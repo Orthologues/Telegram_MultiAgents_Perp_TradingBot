@@ -1,0 +1,8 @@
+{
+  "owner_id": "owner_b_lao_tu",
+  "display_name": "Lao-tu",
+  "channels": ["owner_b_channel_a"],
+  "asset_groups": ["btc_eth", "alts", "tradfi"],
+  "trading_horizons": ["day"],
+  "notes": ["TODO: encode owner-specific simplified/traditional Chinese signal patterns."]
+}

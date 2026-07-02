@@ -1,0 +1,8 @@
+{
+  "owner_id": "owner_a_shu_qin",
+  "display_name": "Shu-qin",
+  "channels": ["owner_a_channel_a"],
+  "asset_groups": ["btc_eth", "alts", "tradfi"],
+  "trading_horizons": ["day", "longer"],
+  "notes": ["TODO: encode owner-specific Chinese wording, order-call style, and examples."]
+}

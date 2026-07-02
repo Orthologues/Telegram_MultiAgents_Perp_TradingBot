@@ -1,0 +1,8 @@
+{
+  "owner_id": "owner_d_a_zhu",
+  "display_name": "A-zhu",
+  "channels": ["owner_d_btc_eth", "owner_d_alts_day", "owner_d_alts_longer"],
+  "asset_groups": ["btc_eth", "alts", "tradfi"],
+  "trading_horizons": ["day", "longer"],
+  "notes": ["TODO: distinguish day-trading and longer-trading channel behavior."]
+}

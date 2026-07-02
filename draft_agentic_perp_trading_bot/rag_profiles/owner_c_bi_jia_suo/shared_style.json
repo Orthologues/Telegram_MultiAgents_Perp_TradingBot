@@ -1,0 +1,8 @@
+{
+  "owner_id": "owner_c_bi_jia_suo",
+  "display_name": "Bi-jia-suo",
+  "channels": ["owner_c_btc_eth", "owner_c_alts_tradfi"],
+  "asset_groups": ["btc_eth", "alts", "tradfi"],
+  "trading_horizons": ["day"],
+  "notes": ["TODO: separate BTC/ETH wording from alts/TradFi wording."]
+}
