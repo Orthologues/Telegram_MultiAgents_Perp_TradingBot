@@ -8,6 +8,36 @@ This draft scaffold was generated from the FigJam flowchart:
 
 The scaffold is intentionally non-executing. It defines project boundaries, schemas, and module placeholders for later implementation.
 
+## Install
+
+This draft project uses `uv` to manage one Python environment for the whole scaffold, including the BitMart MCP server. Run all install commands from the scaffold root so dependencies are resolved into a single local `.venv`.
+
+Create the full development environment:
+
+```bash
+cd draft_agentic_perp_trading_bot
+uv sync --extra aws --extra dev
+```
+
+For runtime-only work without AWS/dev extras:
+
+```bash
+cd draft_agentic_perp_trading_bot
+uv sync
+```
+
+Then either activate the environment:
+
+```bash
+source .venv/bin/activate
+```
+
+or run commands through `uv`:
+
+```bash
+uv run python -m pytest
+```
+
 ## Architecture Layers
 
 1. Telegram trading signal source layer
@@ -23,6 +53,8 @@ The scaffold is intentionally non-executing. It defines project boundaries, sche
 
 - `mcp_servers/bitmart_mcp/`: moved from the original repository-level `bitmart_mcp/` folder.
 - `mcp_servers/bitget_mcp/`: planned placeholder for a future Bitget MCP server.
+
+The BitMart MCP dependencies are now declared in the root `pyproject.toml`; the nested BitMart MCP project metadata was removed to keep a single Python environment.
 
 ## Safety Boundary
 
