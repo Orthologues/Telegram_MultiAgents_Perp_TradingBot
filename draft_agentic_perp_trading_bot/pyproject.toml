@@ -11,6 +11,13 @@ dependencies = [
     "websockets>=12.0",
 ]
 
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentic_perp_trading_bot"]
+
 [project.optional-dependencies]
 aws = [
     "boto3>=1.34",
