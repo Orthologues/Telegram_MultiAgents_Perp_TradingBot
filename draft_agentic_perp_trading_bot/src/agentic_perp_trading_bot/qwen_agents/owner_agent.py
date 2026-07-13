@@ -29,4 +29,5 @@ class OwnerQwenAgent:
             confidence=0.0,
             evidence=[],
             ambiguities=["placeholder implementation"],
+            source_dedup_key=message.dedup_key,
         )

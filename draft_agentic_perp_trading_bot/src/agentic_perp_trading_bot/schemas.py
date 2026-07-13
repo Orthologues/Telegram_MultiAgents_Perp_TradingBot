@@ -52,6 +52,19 @@ class ExchangeId(StrEnum):
     BITMART = "bitmart"
 
 
+class DeduplicationScope(StrEnum):
+    MULTIMODAL_INPUT = "multimodal_input"
+    TRADING_SIGNAL = "trading_signal"
+
+
+class DeduplicationDecision(BaseModel):
+    scope: DeduplicationScope
+    is_duplicate: bool
+    dedup_key: str
+    matched_key: str | None = None
+    reasons: list[str] = Field(default_factory=list)
+
+
 class TelegramMessageEnvelope(BaseModel):
     owner_id: OwnerId
     channel_id: str
@@ -60,6 +73,9 @@ class TelegramMessageEnvelope(BaseModel):
     received_at: datetime
     raw_text: str | None = None
     media_s3_uri: str | None = None
+    content_hash: str | None = None
+    media_hashes: list[str] = Field(default_factory=list)
+    dedup_key: str | None = None
     language_hint: str = "zh"
     strategy_tier_hint: StrategyTier | None = None
 
@@ -78,6 +94,7 @@ class QwenSignalHypothesis(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     evidence: list[str] = Field(default_factory=list)
     ambiguities: list[str] = Field(default_factory=list)
+    source_dedup_key: str | None = None
 
 
 class CanonicalTradeIntent(BaseModel):
@@ -92,6 +109,7 @@ class CanonicalTradeIntent(BaseModel):
     stop_loss: Decimal | None = None
     take_profit: list[Decimal] = Field(default_factory=list)
     target_exchanges: list[ExchangeId]
+    signal_dedup_key: str | None = None
 
 
 class FilterDecision(BaseModel):
@@ -100,6 +118,7 @@ class FilterDecision(BaseModel):
     canonical_intent: CanonicalTradeIntent | None = None
     rejection_reasons: list[str] = Field(default_factory=list)
     reviewer_model: str
+    deduplication: DeduplicationDecision | None = None
 
 
 class PositionSizingDecision(BaseModel):

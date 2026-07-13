@@ -41,9 +41,9 @@ uv run python -m pytest
 ## Architecture Layers
 
 1. Telegram trading signal source layer
-2. Telegram ingestion layer
+2. Telegram ingestion layer with multimodal text/image deduplication
 3. Owner-specific QWEN3-VL multimodal agents
-4. Ministral3-8B/14B filter agent
+4. Ministral3-8B/14B filter agent with trading-signal deduplication
 5. Performance and weight engine
 6. Deterministic risk engine
 7. BitMart/Bitget MCP exchange gateway
@@ -58,4 +58,4 @@ The BitMart MCP dependencies are now declared in the root `pyproject.toml`; the 
 
 ## Safety Boundary
 
-QWEN agents only produce JSON hypotheses. The Ministral filter validates and scores them. Deterministic code computes position size and risk approval. AWS Lambda performs signed order execution only after an approved execution request exists.
+QWEN agents only produce JSON hypotheses from deduplicated Telegram inputs. The Ministral filter validates, deduplicates, and scores those hypotheses. Deterministic code computes position size and risk approval. AWS Lambda performs signed order execution only after an approved execution request exists.
