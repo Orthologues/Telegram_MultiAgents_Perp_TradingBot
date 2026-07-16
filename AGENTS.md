@@ -34,9 +34,9 @@ attached to the message; they do not create extra agents:
 | Owner | Routing examples |
 | --- | --- |
 | A, Shu-qin | Mixed BTC/ETH, alts, and TradFi; day or longer strategy |
-| B, Lao-tu | Mixed BTC/ETH, alts, and TradFi; day strategy |
-| C, Bi-jia-suo | BTC/ETH channel plus alts/TradFi channel |
-| D, A-zhu | BTC/ETH channel plus day and longer alts/TradFi channels |
+| B, Lao-tu | BTC/ETH channel plus alts/TradFi channel; strategy lasting 1-3 days |
+| C, Bi-jia-suo | BTC/ETH channel plus alts/TradFi channel; day strategy |
+| D, A-zhu | BTC/ETH channel plus day and longer alts/TradFi channels. Three seperate channels. Be aware that this owner has been inactivate for more than a month, therefore its signals shall be only use for backtesting currently. |
 
 Each QWEN agent uses manually maintained serial JSON RAG profiles and emits
 preliminary JSON hypotheses in the conservative, intermediate, and radical
