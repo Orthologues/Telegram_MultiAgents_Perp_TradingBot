@@ -36,7 +36,7 @@ attached to the message; they do not create extra agents:
 | A, Shu-qin | Mixed BTC/ETH, alts, and TradFi; day or longer strategy |
 | B, Lao-tu | BTC/ETH channel plus alts/TradFi channel; strategy lasting 1-3 days |
 | C, Bi-jia-suo | BTC/ETH channel plus alts/TradFi channel; day strategy |
-| D, A-zhu | BTC/ETH channel plus day and longer alts/TradFi channels. Three seperate channels. Be aware that this owner has been inactivate for more than a month, therefore its signals shall be only use for backtesting currently. |
+| D, A-zhu | BTC/ETH channel plus day and longer alts/TradFi channels. Three seperate channels. Be aware that this owner has been inactivate since mid June 2026, therefore its signals shall be only use for backtesting currently. |
 
 Each QWEN agent uses manually maintained serial JSON RAG profiles and emits
 preliminary JSON hypotheses in the conservative, intermediate, and radical
@@ -50,14 +50,36 @@ cooldowns, conflicts, and slippage remain deterministic code.
 
 Input deduplication and signal deduplication are separate:
 
-- `telegram_ingestion/deduplication.py` prevents repeated multimodal Telegram
-  inputs from reaching QWEN.
+- `telegram_ingestion/deduplication.py` provides exact-duplicate shortcuts and
+  candidate context; the owner-specific QWEN deduplication skill reasons about
+  semantic repeats and continuations.
 - `ministral_filter/signal_deduplication.py` prevents equivalent QWEN signals
   from being weighted or executed twice.
 
 ECS may provide low-latency Bitget/BitMart WebSocket market data. Order
 execution uses HTTPS REST with exchange signing and slippage checks. AWS
 Lambda retrieves credentials from Secrets Manager at the execution boundary.
+
+## Agent Harness Workflow
+
+This is the crucial reasoning and validation path for every trading message:
+
+```text
+Telegram sequence
+  -> retrieve owner/strategy-specific RAG examples
+  -> QWEN reasoning
+  -> structured trade hypothesis
+  -> MCP validation or simulation
+  -> deterministic risk checks
+  -> result, error, and evaluation record
+```
+
+The RAG examples must preserve serial Chinese message context, intended
+execution orders for each strategy tier, and incorrectly executed examples.
+QWEN interprets the sequence and produces the hypothesis; it never submits an
+order. MCP validation or simulation checks exchange-specific behavior, while
+deterministic risk code remains the final policy gate. Every accepted,
+rejected, simulated, or failed path must produce a traceable evaluation record.
 
 ## Repository Rules
 
@@ -69,7 +91,10 @@ Lambda retrieves credentials from Secrets Manager at the execution boundary.
   as owner, channel, strategy tier, deduplication key, and model id.
 - Persist production deduplication state in a shared store such as DynamoDB;
   the current in-memory classes are test scaffolds only.
-- Keep RAG examples and profiles JSON, versionable, and free of credentials.
+- Keep owner-specific RAG profiles and labeled examples JSON, versionable, and
+  free of credentials. The examples must contain serial Chinese message
+  sequences paired with intended execution orders for each strategy tier, plus
+  annotated incorrectly executed examples.
 
 ## Commands
 
@@ -87,16 +112,40 @@ git diff --check
 For a runtime-only environment, use `uv sync`. Do not create a nested Python
 environment for an individual MCP server.
 
-## Change Example
+## Change Workflow
 
-For a new Telegram deduplication field:
+For changes involving Chinese Telegram interpretation or deduplication, do not
+add keyword, substring, or regular-expression rules for owner wording. Begin
+with the owner-specific QWEN RAG corpus:
 
-1. Add the field to `schemas.py`.
-2. Populate it in `telegram_ingestion/normalizer.py`.
-3. Apply it in `telegram_ingestion/deduplication.py`.
-4. Add a focused test in `tests/` for first-seen and repeated input.
-5. Run the commands above and update the Figma mapping only if the boundary
-   changed.
+1. Add serial examples showing the Chinese messages, the intended execution
+   order, strategy tier, and whether the outcome was correct or incorrectly
+   executed.
+2. Include exact reposts, quoted or screenshot repeats, staged entries, entry
+   updates, take-profit or stop-loss updates, execution notices, unrelated
+   commentary, genuinely new signals, and ambiguous follow-ups.
+3. Label the semantic relation as `duplicate`, `continuation`, `new_signal`, or
+   `ambiguous`, and record the linked prior message when one exists.
+4. Retrieve a bounded candidate history by owner, channel, asset group, and
+   time window. A content/media hash may short-circuit only a byte-identical
+   repeat; it must not decide a semantic match.
+5. Have the owner-specific QWEN agent reason over the original Chinese
+   text/images, the serial RAG examples, the strategy tier, and retrieved
+   candidates. It must return a structured decision, confidence, linked
+   message ids, intended order context, and reasons.
+6. Route `ambiguous`, low-confidence, and incorrect-execution-like cases to
+   review or backtesting. Never silently discard them and never let QWEN
+   submit an order.
+7. Persist the source sequence, candidate set, RAG profile version, model id,
+   decision, and confidence before passing accepted context to the downstream
+   filter and risk layers.
+8. Evaluate a labeled replay set for false merges, missed duplicates,
+   continuation-link accuracy, incorrect-execution detection, and new-signal
+   recall. A false merge is more dangerous than processing one repeated
+   message.
 
-For an order-path change, add or update the deterministic policy test before
-connecting any MCP or Lambda execution code.
+The deterministic Python layer should own byte/media hashing, candidate
+retrieval, idempotent persistence, schema validation, and policy gates. QWEN
+must own the interpretation of owner-specific, serial Chinese language and
+execution examples. For an order-path change, add or update the deterministic
+policy test before connecting any MCP or Lambda execution code.
