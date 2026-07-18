@@ -32,9 +32,10 @@ Example path:
 ```text
 Telegram update
   -> TelegramMessageEnvelope
-  -> content/media hashes
-  -> shared-store conditional write
-  -> QWEN only for a first-seen input
+  -> exact content/media identity check
+  -> retrieve candidate message history
+  -> owner-specific QWEN deduplication reasoning
+  -> accepted new or continuation context
 ```
 
 Preserve `owner_id`, `channel_id`, `asset_group`, and `strategy_tier_hint` so
@@ -183,6 +184,97 @@ before using it for agent weighting. Preserve separate train, validation, and
 forward-test periods. Until that evaluation is complete, use the synthetic
 score only for analysis or conservative weighting and never as permission to
 execute an order.
+
+## Stop-Loss Inference
+
+Use this skill when an owner, especially Lao-tu or Bi-jia-suo, gives an instant
+altcoin order without an explicit stop-loss. The owner-specific QWEN agent must
+infer a candidate from the serial Chinese message sequence and RAG examples,
+not from a hardcoded keyword or universal percentage rule.
+
+The QWEN context should include:
+
+- the complete signal and execution-message sequence;
+- owner, channel, asset group, strategy tier, and recent channel win rates;
+- analogous correct and incorrectly executed RAG examples;
+- entry price, direction, leverage, current position state, and exchange
+  constraints;
+- the 15-minute, 1-hour, and 4-hour technical context used by the confidence
+  skill; and
+- recent coin volatility and the relevant account-risk budget.
+
+The skill returns a candidate and evidence, not an order:
+
+```json
+{
+  "stop_loss_status": "inferred",
+  "stop_loss": "64200",
+  "inference_basis": ["owner_rag_017", "4h_support", "volatility_regime"],
+  "confidence": 0.64,
+  "needs_human_review": false
+}
+```
+
+The provisional `0.8%-1.5%` idea must be defined as an account-risk or
+position-notional constraint before implementation. It is not itself a
+stop-loss price. Convert the candidate price and quantity into maximum loss
+deterministically, then check leverage, liquidation distance, symbol rules,
+slippage, and existing positions. Reject the trade or request review when the
+QWEN agent cannot infer a defensible level.
+
+Evaluate this skill with chronological backtests containing explicit and
+omitted stop-losses, correct and incorrect executions, different strategy
+tiers, and volatile versus calm markets. Track invalid or missing-stop rate,
+stop-loss hit rate, maximum adverse excursion, false-safe decisions, and
+whether the inferred level changes after later message updates.
+
+## Pair Blacklisting
+
+Use a deterministic temporary blacklist to reject exchange/symbol pairs whose
+recent realized performance is persistently poor. This is a risk-policy
+function, not a QWEN decision.
+
+For each canonical `(exchange_id, symbol)` pair, use closed trades whose close
+timestamp is within the trailing 90 days from the evaluation time:
+
+1. Use net realized P/L after fees, funding, and execution costs.
+2. Count `net_pnl > 0` as a win and `net_pnl < 0` as a loss.
+3. Exclude breakeven, open, cancelled, and incomplete trades.
+4. Require configurable minimum observations, such as
+   `min_closed_trades` and `min_losses`, before making a blacklist decision.
+5. Calculate `win_loss_ratio = wins / losses` when losses are nonzero. Treat a
+   pair with wins and no losses as having an infinite ratio; do not blacklist
+   a pair with insufficient observations.
+6. Set `blacklisted = true` only when the ratio is strictly below the
+   configured threshold.
+
+Example decision:
+
+```json
+{
+  "exchange_id": "bitmart",
+  "symbol": "ALTUSDT",
+  "window_days": 90,
+  "wins": 3,
+  "losses": 7,
+  "win_loss_ratio": 0.4286,
+  "threshold": 0.75,
+  "min_closed_trades": 10,
+  "blacklisted": true,
+  "computed_at": "2026-07-18T12:00:00Z"
+}
+```
+
+Persist the window, trade counts, net-P/L definition, threshold, minimum
+sample settings, computation time, and policy version with every decision.
+Apply the blacklist before MCP validation or order execution, and do not allow
+QWEN, Ministral, or a confidence score to override it. If profit-to-loss amount
+is later used instead of win/loss count, define it as a separate metric rather
+than silently changing this ratio.
+
+Test the boundary cases: a pair exactly at the threshold, one trade below the
+threshold, no losses, insufficient observations, trades outside the 90-day
+window, and fees that change a nominal win into a net loss.
 
 ## Ministral Validation
 

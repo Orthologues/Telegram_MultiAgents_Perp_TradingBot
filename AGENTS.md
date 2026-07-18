@@ -31,12 +31,12 @@ Telegram webhook/bot
 The four QWEN agents are owner-specific. Channel and asset-group metadata stay
 attached to the message; they do not create extra agents:
 
-| Owner | Routing examples |
-| --- | --- |
-| A, Shu-qin | Mixed BTC/ETH, alts, and TradFi; day or longer strategy |
-| B, Lao-tu | BTC/ETH channel plus alts/TradFi channel; strategy lasting 1-3 days |
-| C, Bi-jia-suo | BTC/ETH channel plus alts/TradFi channel; day strategy |
-| D, A-zhu | BTC/ETH channel plus day and longer alts/TradFi channels. Three seperate channels. Be aware that this owner has been inactivate since mid June 2026, therefore its signals shall be only use for backtesting currently. |
+| Owner | Routing examples | Caveats / challenges |
+| --- | --- | --- |
+| A, Shu-qin | Mixed BTC/ETH, alts, and TradFi; day or longer strategy | Wording is more ambiguous and message updates are less frequent. |
+| B, Lao-tu | BTC/ETH channel plus alts/TradFi channel; strategy lasting 1-3 days | Instant altcoin orders often omit a stop-loss. Use the stop-loss inference skill; do not use a fixed keyword rule. |
+| C, Bi-jia-suo | BTC/ETH channel plus alts/TradFi channel; day strategy | Instant altcoin orders often omit a stop-loss. Use the stop-loss inference skill; do not use a fixed keyword rule. |
+| D, A-zhu | BTC/ETH channel plus day and longer alts/TradFi channels; three separate channels | Likely inactive since mid-June 2026; use signals for backtesting only. |
 
 Each QWEN agent uses manually maintained serial JSON RAG profiles and emits
 preliminary JSON hypotheses in the conservative, intermediate, and radical
@@ -47,6 +47,16 @@ be A/B-tested. The filter validates schema, rejects prompt-injected or
 ambiguous content, deduplicates equivalent hypotheses, and emits a normalized
 `CanonicalTradeIntent` only when approved. Position sizing, leverage, symbols,
 cooldowns, conflicts, and slippage remain deterministic code.
+
+When an order omits a stop-loss, the owner-specific QWEN stop-loss inference
+skill must propose a candidate price from serial RAG examples and market
+context. Before evaluating that candidate, the deterministic risk engine must
+reject pairs on the temporary blacklist. An instant trading order with an
+inferred stop-loss is never an automatic execution authorization.
+
+The temporary pair blacklist is calculated deterministically from net closed
+trade outcomes over a trailing 90-day window. QWEN confidence or reasoning
+cannot override a blacklisted exchange/symbol pair.
 
 Input deduplication and signal deduplication are separate:
 
