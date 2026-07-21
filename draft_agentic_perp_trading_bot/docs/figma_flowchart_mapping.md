@@ -13,6 +13,8 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 
 - TelegramAgent retrieval and ingestion: `agentic_perp_trading_bot.telegram_ingestion`
 - Per-channel polling and cursor commit: `agentic_perp_trading_bot.telegram_ingestion.agent_worker`
+- S3/DynamoDB ingestion persistence and Bedrock handoff: `agentic_perp_trading_bot.telegram_ingestion.pipeline`
+- Storage contracts: `agentic_perp_trading_bot.telegram_ingestion.storage`
 - Telegram multimodal input deduplication: `agentic_perp_trading_bot.telegram_ingestion.deduplication`
 - Owner QWEN agents: `agentic_perp_trading_bot.qwen_agents`
 - Ministral filter and trading-signal deduplication: `agentic_perp_trading_bot.ministral_filter`
@@ -37,6 +39,7 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
   returns media presence rather than media bytes
 - Raw media: S3
 - Message metadata: DynamoDB
+- Normalized message handoff: Bedrock publisher after metadata persistence
 - Model inference: AWS Bedrock
 - Exchange live state: ECS WebSocket workers
 - Signed execution: AWS Lambda using Secrets Manager

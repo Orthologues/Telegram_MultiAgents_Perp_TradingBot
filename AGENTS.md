@@ -124,6 +124,9 @@ rejected, simulated, or failed path must produce a traceable evaluation record.
   the current in-memory classes are test scaffolds only.
 - Persist one monotonic cursor per logical channel with conditional writes. Do
   not advance it until raw media and searchable message metadata are durable.
+- Keep S3 media archival, DynamoDB metadata persistence, and the Bedrock input
+  handoff behind `telegram_ingestion/storage.py` and `pipeline.py`; do not mix
+  those responsibilities into the owner QWEN agents.
 - Keep AG2 TelegramAgent isolated from QWEN and the exchange path. It retrieves
   source messages only and must never emit a trade hypothesis or submit orders.
 - Keep owner-specific RAG profiles and labeled examples JSON, versionable, and

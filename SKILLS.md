@@ -15,6 +15,7 @@ Example:
 new Figma node: "TelegramAgent"
   -> telegram_ingestion/agent_worker.py
   -> telegram_ingestion/normalizer.py
+  -> telegram_ingestion/storage.py and pipeline.py
   -> schemas.py for traceable fields
   -> tests/test_telegram_agent_ingestion.py for behavior
 ```

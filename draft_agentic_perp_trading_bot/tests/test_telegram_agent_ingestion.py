@@ -18,6 +18,14 @@ from agentic_perp_trading_bot.telegram_ingestion.normalizer import (
     attach_archived_media,
     normalize_telegram_agent_message,
 )
+from agentic_perp_trading_bot.telegram_ingestion.pipeline import (
+    BedrockInputPublisher,
+    TelegramIngestionPipeline,
+)
+from agentic_perp_trading_bot.telegram_ingestion.storage import (
+    InMemoryMessageMetadataRepository,
+    InMemoryRawMediaArchive,
+)
 
 
 def _retrieved_message(message_id: str, *, text: str = "ETH 多", media: bool = False) -> dict:
@@ -211,3 +219,54 @@ def test_retrieval_batch_validates_message_count() -> None:
                 "start_time": "100",
             }
         )
+
+
+def test_pipeline_persists_records_and_publishes_only_unique_messages() -> None:
+    async def retrieve(
+        *, messages_since: str | None, maximum_messages: int | None
+    ) -> dict:
+        return {
+            "message_count": 2,
+            "messages": [_retrieved_message("101"), _retrieved_message("102")],
+            "start_time": messages_since or "latest",
+        }
+
+    published: list[str] = []
+
+    async def publish(message) -> None:
+        published.append(message.telegram_message_id)
+
+    async def scenario() -> None:
+        retriever = CallableTelegramAgentRetriever(
+            telegram_chat_id="-1001234567890",
+            retrieve=retrieve,
+        )
+        cursor_store = InMemoryTelegramCursorStore()
+        poller = TelegramAgentPoller(
+            retrievers={"owner_a_channel_a": retriever},
+            cursor_store=cursor_store,
+        )
+        metadata = InMemoryMessageMetadataRepository()
+        pipeline = TelegramIngestionPipeline(
+            poller=poller,
+            raw_media_archive=InMemoryRawMediaArchive(),
+            metadata_repository=metadata,
+            bedrock_publisher=BedrockInputPublisher(publish),
+        )
+
+        config = TelegramAgentChannelConfig(
+            channel_id="owner_a_channel_a",
+            telegram_chat_id="-1001234567890",
+            maximum_messages=50,
+        )
+        processed = await pipeline.process_once(config)
+
+        assert [message.telegram_message_id for message in processed] == ["101"]
+        assert published == ["101"]
+        assert [record.message.telegram_message_id for record in metadata.records] == [
+            "101",
+            "102",
+        ]
+        assert await cursor_store.load("owner_a_channel_a") == "102"
+
+    asyncio.run(scenario())

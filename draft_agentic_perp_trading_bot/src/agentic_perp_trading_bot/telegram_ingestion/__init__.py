@@ -1,1 +1,1 @@
-"""TelegramAgent retrieval, normalization, deduplication, and storage boundaries."""
+"""TelegramAgent retrieval, storage, normalization, and Bedrock handoff."""

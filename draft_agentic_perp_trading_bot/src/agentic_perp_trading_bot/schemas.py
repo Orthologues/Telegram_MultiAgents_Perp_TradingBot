@@ -140,6 +140,13 @@ class TelegramAgentPollBatch(BaseModel):
     messages: list[TelegramMessageEnvelope] = Field(default_factory=list)
 
 
+class TelegramIngestionRecord(BaseModel):
+    """Durable metadata record produced before downstream model delivery."""
+
+    message: TelegramMessageEnvelope
+    input_deduplication: DeduplicationDecision
+
+
 class QwenSignalHypothesis(BaseModel):
     owner_id: OwnerId
     channel_id: str
