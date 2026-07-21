@@ -9,15 +9,17 @@ The implementation map is
 [`draft_agentic_perp_trading_bot/docs/figma_flowchart_mapping.md`](draft_agentic_perp_trading_bot/docs/figma_flowchart_mapping.md).
 
 Do not describe placeholder code as live trading code. Never commit API keys,
-Telegram tokens, MCP tokens, signatures, or local secret files.
+Telegram API hashes, authorized user sessions, MCP tokens, signatures, or local
+secret files.
 
 ## Architecture Contract
 
 The flow is:
 
 ```text
-Telegram webhook/bot
-  -> Lambda ingestion
+Telegram channels readable by an authorized user account
+  -> one AG2 TelegramAgent configuration per target chat; retrieve-only executor
+  -> Lightsail polling worker (EC2 scale-up) with a durable channel cursor
   -> normalize, filter, OCR-package, and deduplicate input
   -> S3 raw media + DynamoDB message metadata
   -> one QWEN3-VL agent per owner
@@ -27,6 +29,23 @@ Telegram webhook/bot
   -> Bitget/BitMart gateway
   -> Lambda execution with Secrets Manager
 ```
+
+There is no Telegram bot webhook or Lambda ingestion entrypoint. AG2
+TelegramAgent is experimental and its retrieve tool is pull-based: poll by the
+last committed Telegram message id and treat the resulting cadence as
+near-real-time, not native push. A TelegramAgent is configured for one
+`chat_id`; the ingestion service may host multiple per-channel configurations,
+but these do not create additional owner QWEN trading agents.
+
+The ingestion executor must expose only retrieval; do not register
+`TelegramSendTool`. Store Telegram API ID/hash and the authorized user session
+outside the repository. Use one active, leased worker per Telegram user session
+and serialize access unless the session implementation is proven safe for
+concurrent clients. AG2 retrieval returns text and a media-presence flag, not
+media bytes, so hydrate media through an adjacent authenticated adapter before
+archiving it in S3. Persist message metadata and media first, then atomically
+advance the per-channel cursor in DynamoDB. This preserves at-least-once
+delivery across worker restarts.
 
 The four QWEN agents are owner-specific. Channel and asset-group metadata stay
 attached to the message; they do not create extra agents:
@@ -60,6 +79,8 @@ cannot override a blacklisted exchange/symbol pair.
 
 Input deduplication and signal deduplication are separate:
 
+- `telegram_ingestion/agent_worker.py` validates per-channel TelegramAgent
+  retrieval batches and keeps cursor commit separate from durable processing.
 - `telegram_ingestion/deduplication.py` provides exact-duplicate shortcuts and
   candidate context; the owner-specific QWEN deduplication skill reasons about
   semantic repeats and continuations.
@@ -75,7 +96,7 @@ Lambda retrieves credentials from Secrets Manager at the execution boundary.
 This is the crucial reasoning and validation path for every trading message:
 
 ```text
-Telegram sequence
+TelegramAgent-retrieved sequence
   -> retrieve owner/strategy-specific RAG examples
   -> QWEN reasoning
   -> structured trade hypothesis
@@ -101,6 +122,10 @@ rejected, simulated, or failed path must produce a traceable evaluation record.
   as owner, channel, strategy tier, deduplication key, and model id.
 - Persist production deduplication state in a shared store such as DynamoDB;
   the current in-memory classes are test scaffolds only.
+- Persist one monotonic cursor per logical channel with conditional writes. Do
+  not advance it until raw media and searchable message metadata are durable.
+- Keep AG2 TelegramAgent isolated from QWEN and the exchange path. It retrieves
+  source messages only and must never emit a trade hypothesis or submit orders.
 - Keep owner-specific RAG profiles and labeled examples JSON, versionable, and
   free of credentials. The examples must contain serial Chinese message
   sequences paired with intended execution orders for each strategy tier, plus
@@ -112,7 +137,7 @@ Run from the single-environment project root:
 
 ```bash
 cd draft_agentic_perp_trading_bot
-uv sync --extra aws --extra dev
+uv sync --extra aws --extra telegram --extra dev
 uv run pytest -q
 uv run ruff check .
 uv run python -m compileall -q src tests

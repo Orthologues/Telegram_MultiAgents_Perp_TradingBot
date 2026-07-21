@@ -12,34 +12,51 @@ mapping.
 Example:
 
 ```text
-new Figma node: "Input Normalizer"
+new Figma node: "TelegramAgent"
+  -> telegram_ingestion/agent_worker.py
   -> telegram_ingestion/normalizer.py
   -> schemas.py for traceable fields
-  -> tests/test_deduplication.py for behavior
+  -> tests/test_telegram_agent_ingestion.py for behavior
 ```
 
 When a boundary moves, update the mapping document and README together. Do not
 copy the entire flowchart into source code comments.
 
-## Telegram Ingestion
+## TelegramAgent Ingestion
 
-Normalize Chinese text and image metadata before model inference. Archive raw
+Run a long-lived polling service on Lightsail, with EC2 as the scale-up path.
+Configure one AG2 TelegramAgent per target `chat_id`, backed by the same
+authorized Telegram user account, and expose it through a retrieval-only
+executor. Do not register `TelegramSendTool` in that executor and do not route
+TelegramAgent output directly to an exchange or trading model.
+
+TelegramAgent retrieval is pull-based. Poll from the last committed message id,
+normalize Chinese text and image metadata before model inference, archive raw
 media in S3, store searchable metadata in DynamoDB, and compute a stable input
-deduplication key.
+deduplication key. AG2 exposes only a media-presence flag, so use an adjacent
+authenticated media hydrator to obtain bytes and hashes before cursor commit.
 
 Example path:
 
 ```text
-Telegram update
+TelegramAgent retrieval after durable channel cursor
+  -> validate structured retrieval batch
+  -> order messages chronologically
   -> TelegramMessageEnvelope
+  -> hydrate/archive media and persist metadata
   -> exact content/media identity check
   -> retrieve candidate message history
   -> owner-specific QWEN deduplication reasoning
   -> accepted new or continuation context
+  -> atomically advance channel cursor
 ```
 
-Preserve `owner_id`, `channel_id`, `asset_group`, and `strategy_tier_hint` so
-multiple channels can feed one owner agent without losing provenance.
+Keep retrieval and cursor commit as separate operations to preserve
+at-least-once delivery. Use a conditional DynamoDB cursor update and only one
+active, leased worker per Telegram user session. Preserve `owner_id`,
+`channel_id`, `telegram_chat_id`, `telegram_message_id`, `source_timestamp`,
+`retrieval_cursor`, `asset_group`, and `strategy_tier_hint` so multiple channels
+can feed one owner agent without losing provenance.
 
 ## Agentic Deduplication
 
@@ -317,7 +334,9 @@ canonical intent
 Keep Bitget and BitMart adapters behind the MCP gateway. Use ECS WebSockets for
 market-data transport when low latency is required, and signed HTTPS REST for
 order execution. Lambda retrieves exchange credentials and kill-switch settings
-from Secrets Manager; secrets never enter logs, fixtures, RAG files, or commits.
+from Secrets Manager. The Telegram worker separately retrieves Telegram API
+ID/hash and the authorized user-session bootstrap. Secrets never enter logs,
+fixtures, RAG files, or commits.
 
 ## Verification
 
@@ -325,6 +344,7 @@ For every behavior change, add the smallest focused test first, then run:
 
 ```bash
 cd draft_agentic_perp_trading_bot
+uv sync --extra aws --extra telegram --extra dev
 uv run pytest -q
 uv run ruff check .
 uv run python -m compileall -q src tests

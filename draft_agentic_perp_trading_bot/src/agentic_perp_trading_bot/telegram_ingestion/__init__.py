@@ -1,1 +1,1 @@
-"""Telegram webhook ingestion, normalization, deduplication, and storage boundaries."""
+"""TelegramAgent retrieval, normalization, deduplication, and storage boundaries."""

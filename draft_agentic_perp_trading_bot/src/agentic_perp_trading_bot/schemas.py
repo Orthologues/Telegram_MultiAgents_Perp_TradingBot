@@ -5,8 +5,9 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
+from typing import Any, Self
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class OwnerId(StrEnum):
@@ -57,6 +58,10 @@ class DeduplicationScope(StrEnum):
     TRADING_SIGNAL = "trading_signal"
 
 
+class IngestionTransport(StrEnum):
+    AG2_TELEGRAM_AGENT = "ag2_telegram_agent"
+
+
 class DeduplicationDecision(BaseModel):
     scope: DeduplicationScope
     is_duplicate: bool
@@ -65,19 +70,74 @@ class DeduplicationDecision(BaseModel):
     reasons: list[str] = Field(default_factory=list)
 
 
+class TelegramAgentRetrievedMessage(BaseModel):
+    """Message shape returned by AG2's TelegramRetrieveTool."""
+
+    id: str = Field(pattern=r"^[0-9]+$")
+    date: datetime
+    from_id: str | None = None
+    text: str | None = None
+    reply_to_msg_id: str | None = None
+    forward_from: str | None = None
+    edit_date: datetime | None = None
+    media: bool = False
+    entities: list[dict[str, Any]] | None = None
+
+
+class TelegramAgentRetrievalBatch(BaseModel):
+    telegram_chat_id: str
+    message_count: int = Field(ge=0)
+    messages: list[TelegramAgentRetrievedMessage] = Field(default_factory=list)
+    start_time: str
+
+    @model_validator(mode="after")
+    def validate_message_count(self) -> Self:
+        if self.message_count != len(self.messages):
+            raise ValueError(
+                f"message_count={self.message_count} does not match "
+                f"messages={len(self.messages)}"
+            )
+        return self
+
+
+class TelegramAgentChannelConfig(BaseModel):
+    """One AG2 TelegramAgent is configured for one target Telegram chat."""
+
+    channel_id: str
+    telegram_chat_id: str
+    maximum_messages: int = Field(default=100, ge=1, le=1000)
+
+
 class TelegramMessageEnvelope(BaseModel):
     owner_id: OwnerId
     channel_id: str
     asset_group: AssetGroup
     telegram_message_id: str
     received_at: datetime
+    source_transport: IngestionTransport = IngestionTransport.AG2_TELEGRAM_AGENT
+    telegram_chat_id: str | None = None
+    source_timestamp: datetime | None = None
+    sender_id: str | None = None
+    reply_to_message_id: str | None = None
+    forwarded_from_id: str | None = None
+    edited_at: datetime | None = None
+    retrieval_cursor: str | None = None
     raw_text: str | None = None
+    raw_media_present: bool = False
     media_s3_uri: str | None = None
     content_hash: str | None = None
     media_hashes: list[str] = Field(default_factory=list)
     dedup_key: str | None = None
     language_hint: str = "zh"
     strategy_tier_hint: StrategyTier | None = None
+
+
+class TelegramAgentPollBatch(BaseModel):
+    channel_id: str
+    telegram_chat_id: str
+    previous_cursor: str | None = None
+    next_cursor: str | None = None
+    messages: list[TelegramMessageEnvelope] = Field(default_factory=list)
 
 
 class QwenSignalHypothesis(BaseModel):

@@ -11,7 +11,8 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 
 ## Runtime Layer Mapping
 
-- Telegram source and ingestion: `agentic_perp_trading_bot.telegram_ingestion`
+- TelegramAgent retrieval and ingestion: `agentic_perp_trading_bot.telegram_ingestion`
+- Per-channel polling and cursor commit: `agentic_perp_trading_bot.telegram_ingestion.agent_worker`
 - Telegram multimodal input deduplication: `agentic_perp_trading_bot.telegram_ingestion.deduplication`
 - Owner QWEN agents: `agentic_perp_trading_bot.qwen_agents`
 - Ministral filter and trading-signal deduplication: `agentic_perp_trading_bot.ministral_filter`
@@ -27,9 +28,20 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 
 ## Transport Split
 
-- Telegram webhook: AWS Lambda HTTPS entrypoint
+- Telegram retrieval: one AG2 TelegramAgent configuration per target chat,
+  exposed through a retrieval-only executor and hosted by a long-running
+  Lightsail worker with EC2 as the scale-up path
+- Delivery semantics: bounded polling after a DynamoDB message-id cursor;
+  archive and persist before a conditional cursor advance
+- Telegram media: adjacent authenticated hydration because AG2 retrieval
+  returns media presence rather than media bytes
 - Raw media: S3
 - Message metadata: DynamoDB
 - Model inference: AWS Bedrock
 - Exchange live state: ECS WebSocket workers
 - Signed execution: AWS Lambda using Secrets Manager
+
+The board's "pushes real-time updates" label maps to near-real-time polling in
+the scaffold. AG2 TelegramAgent does not expose a native push listener or
+webhook; it retrieves messages since a date or message id. TelegramAgent is an
+ingestion adapter only and does not push source content directly to Bedrock.

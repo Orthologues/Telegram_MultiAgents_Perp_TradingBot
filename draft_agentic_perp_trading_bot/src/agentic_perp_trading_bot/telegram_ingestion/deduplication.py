@@ -1,7 +1,7 @@
 """Draft multimodal Telegram input deduplication.
 
-The production implementation should persist keys in DynamoDB, Redis, or another
-shared store so Lambda/ECS workers deduplicate across processes.
+The production implementation should persist keys in DynamoDB or another shared
+store so TelegramAgent workers deduplicate across processes and restarts.
 """
 
 from __future__ import annotations
@@ -15,7 +15,13 @@ from agentic_perp_trading_bot.schemas import (
 
 def build_input_dedup_key(message: TelegramMessageEnvelope) -> str:
     text_hash = message.content_hash or "no_text"
-    media_hashes = ",".join(sorted(message.media_hashes)) or "no_media"
+    if message.media_hashes:
+        media_hashes = ",".join(sorted(message.media_hashes))
+    elif message.raw_media_present:
+        source_chat = message.telegram_chat_id or message.channel_id
+        media_hashes = f"unhydrated:{source_chat}:{message.telegram_message_id}"
+    else:
+        media_hashes = "no_media"
     return f"{message.owner_id}:{message.channel_id}:{text_hash}:{media_hashes}"
 
 

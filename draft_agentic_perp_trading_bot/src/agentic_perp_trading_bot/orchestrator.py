@@ -16,7 +16,7 @@ async def process_message(
     filter_agent: MinistralFilterAgent,
     telegram_deduplicator: InMemoryTelegramDeduplicator | None = None,
 ) -> ApprovedExecutionRequest | None:
-    """Run one Telegram message through QWEN, Ministral, sizing, and risk."""
+    """Run one normalized TelegramAgent message through QWEN, Ministral, sizing, and risk."""
     if telegram_deduplicator is not None:
         input_deduplication = telegram_deduplicator.check(message)
         if input_deduplication.is_duplicate:

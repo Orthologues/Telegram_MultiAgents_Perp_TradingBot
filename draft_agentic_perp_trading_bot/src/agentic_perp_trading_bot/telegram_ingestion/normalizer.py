@@ -1,12 +1,18 @@
-"""Normalize raw Telegram updates into owner/channel-aware message envelopes."""
+"""Normalize AG2 TelegramAgent retrievals into owner-aware envelopes."""
 
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Iterable
 from datetime import datetime, timezone
 from typing import Any
 
-from agentic_perp_trading_bot.schemas import AssetGroup, OwnerId, TelegramMessageEnvelope
+from agentic_perp_trading_bot.schemas import (
+    AssetGroup,
+    OwnerId,
+    TelegramAgentRetrievedMessage,
+    TelegramMessageEnvelope,
+)
 from agentic_perp_trading_bot.telegram_ingestion.deduplication import build_input_dedup_key
 
 
@@ -25,34 +31,60 @@ def _sha256_text(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
-def _media_hashes(update: dict[str, Any]) -> list[str]:
-    explicit_hashes = update.get("media_hashes")
-    if explicit_hashes:
-        return sorted(str(item) for item in explicit_hashes)
-
-    media_s3_uri = update.get("media_s3_uri")
-    if media_s3_uri is None:
-        return []
-    return [_sha256_text(str(media_s3_uri))]
-
-
-def normalize_telegram_update(update: dict[str, Any]) -> TelegramMessageEnvelope:
-    """Convert a raw Telegram update into the canonical ingestion envelope."""
-    channel_id = str(update["channel_id"])
+def normalize_telegram_agent_message(
+    message: TelegramAgentRetrievedMessage | dict[str, Any],
+    *,
+    channel_id: str,
+    telegram_chat_id: str,
+    retrieval_cursor: str | None = None,
+    observed_at: datetime | None = None,
+    media_s3_uri: str | None = None,
+    media_hashes: Iterable[str] = (),
+) -> TelegramMessageEnvelope:
+    """Convert one AG2 retrieval result into the canonical ingestion envelope."""
+    retrieved = TelegramAgentRetrievedMessage.model_validate(message)
     owner_id, asset_group = OWNER_CHANNEL_MAP[channel_id]
-    raw_text = update.get("text")
-    content_hash = _sha256_text(raw_text.strip()) if isinstance(raw_text, str) else None
+    normalized_media_hashes = sorted(str(item) for item in media_hashes)
 
     envelope = TelegramMessageEnvelope(
         owner_id=owner_id,
         channel_id=channel_id,
         asset_group=asset_group,
-        telegram_message_id=str(update["message_id"]),
-        received_at=datetime.now(timezone.utc),
-        raw_text=raw_text,
-        media_s3_uri=update.get("media_s3_uri"),
-        content_hash=content_hash,
-        media_hashes=_media_hashes(update),
+        telegram_chat_id=telegram_chat_id,
+        telegram_message_id=retrieved.id,
+        source_timestamp=retrieved.date,
+        received_at=observed_at or datetime.now(timezone.utc),
+        sender_id=retrieved.from_id,
+        reply_to_message_id=retrieved.reply_to_msg_id,
+        forwarded_from_id=retrieved.forward_from,
+        edited_at=retrieved.edit_date,
+        retrieval_cursor=retrieval_cursor,
+        raw_text=retrieved.text,
+        raw_media_present=retrieved.media,
+        media_s3_uri=media_s3_uri,
+        content_hash=_sha256_text(retrieved.text) if retrieved.text is not None else None,
+        media_hashes=normalized_media_hashes,
     )
     envelope.dedup_key = build_input_dedup_key(envelope)
     return envelope
+
+
+def attach_archived_media(
+    message: TelegramMessageEnvelope,
+    *,
+    media_s3_uri: str,
+    media_hashes: Iterable[str],
+) -> TelegramMessageEnvelope:
+    """Attach durable media identity and replace the provisional dedup key."""
+    normalized_media_hashes = sorted(str(item) for item in media_hashes)
+    if not normalized_media_hashes:
+        raise ValueError("at least one media hash is required for archived Telegram media")
+
+    enriched = message.model_copy(
+        update={
+            "media_s3_uri": media_s3_uri,
+            "media_hashes": normalized_media_hashes,
+        }
+    )
+    enriched.dedup_key = build_input_dedup_key(enriched)
+    return enriched

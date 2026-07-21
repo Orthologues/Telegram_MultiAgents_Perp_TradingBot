@@ -8,7 +8,8 @@ from enum import StrEnum
 class SecretName(StrEnum):
     BITGET_API_CREDENTIALS = "agentic-perp-trading-bot/bitget/api-credentials"
     BITMART_API_CREDENTIALS = "agentic-perp-trading-bot/bitmart/api-credentials"
-    TELEGRAM_BOT_TOKEN = "agentic-perp-trading-bot/telegram/bot-token"
+    TELEGRAM_API_CREDENTIALS = "agentic-perp-trading-bot/telegram/api-credentials"
+    TELEGRAM_USER_SESSION = "agentic-perp-trading-bot/telegram/user-session"
     MCP_AUTH_TOKEN = "agentic-perp-trading-bot/mcp/auth-token"
     KILL_SWITCH_CONFIG = "agentic-perp-trading-bot/risk/kill-switch-config"
 
