@@ -25,11 +25,14 @@ copy the entire flowchart into source code comments.
 
 ## TelegramAgent Ingestion
 
-Run a long-lived polling service on Lightsail, with EC2 as the scale-up path.
-Configure one AG2 TelegramAgent per target `chat_id`, backed by the same
-authorized Telegram user account, and expose it through a retrieval-only
-executor. Do not register `TelegramSendTool` in that executor and do not route
-TelegramAgent output directly to an exchange or trading model.
+Run one long-lived polling service on Lightsail, with EC2 as the scale-up path,
+and one authorized Telegram user session. Schedule the target channels through
+lightweight per-chat retrieval adapters that preserve each `chat_id`, cursor,
+and provenance boundary. Because AG2 retrieval is scoped to one `chat_id`, an
+adapter may wrap a per-chat TelegramAgent object internally, but these objects
+remain in the same worker and are not independently deployed services. Expose
+only retrieval through the executor. Do not register `TelegramSendTool` and do
+not route TelegramAgent output directly to an exchange or trading model.
 
 TelegramAgent retrieval is pull-based. Poll from the last committed message id,
 normalize Chinese text and image metadata before model inference, archive raw

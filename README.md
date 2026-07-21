@@ -8,6 +8,11 @@ The primary challenge is the hyper-unstructured and often vague language of
 Chinese text in Telegram trading channels, including implicit entries,
 exits, context, screenshots, and owner-specific terminology.
 
+Telegram ingestion runs as one shared polling worker using one authorized user
+session. Channel-specific chat IDs, cursors, and provenance are handled by
+lightweight retrieval adapters within that worker; the scaffold does not
+require one independently deployed TelegramAgent service per channel.
+
 ## Fastest Test
 
 From the repository root:

@@ -18,7 +18,7 @@ The flow is:
 
 ```text
 Telegram channels readable by an authorized user account
-  -> one AG2 TelegramAgent configuration per target chat; retrieve-only executor
+  -> one shared AG2 TelegramAgent ingestion worker with per-chat retrieval adapters
   -> Lightsail polling worker (EC2 scale-up) with a durable channel cursor
   -> normalize, filter, OCR-package, and deduplicate input
   -> S3 raw media + DynamoDB message metadata
@@ -33,9 +33,13 @@ Telegram channels readable by an authorized user account
 There is no Telegram bot webhook or Lambda ingestion entrypoint. AG2
 TelegramAgent is experimental and its retrieve tool is pull-based: poll by the
 last committed Telegram message id and treat the resulting cadence as
-near-real-time, not native push. A TelegramAgent is configured for one
-`chat_id`; the ingestion service may host multiple per-channel configurations,
-but these do not create additional owner QWEN trading agents.
+near-real-time, not native push. The deployment is one long-lived ingestion
+worker and one authorized Telegram user session, scheduled across the target
+channels. Each channel has its own `chat_id`, cursor, and provenance
+configuration. Because the AG2 retrieval API is scoped to one `chat_id`, the
+worker may create or reuse lightweight per-chat TelegramAgent adapters inside
+the same process; these are not separate services or additional owner QWEN
+trading agents.
 
 The ingestion executor must expose only retrieval; do not register
 `TelegramSendTool`. Store Telegram API ID/hash and the authorized user session
