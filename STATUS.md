@@ -14,7 +14,7 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
 
 - The repository is a human-reviewed, non-executing scaffold; it is not live
   trading software.
-- Fifteen commits are summarized in `HISTORY.md`; current HEAD is `b4424d6`.
+- Sixteen commits are summarized in `HISTORY.md`; current HEAD is `510098f`.
 - AG2 TelegramAgent provides pull-based retrieval through one shared Lightsail
   worker, per-chat adapters, one authorized user session, and durable cursors.
 - The scaffold preserves provenance, supports private S3/DynamoDB boundaries,
@@ -66,7 +66,6 @@ serial RAG set with authentic text/image patterns.
 | File | Purpose | Maintenance |
 | --- | --- | --- |
 | `STATUS.md` | Current state and active priorities | Overwrite |
-| `TODO.md` | Detailed task list | Update with priorities |
 | `HISTORY.md` | Committed development history | Append-only |
 | `AGENTS.md` | Agent and repository contract | Update when boundaries change |
 | `SKILLS.md` | Repeatable implementation skills | Update when workflows change |

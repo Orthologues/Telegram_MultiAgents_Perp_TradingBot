@@ -36,3 +36,6 @@ cd draft_agentic_perp_trading_bot && uv sync --extra aws --extra dev && uv run p
 The design source is the [AgenticPerpTradingBotArch flowchart](https://www.figma.com/board/IosVAXW713NeWhTTU962vC/AgenticPerpTradingBotArch).
 The scaffold is intentionally incomplete and must not be treated as a live
 trading system.
+
+For the current state and active priorities, see [`STATUS.md`](STATUS.md). For
+the chronological development record, see [`HISTORY.md`](HISTORY.md).
