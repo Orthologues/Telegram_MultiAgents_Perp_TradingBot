@@ -92,3 +92,10 @@ Reduced `AGENTS.md` to its essential contract and added `TODO.md` with the
 Telethon image hydrator and authentic serial RAG examples as the first two
 priorities, followed by production adapters, restart recovery, and replay
 testing.
+
+2026-07-22 — `554200e`: added history and status tracking
+
+Added this append-only commit history and the overwrite-style `STATUS.md`,
+including the current scaffold state, next actions, and open gaps. The
+codebase is mostly prompted GPT-5.6 Luna and Sol coding produced under time
+constraints and requires careful human review before further use.
