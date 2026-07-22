@@ -15,18 +15,19 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 - Per-channel polling and cursor commit: `agentic_perp_trading_bot.telegram_ingestion.agent_worker`
 - S3/DynamoDB ingestion persistence and Bedrock handoff: `agentic_perp_trading_bot.telegram_ingestion.pipeline`
 - Storage contracts: `agentic_perp_trading_bot.telegram_ingestion.storage`
+- Owner-scoped serial reply trees: `agentic_perp_trading_bot.telegram_ingestion.reply_tree`
 - Telegram multimodal input deduplication: `agentic_perp_trading_bot.telegram_ingestion.deduplication`
 - Owner QWEN agents: `agentic_perp_trading_bot.qwen_agents`
 - Ministral filter and trading-signal deduplication: `agentic_perp_trading_bot.ministral_filter`
 - Performance and weight engine: `agentic_perp_trading_bot.performance_engine`
-- Deterministic risk engine: `agentic_perp_trading_bot.risk_engine`
+- Confidence engine: `agentic_perp_trading_bot.confidence_engine`
 - Bitget/BitMart MCP gateway: `agentic_perp_trading_bot.mcp_gateway`
 - AWS Secrets Manager and Lambda execution: `agentic_perp_trading_bot.aws_execution`
 
 ## Deduplication Split
 
 - Input normalizer deduplicates mixed Chinese text, screenshots, charts, and media packages before QWEN inference.
-- Ministral filter deduplicates semantically equivalent QWEN trading hypotheses before performance weighting, risk checks, and exchange execution.
+- Ministral filter deduplicates semantically equivalent QWEN trading hypotheses before performance weighting and confidence-based strategy selection.
 
 ## Transport Split
 
@@ -39,6 +40,7 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
   returns media presence rather than media bytes
 - Raw media: S3
 - Message metadata: DynamoDB
+- Reply-tree context: owner-scoped in-memory indexes; DynamoDB is write-only for this context
 - Normalized message handoff: Bedrock publisher after metadata persistence
 - Model inference: AWS Bedrock
 - Exchange live state: ECS WebSocket workers

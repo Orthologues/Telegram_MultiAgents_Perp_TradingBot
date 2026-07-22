@@ -6,7 +6,7 @@ This file is a compact index of repeatable repository workflows. It complements
 ## Flowchart to Scaffold
 
 Use the Figma board as the design source and
-`draft_agentic_perp_trading_bot/docs/figma_flowchart_mapping.md` as the code
+`draft_agentic_perp_trading_bot/docs/arch_to_filename_mapping.md` as the code
 mapping.
 
 Example:
@@ -47,6 +47,10 @@ TelegramAgent retrieval after durable channel cursor
   -> validate structured retrieval batch
   -> order messages chronologically
   -> TelegramMessageEnvelope
+  -> traverse prior reply-tree messages from the owner QWEN in-memory index
+     into parent_messages (oldest first)
+  -> TelegramPromptContext with ID-labeled parent blocks and current block last
+  -> pass the same context to QWEN and Ministral prompts
   -> hydrate/archive media and persist metadata
   -> exact content/media identity check
   -> retrieve candidate message history
@@ -59,8 +63,12 @@ Keep retrieval and cursor commit as separate operations to preserve
 at-least-once delivery. Use a conditional DynamoDB cursor update and only one
 active, leased worker per Telegram user session. Preserve `owner_id`,
 `channel_id`, `telegram_chat_id`, `telegram_message_id`, `source_timestamp`,
-`retrieval_cursor`, `asset_group`, and `strategy_tier_hint` so multiple channels
-can feed one owner agent without losing provenance.
+`retrieval_cursor`, `parent_messages`, `asset_group`, and `strategy_tier_hint`
+so multiple channels can feed one owner agent without losing provenance.
+Treat the DynamoDB message history primarily as a replay dataset for backtesting
+and strategy optimization. Retain omitted take-profit/stop-loss cases, inferred
+levels, later updates, execution outcomes, and the inputs used for deterministic
+pair-blacklisting analysis; do not read it to assemble live model context.
 
 ## Agentic Deduplication
 
@@ -139,7 +147,9 @@ repeated-message pairs.
 ## Owner QWEN Agent
 
 Load the owner-specific serial JSON RAG profile, provide recent signal and
-position context, and request only a `QwenSignalHypothesis`.
+position context, and request only a `QwenSignalHypothesis`. Include the same
+`TelegramPromptContext` supplied by ingestion: parent messages must remain
+ID-labeled, ordered oldest-to-newest, and available to both QWEN and Ministral.
 
 Example output boundary:
 
@@ -164,9 +174,10 @@ position sizing to the model prompt as a substitute for deterministic policy.
 
 ## Confidence Calculation
 
-Confidence is a synthetic, traceable feature for ranking and weighting trade
-hypotheses. It is not a risk approval and it must not override the deterministic
-risk engine.
+Confidence is a synthetic, traceable feature for ranking trade hypotheses and
+selecting conservative, intermediate, or radical strategy tiers. The only hard
+rejections are a deterministic pair blacklist and an instant-order current
+price that is too distant from the message reference price.
 
 The initial feature groups are:
 
@@ -222,7 +233,7 @@ The QWEN context should include:
   constraints;
 - the 15-minute, 1-hour, and 4-hour technical context used by the confidence
   skill; and
-- recent coin volatility and the relevant account-risk budget.
+  - recent coin volatility and the relevant account-allocation budget.
 
 The skill returns a candidate and evidence, not an order:
 
@@ -236,12 +247,11 @@ The skill returns a candidate and evidence, not an order:
 }
 ```
 
-The provisional `0.8%-1.5%` idea must be defined as an account-risk or
-position-notional constraint before implementation. It is not itself a
-stop-loss price. Convert the candidate price and quantity into maximum loss
-deterministically, then check leverage, liquidation distance, symbol rules,
-slippage, and existing positions. Reject the trade or request review when the
-QWEN agent cannot infer a defensible level.
+The provisional `0.8%-1.5%` idea must be recorded as a backtest feature, not
+treated as a universal stop-loss rule. Preserve the inferred level, later
+updates, and execution outcome for strategy optimization. A live instant order
+is rejected only when its pair is blacklisted or its MCP-supplied current price
+is too distant from the message reference price.
 
 Evaluate this skill with chronological backtests containing explicit and
 omitted stop-losses, correct and incorrect executions, different strategy
@@ -252,8 +262,8 @@ whether the inferred level changes after later message updates.
 ## Pair Blacklisting
 
 Use a deterministic temporary blacklist to reject exchange/symbol pairs whose
-recent realized performance is persistently poor. This is a risk-policy
-function, not a QWEN decision.
+recent realized performance is persistently poor. This is a deterministic
+confidence rejection, not a QWEN decision.
 
 For each canonical `(exchange_id, symbol)` pair, use closed trades whose close
 timestamp is within the trailing 90 days from the evaluation time:
@@ -314,22 +324,23 @@ QWEN hypothesis
 ```
 
 Keep explanations and labels available to the performance engine, but never let
-free-form model reasoning override hard risk rules.
+free-form model reasoning override the pair blacklist or instant-order price
+distance check.
 
-## Weight and Risk
+## Weight and Confidence
 
 Use realized, replayable metrics such as TP1/TP2 hit rate, stop-loss rate,
 cumulative P/L, and post-stop-loss reversal rate to update owner/channel and
-strategy-tier weights. The deterministic risk engine remains the final policy
-gate for symbol allowlists, maximum position value, leverage, cooldowns,
-conflicting positions, and slippage.
+strategy-tier weights. The confidence engine selects the strategy tier; the
+pair blacklist and instant-order price-distance check are the only hard
+execution rejections.
 
 Example order path:
 
 ```text
 canonical intent
   -> weight-adjusted sizing
-  -> risk approval
+  -> confidence-based strategy tier
   -> ApprovedExecutionRequest
 ```
 

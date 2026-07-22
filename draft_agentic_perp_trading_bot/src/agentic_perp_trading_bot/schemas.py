@@ -7,7 +7,7 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import Any, Self
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class OwnerId(StrEnum):
@@ -119,6 +119,7 @@ class TelegramMessageEnvelope(BaseModel):
     source_timestamp: datetime | None = None
     sender_id: str | None = None
     reply_to_message_id: str | None = None
+    parent_messages: list[str] = Field(default_factory=list)
     forwarded_from_id: str | None = None
     edited_at: datetime | None = None
     retrieval_cursor: str | None = None
@@ -130,6 +131,79 @@ class TelegramMessageEnvelope(BaseModel):
     dedup_key: str | None = None
     language_hint: str = "zh"
     strategy_tier_hint: StrategyTier | None = None
+
+    @field_validator("parent_messages")
+    @classmethod
+    def validate_parent_messages(cls, message_ids: list[str]) -> list[str]:
+        if any(not message_id.isdigit() for message_id in message_ids):
+            raise ValueError("parent_messages must contain numeric Telegram message IDs")
+        if len(message_ids) != len(set(message_ids)):
+            raise ValueError("parent_messages must not contain duplicate message IDs")
+        if message_ids != sorted(message_ids, key=int):
+            raise ValueError("parent_messages must be in chronological order")
+        return message_ids
+
+
+class TelegramPromptMessage(BaseModel):
+    """ID-labeled source message representation passed into an agent prompt."""
+
+    telegram_message_id: str
+    source_timestamp: datetime | None = None
+    sender_id: str | None = None
+    reply_to_message_id: str | None = None
+    raw_text: str | None = None
+    raw_media_present: bool = False
+    media_s3_uri: str | None = None
+
+    @classmethod
+    def from_envelope(cls, message: TelegramMessageEnvelope) -> Self:
+        return cls(
+            telegram_message_id=message.telegram_message_id,
+            source_timestamp=message.source_timestamp,
+            sender_id=message.sender_id,
+            reply_to_message_id=message.reply_to_message_id,
+            raw_text=message.raw_text,
+            raw_media_present=message.raw_media_present,
+            media_s3_uri=message.media_s3_uri,
+        )
+
+
+class TelegramPromptContext(BaseModel):
+    """Current Telegram input plus ordered parent messages for model context."""
+
+    current_message: TelegramMessageEnvelope
+    parent_messages: list[TelegramPromptMessage] = Field(default_factory=list)
+
+    @classmethod
+    def from_message(
+        cls,
+        message: TelegramMessageEnvelope,
+        parent_messages: list[TelegramPromptMessage] | None = None,
+    ) -> Self:
+        if parent_messages is None:
+            parent_messages = [
+                TelegramPromptMessage(telegram_message_id=message_id)
+                for message_id in message.parent_messages
+            ]
+        return cls(
+            current_message=message,
+            parent_messages=list(parent_messages),
+        )
+
+    def to_prompt_messages(self) -> list[dict[str, Any]]:
+        """Serialize parent and current messages with explicit Telegram IDs."""
+        prompt_messages = [
+            {"role": "parent", **parent.model_dump(mode="json")}
+            for parent in self.parent_messages
+        ]
+        current = TelegramPromptMessage.from_envelope(self.current_message).model_dump(
+            mode="json"
+        )
+        current["parent_message_ids"] = [
+            parent.telegram_message_id for parent in self.parent_messages
+        ]
+        prompt_messages.append({"role": "current", **current})
+        return prompt_messages
 
 
 class TelegramAgentPollBatch(BaseModel):
@@ -198,16 +272,15 @@ class PositionSizingDecision(BaseModel):
     final_position_notional_usdt: Decimal = Field(ge=Decimal("0"))
 
 
-class RiskDecision(BaseModel):
-    approved: bool
-    max_position_notional_usdt: Decimal
-    max_leverage: int
-    allowed_exchanges: list[ExchangeId]
+class ConfidenceDecision(BaseModel):
+    approved: bool = True
+    confidence: float = Field(ge=0.0, le=1.0)
+    strategy_tier: StrategyTier
     reasons: list[str] = Field(default_factory=list)
 
 
 class ApprovedExecutionRequest(BaseModel):
     intent: CanonicalTradeIntent
     sizing: PositionSizingDecision
-    risk: RiskDecision
+    confidence: ConfidenceDecision
     idempotency_key: str

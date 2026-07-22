@@ -56,6 +56,7 @@ def normalize_telegram_agent_message(
         received_at=observed_at or datetime.now(timezone.utc),
         sender_id=retrieved.from_id,
         reply_to_message_id=retrieved.reply_to_msg_id,
+        parent_messages=[retrieved.reply_to_msg_id] if retrieved.reply_to_msg_id else [],
         forwarded_from_id=retrieved.forward_from,
         edited_at=retrieved.edit_date,
         retrieval_cursor=retrieval_cursor,

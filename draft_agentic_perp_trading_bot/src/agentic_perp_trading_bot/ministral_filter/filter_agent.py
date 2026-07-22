@@ -5,7 +5,11 @@ from __future__ import annotations
 from agentic_perp_trading_bot.ministral_filter.signal_deduplication import (
     InMemorySignalDeduplicator,
 )
-from agentic_perp_trading_bot.schemas import FilterDecision, QwenSignalHypothesis
+from agentic_perp_trading_bot.schemas import (
+    FilterDecision,
+    QwenSignalHypothesis,
+    TelegramPromptContext,
+)
 
 
 class MinistralFilterAgent:
@@ -17,8 +21,23 @@ class MinistralFilterAgent:
         self.model_id = model_id
         self.signal_deduplicator = signal_deduplicator
 
-    async def review(self, hypothesis: QwenSignalHypothesis) -> FilterDecision:
+    def build_prompt_messages(
+        self,
+        hypothesis: QwenSignalHypothesis,
+        prompt_context: TelegramPromptContext,
+    ) -> list[dict[str, object]]:
+        return [
+            *prompt_context.to_prompt_messages(),
+            {"role": "qwen_hypothesis", **hypothesis.model_dump(mode="json")},
+        ]
+
+    async def review(
+        self,
+        hypothesis: QwenSignalHypothesis,
+        prompt_context: TelegramPromptContext,
+    ) -> FilterDecision:
         """Validate, deduplicate, quality-score, and canonicalize a QWEN hypothesis."""
+        _ = self.build_prompt_messages(hypothesis, prompt_context)
         deduplication = None
         if self.signal_deduplicator is not None:
             deduplication = self.signal_deduplicator.check(hypothesis)

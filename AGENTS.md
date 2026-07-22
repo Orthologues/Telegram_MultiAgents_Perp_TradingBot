@@ -6,7 +6,7 @@ This repository is a deliberately non-executing scaffold for a Telegram-driven
 multi-agent perpetual-futures bot. Keep changes small, explicit, and consistent
 with the [AgenticPerpTradingBotArch flowchart](https://www.figma.com/board/IosVAXW713NeWhTTU962vC/AgenticPerpTradingBotArch-Flowchart).
 The implementation map is
-[`draft_agentic_perp_trading_bot/docs/figma_flowchart_mapping.md`](draft_agentic_perp_trading_bot/docs/figma_flowchart_mapping.md).
+[`draft_agentic_perp_trading_bot/docs/arch_to_filename_mapping.md`](draft_agentic_perp_trading_bot/docs/arch_to_filename_mapping.md).
 
 Do not describe placeholder code as live trading code. Never commit API keys,
 Telegram API hashes, authorized user sessions, MCP tokens, signatures, or local
@@ -25,7 +25,7 @@ Telegram channels readable by an authorized user account
   -> one QWEN3-VL agent per owner
   -> Ministral3-8B or -14B validation and trading-signal deduplication
   -> performance/weight engine
-  -> deterministic risk and policy engine
+  -> confidence engine with pair-blacklist and instant-price checks
   -> Bitget/BitMart gateway
   -> Lambda execution with Secrets Manager
 ```
@@ -49,7 +49,17 @@ concurrent clients. AG2 retrieval returns text and a media-presence flag, not
 media bytes, so hydrate media through an adjacent authenticated adapter before
 archiving it in S3. Persist message metadata and media first, then atomically
 advance the per-channel cursor in DynamoDB. This preserves at-least-once
-delivery across worker restarts.
+delivery across worker restarts. Before Bedrock delivery, populate
+`parent_messages` with all earlier reply-tree message IDs from the owner-scoped
+in-memory index in oldest-to-newest order; write the enriched record to
+DynamoDB, but do not read DynamoDB for parent reconstruction.
+Build a `TelegramPromptContext` from the in-memory snapshots and pass the same
+context to QWEN and Ministral. The prompt must contain one ID-labeled block per
+parent, oldest first, followed by the current message block.
+DynamoDB message metadata is primarily the historical record for replay,
+backtesting, and strategy optimization, including omitted take-profit or
+stop-loss inference outcomes and deterministic pair-blacklisting criteria. It
+is not a live parent-context source for model prompts.
 
 The four QWEN agents are owner-specific. Channel and asset-group metadata stay
 attached to the message; they do not create extra agents:
@@ -69,13 +79,15 @@ The Ministral 8B and 14B variants must implement the same interface so they can
 be A/B-tested. The filter validates schema, rejects prompt-injected or
 ambiguous content, deduplicates equivalent hypotheses, and emits a normalized
 `CanonicalTradeIntent` only when approved. Position sizing, leverage, symbols,
-cooldowns, conflicts, and slippage remain deterministic code.
+strategy-tier selection and the two explicit execution checks remain
+deterministic code.
 
 When an order omits a stop-loss, the owner-specific QWEN stop-loss inference
 skill must propose a candidate price from serial RAG examples and market
-context. Before evaluating that candidate, the deterministic risk engine must
-reject pairs on the temporary blacklist. An instant trading order with an
-inferred stop-loss is never an automatic execution authorization.
+context. Before evaluating that candidate, the confidence engine must reject a
+blacklisted pair. For an instant order, the MCP-supplied current price must not
+be too distant from the message reference price. An inferred stop-loss remains
+a backtestable strategy input, not a separate hard rejection rule.
 
 The temporary pair blacklist is calculated deterministically from net closed
 trade outcomes over a trailing 90-day window. QWEN confidence or reasoning
@@ -105,7 +117,7 @@ TelegramAgent-retrieved sequence
   -> QWEN reasoning
   -> structured trade hypothesis
   -> MCP validation or simulation
-  -> deterministic risk checks
+  -> confidence tier and explicit execution checks
   -> result, error, and evaluation record
 ```
 
@@ -113,7 +125,8 @@ The RAG examples must preserve serial Chinese message context, intended
 execution orders for each strategy tier, and incorrectly executed examples.
 QWEN interprets the sequence and produces the hypothesis; it never submits an
 order. MCP validation or simulation checks exchange-specific behavior, while
-deterministic risk code remains the final policy gate. Every accepted,
+the confidence engine records the strategy tier and explicit rejection reason.
+Every accepted,
 rejected, simulated, or failed path must produce a traceable evaluation record.
 
 ## Repository Rules
@@ -180,14 +193,15 @@ with the owner-specific QWEN RAG corpus:
    submit an order.
 7. Persist the source sequence, candidate set, RAG profile version, model id,
    decision, and confidence before passing accepted context to the downstream
-   filter and risk layers.
+   filter and confidence layers.
 8. Evaluate a labeled replay set for false merges, missed duplicates,
    continuation-link accuracy, incorrect-execution detection, and new-signal
    recall. A false merge is more dangerous than processing one repeated
    message.
 
 The deterministic Python layer should own byte/media hashing, candidate
-retrieval, idempotent persistence, schema validation, and policy gates. QWEN
+retrieval, idempotent persistence, schema validation, confidence tier mapping,
+and the two explicit execution checks. QWEN
 must own the interpretation of owner-specific, serial Chinese language and
 execution examples. For an order-path change, add or update the deterministic
-policy test before connecting any MCP or Lambda execution code.
+confidence-policy test before connecting any MCP or Lambda execution code.

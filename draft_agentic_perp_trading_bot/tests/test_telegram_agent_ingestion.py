@@ -22,19 +22,28 @@ from agentic_perp_trading_bot.telegram_ingestion.pipeline import (
     BedrockInputPublisher,
     TelegramIngestionPipeline,
 )
+from agentic_perp_trading_bot.telegram_ingestion.reply_tree import (
+    InMemoryReplyTreeIndexRegistry,
+)
 from agentic_perp_trading_bot.telegram_ingestion.storage import (
     InMemoryMessageMetadataRepository,
     InMemoryRawMediaArchive,
 )
 
 
-def _retrieved_message(message_id: str, *, text: str = "ETH 多", media: bool = False) -> dict:
+def _retrieved_message(
+    message_id: str,
+    *,
+    text: str = "ETH 多",
+    media: bool = False,
+    reply_to_msg_id: str | None = None,
+) -> dict:
     return {
         "id": message_id,
         "date": "2026-07-20T09:30:00+00:00",
         "from_id": "PeerUser(user_id=42)",
         "text": text,
-        "reply_to_msg_id": None,
+        "reply_to_msg_id": reply_to_msg_id,
         "forward_from": None,
         "edit_date": None,
         "media": media,
@@ -61,6 +70,18 @@ def test_telegram_agent_normalizer_preserves_retrieval_provenance() -> None:
     assert envelope.source_timestamp == datetime(2026, 7, 20, 9, 30, tzinfo=timezone.utc)
     assert envelope.received_at == observed_at
     assert envelope.raw_media_present is True
+    assert envelope.parent_messages == []
+
+
+def test_normalizer_preserves_direct_parent_message_id() -> None:
+    envelope = normalize_telegram_agent_message(
+        _retrieved_message("123", reply_to_msg_id="121"),
+        channel_id="owner_a_channel_a",
+        telegram_chat_id="-1001234567890",
+    )
+
+    assert envelope.reply_to_message_id == "121"
+    assert envelope.parent_messages == ["121"]
 
 
 def test_unhydrated_media_messages_do_not_share_an_exact_dedup_key() -> None:
@@ -233,8 +254,8 @@ def test_pipeline_persists_records_and_publishes_only_unique_messages() -> None:
 
     published: list[str] = []
 
-    async def publish(message) -> None:
-        published.append(message.telegram_message_id)
+    async def publish(context) -> None:
+        published.append(context.current_message.telegram_message_id)
 
     async def scenario() -> None:
         retriever = CallableTelegramAgentRetriever(
@@ -270,3 +291,159 @@ def test_pipeline_persists_records_and_publishes_only_unique_messages() -> None:
         assert await cursor_store.load("owner_a_channel_a") == "102"
 
     asyncio.run(scenario())
+
+
+def test_pipeline_expands_parent_messages_in_chronological_order() -> None:
+    async def retrieve(
+        *, messages_since: str | None, maximum_messages: int | None
+    ) -> dict:
+        return {
+            "message_count": 3,
+            "messages": [
+                _retrieved_message("103", text="close", reply_to_msg_id="102"),
+                _retrieved_message("102", text="add", reply_to_msg_id="101"),
+                _retrieved_message("101", text="open"),
+            ],
+            "start_time": messages_since or "latest",
+        }
+
+    published = []
+
+    async def publish(context) -> None:
+        published.append(context)
+
+    async def scenario() -> None:
+        retriever = CallableTelegramAgentRetriever(
+            telegram_chat_id="-1001234567890",
+            retrieve=retrieve,
+        )
+        poller = TelegramAgentPoller(
+            retrievers={"owner_a_channel_a": retriever},
+            cursor_store=InMemoryTelegramCursorStore(),
+        )
+        metadata = InMemoryMessageMetadataRepository()
+        pipeline = TelegramIngestionPipeline(
+            poller=poller,
+            raw_media_archive=InMemoryRawMediaArchive(),
+            metadata_repository=metadata,
+            bedrock_publisher=BedrockInputPublisher(publish),
+        )
+
+        await pipeline.process_once(
+            TelegramAgentChannelConfig(
+                channel_id="owner_a_channel_a",
+                telegram_chat_id="-1001234567890",
+            )
+        )
+
+        assert [context.current_message.telegram_message_id for context in published] == [
+            "101",
+            "102",
+            "103",
+        ]
+        assert published[0].parent_messages == []
+        assert published[1].parent_messages[0].telegram_message_id == "101"
+        assert [parent.telegram_message_id for parent in published[2].parent_messages] == [
+            "101",
+            "102",
+        ]
+        assert [prompt["telegram_message_id"] for prompt in published[2].to_prompt_messages()] == [
+            "101",
+            "102",
+            "103",
+        ]
+        assert metadata.records[-1].message.parent_messages == ["101", "102"]
+
+    asyncio.run(scenario())
+
+
+def test_pipeline_traverses_prior_sibling_replies() -> None:
+    async def retrieve(
+        *, messages_since: str | None, maximum_messages: int | None
+    ) -> dict:
+        return {
+            "message_count": 3,
+            "messages": [
+                _retrieved_message("103", text="C", reply_to_msg_id="101"),
+                _retrieved_message("102", text=None, media=True, reply_to_msg_id="101"),
+                _retrieved_message("101", text="A"),
+            ],
+            "start_time": messages_since or "latest",
+        }
+
+    published = []
+
+    async def publish(context) -> None:
+        published.append(context)
+
+    async def scenario() -> None:
+        retriever = CallableTelegramAgentRetriever(
+            telegram_chat_id="-1001234567890",
+            retrieve=retrieve,
+        )
+        poller = TelegramAgentPoller(
+            retrievers={"owner_a_channel_a": retriever},
+            cursor_store=InMemoryTelegramCursorStore(),
+        )
+        metadata = InMemoryMessageMetadataRepository()
+        pipeline = TelegramIngestionPipeline(
+            poller=poller,
+            raw_media_archive=InMemoryRawMediaArchive(),
+            metadata_repository=metadata,
+            bedrock_publisher=BedrockInputPublisher(publish),
+        )
+
+        await pipeline.process_once(
+            TelegramAgentChannelConfig(
+                channel_id="owner_a_channel_a",
+                telegram_chat_id="-1001234567890",
+            )
+        )
+
+        assert published[-1].current_message.telegram_message_id == "103"
+        assert [parent.telegram_message_id for parent in published[-1].parent_messages] == [
+            "101",
+            "102",
+        ]
+        assert [prompt["role"] for prompt in published[-1].to_prompt_messages()] == [
+            "parent",
+            "parent",
+            "current",
+        ]
+        assert metadata.records[-1].message.parent_messages == ["101", "102"]
+
+    asyncio.run(scenario())
+
+
+def test_reply_tree_index_is_scoped_to_each_owner_qwen_agent() -> None:
+    registry = InMemoryReplyTreeIndexRegistry()
+    owner_a_index = registry.for_owner(OwnerId.OWNER_A_SHU_QIN)
+
+    root = normalize_telegram_agent_message(
+        _retrieved_message("100", text="A"),
+        channel_id="owner_a_channel_a",
+        telegram_chat_id="-1001234567890",
+    )
+    sibling = normalize_telegram_agent_message(
+        _retrieved_message("101", text="B", reply_to_msg_id="100"),
+        channel_id="owner_a_channel_a",
+        telegram_chat_id="-1001234567890",
+    )
+    current_owner_a = normalize_telegram_agent_message(
+        _retrieved_message("102", text="C", reply_to_msg_id="100"),
+        channel_id="owner_a_channel_a",
+        telegram_chat_id="-1001234567890",
+    )
+    current_owner_b = normalize_telegram_agent_message(
+        _retrieved_message("102", text="C", reply_to_msg_id="100"),
+        channel_id="owner_b_channel_a",
+        telegram_chat_id="-1001234567890",
+    )
+
+    owner_a_index.add(root)
+    owner_a_index.add(sibling)
+
+    assert owner_a_index.parent_messages_for(current_owner_a) == ["100", "101"]
+    assert registry.for_owner(OwnerId.OWNER_B_LAO_TU).parent_messages_for(current_owner_b) == [
+        "100"
+    ]

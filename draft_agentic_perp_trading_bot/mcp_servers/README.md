@@ -9,4 +9,4 @@ The intended split is:
 
 - MCP transport: Streamable HTTP at `/mcp`
 - market/account state: WebSocket workers where practical
-- signed order execution: REST requests or AWS Lambda execution after filter/risk approval
+- signed order execution: REST requests or AWS Lambda execution after filter and explicit confidence-policy approval

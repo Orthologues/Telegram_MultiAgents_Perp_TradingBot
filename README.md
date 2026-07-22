@@ -1,8 +1,8 @@
 # Telegram MultiAgent Perpetual Trading Bot
 
 This repository contains a non-executing Python scaffold for converting four
-owner-specific Chinese Telegram trading channels into validated, weighted, and
-risk-checked perpetual-futures execution requests.
+owner-specific Chinese Telegram trading channels into confidence-ranked,
+weighted, and backtestable perpetual-futures strategy requests.
 
 The primary challenge is the hyper-unstructured and often vague language of
 Chinese text in Telegram trading channels, including implicit entries,
@@ -11,7 +11,11 @@ exits, context, screenshots, and owner-specific terminology.
 Telegram ingestion runs as one shared polling worker using one authorized user
 session. Channel-specific chat IDs, cursors, and provenance are handled by
 lightweight retrieval adapters within that worker; the scaffold does not
-require one independently deployed TelegramAgent service per channel.
+require one independently deployed TelegramAgent service per channel. Each
+delivered message includes oldest-to-newest `parent_messages` IDs for serial
+reply-tree context retrieval. The reply-tree index is maintained in memory per
+owner QWEN agent; DynamoDB receives enriched metadata but is not read for this
+context.
 
 ## Fastest Test
 

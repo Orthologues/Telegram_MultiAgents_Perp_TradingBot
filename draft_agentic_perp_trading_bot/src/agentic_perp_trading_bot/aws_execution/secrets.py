@@ -11,7 +11,7 @@ class SecretName(StrEnum):
     TELEGRAM_API_CREDENTIALS = "agentic-perp-trading-bot/telegram/api-credentials"
     TELEGRAM_USER_SESSION = "agentic-perp-trading-bot/telegram/user-session"
     MCP_AUTH_TOKEN = "agentic-perp-trading-bot/mcp/auth-token"
-    KILL_SWITCH_CONFIG = "agentic-perp-trading-bot/risk/kill-switch-config"
+    KILL_SWITCH_CONFIG = "agentic-perp-trading-bot/confidence/kill-switch-config"
 
 
 def get_secret_payload(secret_name: SecretName) -> dict:
