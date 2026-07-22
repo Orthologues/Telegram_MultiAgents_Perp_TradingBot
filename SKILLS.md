@@ -6,7 +6,7 @@ This file is a compact index of repeatable repository workflows. It complements
 ## Flowchart to Scaffold
 
 Use the Figma board as the design source and
-`draft_agentic_perp_trading_bot/docs/arch_to_filename_mapping.md` as the code
+`draft_agentic_perp_trading_bot/architecture_to_code_mapping.md` as the code
 mapping.
 
 Example:
@@ -40,6 +40,11 @@ media in S3, store searchable metadata in DynamoDB, and compute a stable input
 deduplication key. AG2 exposes only a media-presence flag, so use an adjacent
 authenticated media hydrator to obtain bytes and hashes before cursor commit.
 
+For the A-zhu private-chat workflow, use the minimalist Chinese reply skill
+when a short acknowledgment is explicitly required. Keep this response path
+separate from retrieval and exchange execution: it may acknowledge receipt, but
+it must not infer trade parameters, confirm execution, or replace QWEN analysis.
+
 Example path:
 
 ```text
@@ -69,6 +74,14 @@ Treat the DynamoDB message history primarily as a replay dataset for backtesting
 and strategy optimization. Retain omitted take-profit/stop-loss cases, inferred
 levels, later updates, execution outcomes, and the inputs used for deterministic
 pair-blacklisting analysis; do not read it to assemble live model context.
+
+## Minimalist Chinese Reply
+
+Use this skill only for the A-zhu private-chat workflow when a concise response
+is explicitly required. Produce a brief Chinese acknowledgment equivalent to
+"yes" or "ok", without adding market commentary, inferred stop-loss or
+take-profit levels, execution claims, or new trading instructions. Preserve the
+source message and response provenance for later replay and review.
 
 ## Agentic Deduplication
 

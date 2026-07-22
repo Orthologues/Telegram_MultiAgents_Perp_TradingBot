@@ -67,9 +67,9 @@ attached to the message; they do not create extra agents:
 | Owner | Routing examples | Caveats / challenges |
 | --- | --- | --- |
 | A, Shu-qin | Mixed BTC/ETH, alts, and TradFi; day or longer strategy | Wording is more ambiguous and message updates are less frequent. |
-| B, Lao-tu | BTC/ETH channel plus alts/TradFi channel; strategy lasting 1-3 days | Instant altcoin orders often omit a stop-loss. Use the stop-loss inference skill; do not use a fixed keyword rule. |
-| C, Bi-jia-suo | BTC/ETH channel plus alts/TradFi channel; day strategy | Instant altcoin orders often omit a stop-loss. Use the stop-loss inference skill; do not use a fixed keyword rule. |
-| D, A-zhu | BTC/ETH channel plus day and longer alts/TradFi channels; three separate channels | Likely inactive since mid-June 2026; use signals for backtesting only. |
+| B, Lao-tu | BTC/ETH channel plus alts/TradFi channel; strategy lasting 1-3 days | Instant altcoin orders often omit stop-loss and take-profit prices. Follow-up messages providing those prices may arrive minutes to hours later, after the instant order is no longer valid, creating duplicates. The QWEN agent must use the deduplication, stop-loss, and take-profit inference skills; do not use a fixed keyword rule. |
+| C, Bi-jia-suo | BTC/ETH channel plus alts/TradFi channel; day strategy | Instant altcoin orders occasionally omit stop-loss and take-profit prices. The QWEN agent must use the stop-loss and take-profit inference skills; do not use a fixed keyword rule. |
+| D, A-zhu | BTC/ETH channel plus day and longer alts/TradFi channels; three separate channels | The channel has likely been inactive since mid-June 2026. It currently functions only as a private chat in which I receive instant altcoin orders, occasionally with omitted take-profit prices. A short agentic "yes"/"ok" response may therefore be necessary; use the channel's messages for backtesting only. The QWEN agent must use the take-profit inference skill, while the TelegramAgent shall use the "minimalist reply in Chinese" skill. |
 
 Each QWEN agent uses manually maintained serial JSON RAG profiles and emits
 preliminary JSON hypotheses in the conservative, intermediate, and radical
