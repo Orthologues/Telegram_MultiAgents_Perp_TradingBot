@@ -53,6 +53,23 @@ TelegramAgent retrieval
   Chinese acknowledgment skill; it must not infer parameters or confirm
   execution.
 
+## Agent API Interfaces
+
+Typed contracts live in
+`draft_agentic_perp_trading_bot/src/agentic_perp_trading_bot/skills_api/`:
+
+```text
+TelegramAgentAPI.retrieve_messages(...) -> TelegramAgentRetrievalBatch
+OwnerQwenAPI.infer_signal(...) -> QwenSignalHypothesis
+OwnerQwenAPI.infer_synonym(...) -> TradingMessageSynonymDecision
+MinistralFilterAPI.review(...) -> FilterDecision
+```
+
+The shared synonym skill is review-only and is implemented by every
+`OwnerQwenAgent` in `qwen_agents/owner_agent.py`. The minimalist Chinese reply
+skill has no trading API. No agent API may call an exchange; approved execution
+remains behind the MCP gateway.
+
 ## Data and Execution Rules
 
 - Keep input deduplication, semantic QWEN deduplication, and Ministral signal

@@ -1,7 +1,8 @@
-"""Draft owner-specific QWEN agent interface.
+"""Draft owner-specific QWEN agent and shared-skill interface.
 
-Each owner agent consumes Chinese Telegram text/images plus manual RAG JSON profiles
-and returns a JSON trading hypothesis only. It must not call exchange tools.
+Each owner agent consumes Chinese Telegram text/images plus manual RAG JSON
+profiles. It returns reviewable JSON decisions only and must not call exchange
+tools.
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ from agentic_perp_trading_bot.schemas import (
     StrategyTier,
     TelegramMessageEnvelope,
     TelegramPromptContext,
+    TradingMessageSynonymDecision,
 )
 
 
@@ -45,4 +47,21 @@ class OwnerQwenAgent:
             evidence=[],
             ambiguities=["placeholder implementation"],
             source_dedup_key=message.dedup_key,
+        )
+
+    async def infer_synonym(
+        self,
+        message: TelegramMessageEnvelope,
+        prompt_context: TelegramPromptContext,
+    ) -> TradingMessageSynonymDecision:
+        """Run the shared trading-message synonym skill for this owner."""
+        if prompt_context.current_message.telegram_message_id != message.telegram_message_id:
+            raise ValueError("prompt context current message does not match input")
+        return TradingMessageSynonymDecision(
+            owner_id=message.owner_id,
+            channel_id=message.channel_id,
+            telegram_message_id=message.telegram_message_id,
+            confidence=0.0,
+            reasons=["placeholder implementation; authentic serial RAG is pending"],
+            needs_human_review=True,
         )

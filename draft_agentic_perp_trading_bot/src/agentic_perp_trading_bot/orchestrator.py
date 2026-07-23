@@ -5,21 +5,20 @@ from __future__ import annotations
 from decimal import Decimal
 
 from agentic_perp_trading_bot.confidence_engine.policy import evaluate_confidence
-from agentic_perp_trading_bot.ministral_filter.filter_agent import MinistralFilterAgent
 from agentic_perp_trading_bot.performance_engine.weight_engine import compute_position_size
-from agentic_perp_trading_bot.qwen_agents.owner_agent import OwnerQwenAgent
 from agentic_perp_trading_bot.schemas import (
     ApprovedExecutionRequest,
     TelegramMessageEnvelope,
     TelegramPromptContext,
 )
+from agentic_perp_trading_bot.skills_api import MinistralFilterAPI, OwnerQwenAPI
 from agentic_perp_trading_bot.telegram_ingestion.deduplication import InMemoryTelegramDeduplicator
 
 
 async def process_message(
     message: TelegramMessageEnvelope,
-    qwen_agent: OwnerQwenAgent,
-    filter_agent: MinistralFilterAgent,
+    qwen_agent: OwnerQwenAPI,
+    filter_agent: MinistralFilterAPI,
     telegram_deduplicator: InMemoryTelegramDeduplicator | None = None,
     prompt_context: TelegramPromptContext | None = None,
     pair_blacklisted: bool = False,

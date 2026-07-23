@@ -238,6 +238,21 @@ class QwenSignalHypothesis(BaseModel):
     source_dedup_key: str | None = None
 
 
+class TradingMessageSynonymDecision(BaseModel):
+    """Reviewable baseline-synonym inference, never an execution command."""
+
+    owner_id: OwnerId
+    channel_id: str
+    telegram_message_id: str
+    baseline_signal: str | None = None
+    matched_synonym: str | None = None
+    conditional_strategy_id: str | None = None
+    confidence: float = Field(ge=0.0, le=1.0)
+    evidence: list[str] = Field(default_factory=list)
+    reasons: list[str] = Field(default_factory=list)
+    needs_human_review: bool = True
+
+
 class CanonicalTradeIntent(BaseModel):
     owner_id: OwnerId
     channel_id: str

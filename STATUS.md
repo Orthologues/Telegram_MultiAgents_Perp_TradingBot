@@ -3,7 +3,7 @@
 Maintenance rule: **OVERWRITE** this file on every update. It is the single
 source of current state, not a development log. The log is `HISTORY.md`.
 
-Last updated: 2026-07-22
+Last updated: 2026-07-23
 
 ## Phase
 
@@ -15,6 +15,9 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
 - The repository is a human-reviewed, non-executing scaffold; it is not live
   trading software.
 - Sixteen commits are summarized in `HISTORY.md`; current HEAD is `510098f`.
+- Pending changes add an explicit `skills_api/` package and merge review-only
+  synonym inference into `OwnerQwenAPI`/`qwen_agents/owner_agent.py`, without
+  direct exchange access from agents.
 - AG2 TelegramAgent provides pull-based retrieval through one shared Lightsail
   worker, per-chat adapters, one authorized user session, and durable cursors.
 - The scaffold preserves provenance, supports private S3/DynamoDB boundaries,
@@ -24,8 +27,9 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   blacklist or an instant-order MCP price too far from the message reference.
 - The Telethon image hydrator and authentic serial RAG corpus are not yet
   implemented. Current media archival and QWEN multimodal delivery remain
-  scaffold boundaries.
-- Last verification: 20 tests passed; compilation and diff checks passed.
+  scaffold boundaries; synonym inference remains a placeholder until RAG is
+  populated.
+- Last verification: 22 tests passed; compilation and diff checks passed.
 
 ## Next Actions
 

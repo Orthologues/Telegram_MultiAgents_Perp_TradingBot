@@ -357,6 +357,18 @@ canonical intent
   -> ApprovedExecutionRequest
 ```
 
+## Trading Message Synonym Inference
+
+Use QWEN reasoning to infer the meaning of Chinese trading messages quickly.
+Build a baseline vocabulary of signal classes and associate each class with a
+conditional strategy profile indexed by the trading pair's reference price at
+message time. Map each incoming Telegram message to its closest baseline
+synonym and return the matched class, strategy identifier, evidence, and
+confidence. Pass this structured result to Ministral for validation. This skill
+produces no execution command and must not call Bitget or BitMart APIs.
+Its API contract is
+`agentic_perp_trading_bot.skills_api.owner_qwen.OwnerQwenAPI.infer_synonym`.
+
 ## Exchange and AWS Boundary
 
 Keep Bitget and BitMart adapters behind the MCP gateway. Use ECS WebSockets for

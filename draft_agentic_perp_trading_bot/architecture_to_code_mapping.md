@@ -17,7 +17,8 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 - Storage contracts: `agentic_perp_trading_bot.telegram_ingestion.storage`
 - Owner-scoped serial reply trees: `agentic_perp_trading_bot.telegram_ingestion.reply_tree`
 - Telegram multimodal input deduplication: `agentic_perp_trading_bot.telegram_ingestion.deduplication`
-- Owner QWEN agents: `agentic_perp_trading_bot.qwen_agents`
+- Agent-owned skill contracts: `agentic_perp_trading_bot.skills_api`
+- Owner QWEN agents and shared synonym skill: `agentic_perp_trading_bot.qwen_agents.owner_agent`
 - Ministral filter and trading-signal deduplication: `agentic_perp_trading_bot.ministral_filter`
 - Performance and weight engine: `agentic_perp_trading_bot.performance_engine`
 - Confidence engine: `agentic_perp_trading_bot.confidence_engine`

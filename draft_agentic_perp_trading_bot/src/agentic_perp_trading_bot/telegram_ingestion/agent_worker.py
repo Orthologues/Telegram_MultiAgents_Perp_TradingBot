@@ -16,6 +16,7 @@ from agentic_perp_trading_bot.schemas import (
     TelegramAgentPollBatch,
     TelegramAgentRetrievalBatch,
 )
+from agentic_perp_trading_bot.skills_api import TelegramAgentAPI
 from agentic_perp_trading_bot.telegram_ingestion.normalizer import (
     normalize_telegram_agent_message,
 )
@@ -30,17 +31,6 @@ class TelegramRetrieveCallable(Protocol):
         messages_since: str | None,
         maximum_messages: int | None,
     ) -> Awaitable[dict[str, Any] | str]: ...
-
-
-class TelegramAgentRetriever(Protocol):
-    telegram_chat_id: str
-
-    async def retrieve_messages(
-        self,
-        *,
-        messages_since: str | None,
-        maximum_messages: int | None,
-    ) -> TelegramAgentRetrievalBatch: ...
 
 
 class TelegramCursorStore(Protocol):
@@ -140,7 +130,7 @@ class TelegramAgentPoller:
     def __init__(
         self,
         *,
-        retrievers: Mapping[str, TelegramAgentRetriever],
+        retrievers: Mapping[str, TelegramAgentAPI],
         cursor_store: TelegramCursorStore,
         clock: Callable[[], datetime] | None = None,
     ) -> None:

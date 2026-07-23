@@ -104,3 +104,10 @@ constraints and requires careful human review before further use.
 
 Deleted `TODO.md` and kept the active priorities in `STATUS.md`, while
 preserving the append-only history and current-state documentation split.
+
+### 2026-07-23 — pending: explicit agent API interfaces and synonym inference
+
+Corrected the Trading Message Synonym Inference skill and added the explicit
+`skills_api/` package. Merged the review-only synonym skill into every
+`OwnerQwenAgent`, updated the scaffold documentation and file map, and kept the
+boundary free of exchange calls.

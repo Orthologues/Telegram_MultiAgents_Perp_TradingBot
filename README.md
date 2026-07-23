@@ -31,6 +31,10 @@ cd draft_agentic_perp_trading_bot && uv sync --extra aws --extra dev && uv run p
   profiles, and Bitget/BitMart MCP drafts.
 - `AGENTS.md`: architecture contract and repository rules.
 - `SKILLS.md`: concise implementation workflows.
+- `draft_agentic_perp_trading_bot/src/agentic_perp_trading_bot/skills_api/`:
+  typed skill APIs for TelegramAgent, QWEN, Ministral, and synonym inference.
+- `draft_agentic_perp_trading_bot/src/agentic_perp_trading_bot/qwen_agents/owner_agent.py`:
+  owner QWEN API and shared review-only trading-message synonym skill.
 - `preliminary_flowchart_Figma.png`: local architecture snapshot.
 
 The design source is the [AgenticPerpTradingBotArch flowchart](https://www.figma.com/board/IosVAXW713NeWhTTU962vC/AgenticPerpTradingBotArch).
