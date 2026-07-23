@@ -14,10 +14,9 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
 
 - The repository is a human-reviewed, non-executing scaffold; it is not live
   trading software.
-- Sixteen commits are summarized in `HISTORY.md`; current HEAD is `510098f`.
-- Pending changes add an explicit `skills_api/` package and merge review-only
-  synonym inference into `OwnerQwenAPI`/`qwen_agents/owner_agent.py`, without
-  direct exchange access from agents.
+- Seventeen commits are summarized in `HISTORY.md`; current HEAD is `27cce05`.
+- `OwnerQwenAPI` includes the shared review-only synonym skill through
+  `qwen_agents/owner_agent.py`, without direct exchange access from agents.
 - AG2 TelegramAgent provides pull-based retrieval through one shared Lightsail
   worker, per-chat adapters, one authorized user session, and durable cursors.
 - The scaffold preserves provenance, supports private S3/DynamoDB boundaries,

@@ -1,0 +1,5 @@
+{
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/draft_agentic_perp_trading_bot/src"
+  ]
+}
