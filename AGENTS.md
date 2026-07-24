@@ -52,8 +52,7 @@ TelegramAgent retrieval
   derives omitted stop-losses from MCP liquidity and `5m`/`15m`/`1h`/`4h`
   KDJ, Bollinger-width, and Average True Range (ATR) inputs within a one-second budget.
 - Confidence selects the strategy tier. Hard rejection is limited to a
-  deterministic pair blacklist or an instant-order MCP current price too far
-  from the message reference price. Omitted TP/SL inference remains a
+  deterministic pair blacklist or an instant-order MCP current price deviating the message reference price above a certain threshold (SEE `./STATUS.md` for reference). Omitted TP/SL inference remains a
   backtestable input, not a separate hard rejection. QWEN must leave an omitted
   stop-loss unset.
 - A-zhu's private-chat workflow may use a separately authorized minimalist

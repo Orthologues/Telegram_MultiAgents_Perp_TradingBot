@@ -24,7 +24,7 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   maintains owner-scoped in-memory reply trees, and sends chronological parent
   context to QWEN and Ministral.
 - Confidence selects strategy tiers. Hard rejection is limited to a pair
-  blacklist or an instant-order MCP price deviated over 0.5% (generic altcoins), 0.25% (BNB, ETH, SOL, TradFi perpetual future pairs) or 0.125% (BTC) the message reference.
+  blacklist or an instant-order MCP price deviating over `0.5%` (generic altcoins), `0.25%` (BNB, ETH, SOL, TradFi perpetual future pairs) or `0.125%` (BTC) the message reference.
 - The scaffold moves omitted stop-loss derivation from QWEN to a versioned
   Ministral policy using MCP market cap, volume, and `5m`/`15m`/`1h`/`4h`
   KDJ, Bollinger-width, and ATR inputs, bounded to `1.25%`-`7.5%` with a
