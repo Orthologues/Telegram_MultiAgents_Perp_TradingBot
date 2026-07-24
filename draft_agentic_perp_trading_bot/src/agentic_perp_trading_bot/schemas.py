@@ -502,6 +502,14 @@ class ConfidenceDecision(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     strategy_tier: StrategyTier
     reasons: list[str] = Field(default_factory=list)
+    instant_price_deviation: Decimal | None = Field(
+        default=None,
+        ge=Decimal("0"),
+    )
+    maximum_instant_price_deviation: Decimal | None = Field(
+        default=None,
+        ge=Decimal("0"),
+    )
 
 
 class ApprovedExecutionRequest(BaseModel):

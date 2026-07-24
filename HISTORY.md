@@ -129,3 +129,9 @@ tests; the scaffold remains non-executing and requires human review.
 Clarified in `AGENTS.md` that this prompted-generated scaffold requires careful
 human code review and backtesting of previous Telegram trading signals before
 further use.
+
+### 2026-07-24 — pending: aligned instant-order deviation thresholds
+
+Implemented deterministic `0.5%`, `0.25%`, and `0.125%` price-deviation limits
+for generic altcoins, major/TradFi perpetuals, and BTC, respectively, with
+explicit mixed-channel TradFi classification and boundary tests.

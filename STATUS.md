@@ -14,7 +14,7 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
 
 - The repository is a human-reviewed, non-executing scaffold; it is not live
   trading software.
-- Nineteen commits are summarized in `HISTORY.md`; current HEAD is `1c1c768`.
+- Twenty commits are summarized in `HISTORY.md`; current HEAD is `f0f609b`.
 - `OwnerQwenAPI` includes shared review-only synonym and reduce-and-protect
   skills, while `MinistralFilterAPI` includes MCP take-profit protection; no
   agent has direct exchange access.
@@ -24,7 +24,7 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   maintains owner-scoped in-memory reply trees, and sends chronological parent
   context to QWEN and Ministral.
 - Confidence selects strategy tiers. Hard rejection is limited to a pair
-  blacklist or an instant-order MCP price too far from the message reference.
+  blacklist or an instant-order MCP price deviated over 0.5% (generic altcoins), 0.25% (BNB, ETH, SOL, TradFi perpetual future pairs) or 0.125% (BTC) the message reference.
 - The scaffold moves omitted stop-loss derivation from QWEN to a versioned
   Ministral policy using MCP market cap, volume, and `5m`/`15m`/`1h`/`4h`
   KDJ, Bollinger-width, and ATR inputs, bounded to `1.25%`-`7.5%` with a
@@ -36,7 +36,7 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   implemented. Current media archival and QWEN multimodal delivery remain
   scaffold boundaries; synonym inference remains a placeholder until RAG is
   populated.
-- Last verification: 50 tests passed with the active Python 3.11 environment;
+- Last verification: 58 tests passed with the active Python 3.11 environment;
   `uv` remains unavailable in the sandbox because of Snap permissions.
 
 ## Next Actions

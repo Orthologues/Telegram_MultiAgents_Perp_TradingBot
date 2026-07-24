@@ -18,7 +18,7 @@ owner QWEN agent; DynamoDB receives enriched metadata but is not read for this
 context.
 
 Omitted stop-losses are derived at the Ministral boundary from typed MCP
-liquidity plus KDJ, Bollinger-width, and ATR inputs at `5m`, `15m`, `1h`, and
+liquidity plus KDJ, Bollinger-width, and Average True Range (ATR) inputs at `5m`, `15m`, `1h`, and
 `4h`, constrained to `1.25%`-`7.5%` of current price. QWEN does not infer them.
 
 ## Fastest Test

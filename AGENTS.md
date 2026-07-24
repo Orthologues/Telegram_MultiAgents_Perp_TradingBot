@@ -50,7 +50,7 @@ TelegramAgent retrieval
 - Ministral validates schema/evidence, deduplicates equivalent hypotheses,
   handles authenticated MCP take-profit fill protection, and deterministically
   derives omitted stop-losses from MCP liquidity and `5m`/`15m`/`1h`/`4h`
-  KDJ, Bollinger-width, and ATR inputs within a one-second budget.
+  KDJ, Bollinger-width, and Average True Range (ATR) inputs within a one-second budget.
 - Confidence selects the strategy tier. Hard rejection is limited to a
   deterministic pair blacklist or an instant-order MCP current price too far
   from the message reference price. Omitted TP/SL inference remains a

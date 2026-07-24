@@ -26,6 +26,7 @@ async def process_message(
     current_price: Decimal | None = None,
     reference_price: Decimal | None = None,
     market_snapshot: MarketAnalysisSnapshot | None = None,
+    tradfi_perpetual_pair: bool = False,
 ) -> ApprovedExecutionRequest | None:
     """Run one normalized message through confidence-based backtest stages."""
     if telegram_deduplicator is not None:
@@ -59,6 +60,9 @@ async def process_message(
         instant_order=canonical_intent.order_type == "market",
         current_price=effective_current_price,
         reference_price=reference_price,
+        symbol=canonical_intent.symbol,
+        asset_group=canonical_intent.asset_group,
+        tradfi_perpetual_pair=tradfi_perpetual_pair,
     )
     if not confidence.approved:
         return None
