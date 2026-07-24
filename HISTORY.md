@@ -116,3 +116,10 @@ boundary free of exchange calls.
 
 Updated `HISTORY.md` and `STATUS.md` for `27cce05` and added the VS Code source
 path needed for Pylance to resolve the package.
+
+### 2026-07-24 — `1c1c768`: added position-management skills
+
+Added multi-timeframe deterministic omitted stop-loss derivation, the owner
+QWEN reduce-and-protect hypothesis, and Ministral MCP take-profit fill
+protection. Added typed skill APIs, gateway boundaries, schemas, and focused
+tests; the scaffold remains non-executing and requires human review.

@@ -14,9 +14,10 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
 
 - The repository is a human-reviewed, non-executing scaffold; it is not live
   trading software.
-- Eighteen commits are summarized in `HISTORY.md`; current HEAD is `a02e839`.
+- Nineteen commits are summarized in `HISTORY.md`; current HEAD is `1c1c768`.
 - `OwnerQwenAPI` includes shared review-only synonym and reduce-and-protect
-  skills through `qwen_agents/owner_agent.py`, without direct exchange access.
+  skills, while `MinistralFilterAPI` includes MCP take-profit protection; no
+  agent has direct exchange access.
 - AG2 TelegramAgent provides pull-based retrieval through one shared Lightsail
   worker, per-chat adapters, one authorized user session, and durable cursors.
 - The scaffold preserves provenance, supports private S3/DynamoDB boundaries,
@@ -24,12 +25,13 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   context to QWEN and Ministral.
 - Confidence selects strategy tiers. Hard rejection is limited to a pair
   blacklist or an instant-order MCP price too far from the message reference.
-- Pending changes move omitted stop-loss derivation from QWEN to a versioned
+- The scaffold moves omitted stop-loss derivation from QWEN to a versioned
   Ministral policy using MCP market cap, volume, and `5m`/`15m`/`1h`/`4h`
   KDJ, Bollinger-width, and ATR inputs, bounded to `1.25%`-`7.5%` with a
   one-second reasoning budget.
 - Ministral also exposes typed MCP-event protection for TP1 entry protection
-  and TP2-to-TP1 stop movement while TP3 remains pending.
+  and TP2-to-TP1 stop movement while TP3 remains pending, with idempotent
+  decisions that never loosen an existing stop.
 - The Telethon image hydrator and authentic serial RAG corpus are not yet
   implemented. Current media archival and QWEN multimodal delivery remain
   scaffold boundaries; synonym inference remains a placeholder until RAG is
