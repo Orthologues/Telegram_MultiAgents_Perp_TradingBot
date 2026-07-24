@@ -123,3 +123,9 @@ Added multi-timeframe deterministic omitted stop-loss derivation, the owner
 QWEN reduce-and-protect hypothesis, and Ministral MCP take-profit fill
 protection. Added typed skill APIs, gateway boundaries, schemas, and focused
 tests; the scaffold remains non-executing and requires human review.
+
+### 2026-07-24 — pending: clarified human-review requirements
+
+Clarified in `AGENTS.md` that this prompted-generated scaffold requires careful
+human code review and backtesting of previous Telegram trading signals before
+further use.

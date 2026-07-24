@@ -2,8 +2,11 @@
 
 ## Scope
 
-This repository is a human-reviewed, non-executing scaffold for a
-Telegram-driven perpetual-futures bot. Keep changes small and consistent with
+This repository is a human-harnessed, non-executing scaffold for a
+Telegram-driven perpetual-futures bot, generated predominantly by Codex
+GPT-5.6 Sol and GPT-5.6 Luna. Careful human review of the codebase and
+backtesting of previous Telegram trading signals are required before further
+use. Keep changes small and consistent with
 the [Figma architecture flowchart](https://www.figma.com/board/IosVAXW713NeWhTTU962vC/AgenticPerpTradingBotArch-Flowchart)
 and [`architecture_to_code_mapping.md`](draft_agentic_perp_trading_bot/architecture_to_code_mapping.md).
 Never commit credentials, Telegram sessions, tokens, signatures, or secret
