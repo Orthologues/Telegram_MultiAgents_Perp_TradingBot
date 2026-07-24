@@ -14,6 +14,7 @@ from agentic_perp_trading_bot.schemas import (
 )
 from agentic_perp_trading_bot.skills_api import MinistralFilterAPI, OwnerQwenAPI
 from agentic_perp_trading_bot.telegram_ingestion.deduplication import InMemoryTelegramDeduplicator
+from agentic_perp_trading_bot.trade_cursor import ConcurrentTradeCursorManager
 
 
 async def process_message(
@@ -27,14 +28,20 @@ async def process_message(
     reference_price: Decimal | None = None,
     market_snapshot: MarketAnalysisSnapshot | None = None,
     tradfi_perpetual_pair: bool = False,
+    trade_cursor_manager: ConcurrentTradeCursorManager | None = None,
 ) -> ApprovedExecutionRequest | None:
-    """Run one normalized message through confidence-based backtest stages."""
+    """Run one normalized message through confidence-based approval stages."""
     if telegram_deduplicator is not None:
         input_deduplication = telegram_deduplicator.check(message)
         if input_deduplication.is_duplicate:
             return None
 
     context = prompt_context or TelegramPromptContext.from_message(message)
+    if trade_cursor_manager is not None:
+        active_trade_cursors = await trade_cursor_manager.resolve_for_message(message)
+        context = context.model_copy(
+            update={"active_trade_cursors": active_trade_cursors}
+        )
     hypothesis = await qwen_agent.infer_signal(message, context)
     hypothesis.source_dedup_key = message.dedup_key
     filter_decision = await filter_agent.review(hypothesis, context, market_snapshot)
@@ -73,9 +80,19 @@ async def process_message(
     sizing = compute_position_size(
         filter_decision.model_copy(update={"canonical_intent": intent})
     )
+    trade_cursors = []
+    if trade_cursor_manager is not None:
+        trade_cursors = await trade_cursor_manager.attach_message_for_intent(
+            message,
+            intent,
+            hypothesis.intent_type,
+        )
     return ApprovedExecutionRequest(
         intent=intent,
         sizing=sizing,
         confidence=confidence,
         idempotency_key=message.dedup_key or f"{message.channel_id}:{message.telegram_message_id}",
+        source_telegram_message_id=message.telegram_message_id,
+        parent_message_ids=list(message.parent_messages),
+        trade_cursor_ids=[cursor.cursor_id for cursor in trade_cursors],
     )

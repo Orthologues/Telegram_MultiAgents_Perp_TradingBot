@@ -70,6 +70,11 @@ class ExchangeId(StrEnum):
     BITMART = "bitmart"
 
 
+class TradeCursorStatus(StrEnum):
+    ACTIVE = "active"
+    CLOSED = "closed"
+
+
 class MarketLiquidityTier(StrEnum):
     LARGE = "large"
     MID = "mid"
@@ -152,7 +157,6 @@ class TelegramMessageEnvelope(BaseModel):
     parent_messages: list[str] = Field(default_factory=list)
     forwarded_from_id: str | None = None
     edited_at: datetime | None = None
-    retrieval_cursor: str | None = None
     raw_text: str | None = None
     raw_media_present: bool = False
     media_s3_uri: str | None = None
@@ -172,6 +176,71 @@ class TelegramMessageEnvelope(BaseModel):
         if message_ids != sorted(message_ids, key=int):
             raise ValueError("parent_messages must be in chronological order")
         return message_ids
+
+
+class ExchangeTradeState(BaseModel):
+    """MCP-observed live orders and positions for one exchange trading pair."""
+
+    exchange_id: ExchangeId
+    symbol: str = Field(min_length=1)
+    direction: PositionDirection
+    active_order_ids: set[str] = Field(default_factory=set)
+    open_position_ids: set[str] = Field(default_factory=set)
+    observed_at: datetime
+
+    @field_validator("active_order_ids", "open_position_ids")
+    @classmethod
+    def validate_exchange_ids(cls, identifiers: set[str]) -> set[str]:
+        if any(not identifier.strip() for identifier in identifiers):
+            raise ValueError("exchange order and position IDs must not be blank")
+        return identifiers
+
+
+class TradeThreadCursor(BaseModel):
+    """Concurrent live trade thread selected through Telegram parent messages."""
+
+    cursor_id: str = Field(min_length=1)
+    owner_id: OwnerId
+    channel_id: str
+    origin_message_id: str = Field(pattern=r"^[0-9]+$")
+    message_ids: list[str] = Field(min_length=1)
+    exchange_id: ExchangeId
+    symbol: str = Field(min_length=1)
+    direction: PositionDirection
+    active_order_ids: set[str] = Field(default_factory=set)
+    open_position_ids: set[str] = Field(default_factory=set)
+    position_was_opened: bool = False
+    status: TradeCursorStatus = TradeCursorStatus.ACTIVE
+    opened_at: datetime
+    updated_at: datetime
+    closed_at: datetime | None = None
+    version: int = Field(default=0, ge=0)
+
+    @field_validator("message_ids")
+    @classmethod
+    def validate_cursor_message_ids(cls, message_ids: list[str]) -> list[str]:
+        if any(not message_id.isdigit() for message_id in message_ids):
+            raise ValueError("trade cursor message_ids must be numeric")
+        if len(message_ids) != len(set(message_ids)):
+            raise ValueError("trade cursor message_ids must not contain duplicates")
+        if message_ids != sorted(message_ids, key=int):
+            raise ValueError("trade cursor message_ids must be chronological")
+        return message_ids
+
+    @model_validator(mode="after")
+    def validate_cursor_lifecycle(self) -> Self:
+        if self.origin_message_id not in self.message_ids:
+            raise ValueError("origin_message_id must be included in message_ids")
+        if self.status == TradeCursorStatus.CLOSED:
+            if not self.position_was_opened:
+                raise ValueError("a cursor cannot close before a position has opened")
+            if self.active_order_ids or self.open_position_ids:
+                raise ValueError("a closed cursor cannot retain active orders or positions")
+            if self.closed_at is None:
+                raise ValueError("a closed cursor requires closed_at")
+        elif self.closed_at is not None:
+            raise ValueError("an active cursor cannot have closed_at")
+        return self
 
 
 class TelegramPromptMessage(BaseModel):
@@ -203,6 +272,7 @@ class TelegramPromptContext(BaseModel):
 
     current_message: TelegramMessageEnvelope
     parent_messages: list[TelegramPromptMessage] = Field(default_factory=list)
+    active_trade_cursors: list[TradeThreadCursor] = Field(default_factory=list)
 
     @classmethod
     def from_message(
@@ -232,6 +302,9 @@ class TelegramPromptContext(BaseModel):
         current["parent_message_ids"] = [
             parent.telegram_message_id for parent in self.parent_messages
         ]
+        current["active_trade_cursors"] = [
+            cursor.model_dump(mode="json") for cursor in self.active_trade_cursors
+        ]
         prompt_messages.append({"role": "current", **current})
         return prompt_messages
 
@@ -239,8 +312,6 @@ class TelegramPromptContext(BaseModel):
 class TelegramAgentPollBatch(BaseModel):
     channel_id: str
     telegram_chat_id: str
-    previous_cursor: str | None = None
-    next_cursor: str | None = None
     messages: list[TelegramMessageEnvelope] = Field(default_factory=list)
 
 
@@ -517,3 +588,6 @@ class ApprovedExecutionRequest(BaseModel):
     sizing: PositionSizingDecision
     confidence: ConfidenceDecision
     idempotency_key: str
+    source_telegram_message_id: str | None = None
+    parent_message_ids: list[str] = Field(default_factory=list)
+    trade_cursor_ids: list[str] = Field(default_factory=list)

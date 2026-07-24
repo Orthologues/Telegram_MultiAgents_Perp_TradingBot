@@ -12,10 +12,11 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 ## Runtime Layer Mapping
 
 - TelegramAgent retrieval and ingestion: `agentic_perp_trading_bot.telegram_ingestion`
-- Per-channel polling and cursor commit: `agentic_perp_trading_bot.telegram_ingestion.agent_worker`
+- Per-channel polling and message receipts: `agentic_perp_trading_bot.telegram_ingestion.agent_worker`
 - S3/DynamoDB ingestion persistence and Bedrock handoff: `agentic_perp_trading_bot.telegram_ingestion.pipeline`
 - Storage contracts: `agentic_perp_trading_bot.telegram_ingestion.storage`
 - Owner-scoped serial reply trees: `agentic_perp_trading_bot.telegram_ingestion.reply_tree`
+- Concurrent parent-linked trade cursors: `agentic_perp_trading_bot.trade_cursor`
 - Telegram multimodal input deduplication: `agentic_perp_trading_bot.telegram_ingestion.deduplication`
 - Agent-owned skill contracts: `agentic_perp_trading_bot.skills_api`
 - Owner QWEN agents and shared interpretation skills: `agentic_perp_trading_bot.qwen_agents.owner_agent`
@@ -37,13 +38,15 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 - Telegram retrieval: one AG2 TelegramAgent configuration per target chat,
   exposed through a retrieval-only executor and hosted by a long-running
   Lightsail worker with EC2 as the scale-up path
-- Delivery semantics: bounded polling after a DynamoDB message-id cursor;
-  archive and persist before a conditional cursor advance
+- Delivery semantics: bounded polling without a channel cursor; archive and
+  persist before a conditional per-message receipt write
 - Telegram media: adjacent authenticated hydration because AG2 retrieval
   returns media presence rather than media bytes
 - Raw media: S3
 - Message metadata: DynamoDB
-- Reply-tree context: owner-scoped in-memory indexes; DynamoDB is write-only for this context
+- Reply-tree context: owner-scoped in-memory message indexes
+- Live trade state: parent-linked, versioned DynamoDB cursors containing active
+  BitMart/Bitget order IDs and open position IDs
 - Normalized message handoff: Bedrock publisher after metadata persistence
 - Model inference: AWS Bedrock
 - Exchange live state: ECS WebSocket workers

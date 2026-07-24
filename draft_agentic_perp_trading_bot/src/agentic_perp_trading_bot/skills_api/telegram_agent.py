@@ -13,6 +13,5 @@ class TelegramAgentAPI(Protocol):
     async def retrieve_messages(
         self,
         *,
-        messages_since: str | None,
         maximum_messages: int | None,
     ) -> TelegramAgentRetrievalBatch: ...

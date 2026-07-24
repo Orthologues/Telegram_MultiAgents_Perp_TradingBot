@@ -11,7 +11,9 @@ from typing import Protocol
 
 from agentic_perp_trading_bot.schemas import (
     ApprovedExecutionRequest,
+    ExchangeTradeState,
     MarketAnalysisSnapshot,
+    PositionDirection,
     TakeProfitProtectionDecision,
 )
 
@@ -22,6 +24,13 @@ class ExchangeGateway(Protocol):
 
     async def get_positions(self) -> dict:
         """Return account positions through a narrow exchange-specific adapter."""
+
+    async def get_trade_state(
+        self,
+        symbol: str,
+        direction: PositionDirection,
+    ) -> ExchangeTradeState:
+        """Return active order and open position IDs for one cursor identity."""
 
     async def submit_approved_order(self, request: ApprovedExecutionRequest) -> dict:
         """Submit an approved order request through the execution boundary."""

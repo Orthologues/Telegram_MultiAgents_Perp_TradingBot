@@ -3,7 +3,7 @@
 Maintenance rule: **OVERWRITE** this file on every update. It is the single
 source of current state, not a development log. The log is `HISTORY.md`.
 
-Last updated: 2026-07-24
+Last updated: 2026-07-25
 
 ## Phase
 
@@ -14,15 +14,19 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
 
 - The repository is a human-reviewed, non-executing scaffold; it is not live
   trading software.
-- Twenty commits are summarized in `HISTORY.md`; current HEAD is `f0f609b`.
+- Twenty-two commits are summarized in `HISTORY.md`; current HEAD is `a2c9a5c`.
 - `OwnerQwenAPI` includes shared review-only synonym and reduce-and-protect
   skills, while `MinistralFilterAPI` includes MCP take-profit protection; no
   agent has direct exchange access.
 - AG2 TelegramAgent provides pull-based retrieval through one shared Lightsail
-  worker, per-chat adapters, one authorized user session, and durable cursors.
+  worker, per-chat adapters, one authorized user session, and per-message
+  durable receipts rather than a channel-level cursor.
 - The scaffold preserves provenance, supports private S3/DynamoDB boundaries,
   maintains owner-scoped in-memory reply trees, and sends chronological parent
   context to QWEN and Ministral.
+- Parent-message IDs resolve concurrent live trade cursors by symbol, exchange,
+  and direction. Each cursor retains active BitMart/Bitget order and position
+  IDs in a DynamoDB repository boundary until the position is fully closed.
 - Confidence selects strategy tiers. Hard rejection is limited to a pair
   blacklist or an instant-order MCP price deviating over `0.5%` (generic altcoins), `0.25%` (BNB, ETH, SOL, TradFi perpetual future pairs) or `0.125%` (BTC) the message reference.
 - The scaffold moves omitted stop-loss derivation from QWEN to a versioned
@@ -36,7 +40,7 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   implemented. Current media archival and QWEN multimodal delivery remain
   scaffold boundaries; synonym inference remains a placeholder until RAG is
   populated.
-- Last verification: 58 tests passed with the active Python 3.11 environment;
+- Last verification: 63 tests passed with the active Python 3.11 environment;
   `uv` remains unavailable in the sandbox because of Snap permissions.
 
 ## Next Actions
@@ -45,13 +49,13 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
 
 - Retrieve media by `chat_id` and message ID through the authorized session.
 - Validate, hash, archive, and attach private S3 provenance before metadata,
-  reply-tree, QWEN, and cursor processing.
+  reply-tree, QWEN, and message-receipt processing.
 - Send current and chronological parent images to QWEN as multimodal inputs.
 - Add network-free tests for success, failures, limits, duplicate hashes, and
   parent-image prompts.
 
 Complete when every available current and parent image reaches QWEN with an ID,
-hash, and private S3 provenance before the cursor advances.
+hash, and private S3 provenance before its message receipt is recorded.
 
 ### 2. Authentic Serial RAG Examples
 
@@ -67,7 +71,8 @@ serial RAG set with authentic text/image patterns.
 
 ## Further Priorities
 
-- Replace in-memory test storage with production S3 and DynamoDB adapters.
+- Replace in-memory test storage with production S3, message-receipt, and
+  versioned trade-cursor DynamoDB adapters.
 - Implement model-specific Bedrock QWEN and Ministral multimodal adapters.
 - Implement Bitget/BitMart MCP market-analysis adapters for the typed
   liquidity and indicator snapshot.

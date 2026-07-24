@@ -1,8 +1,9 @@
-"""AG2 TelegramAgent polling and durable-cursor boundaries.
+"""AG2 TelegramAgent polling and per-message receipt boundaries.
 
-AG2's TelegramAgent retrieval tool is pull-based. This scaffold keeps retrieval
-separate from cursor commit so callers can persist media and metadata before the
-cursor advances, providing at-least-once delivery.
+AG2's TelegramAgent retrieval tool is pull-based. This scaffold retrieves a
+bounded recent window and keeps per-message receipt recording separate from
+retrieval so callers can persist media and metadata before acknowledging each
+message.
 """
 
 from __future__ import annotations
@@ -15,11 +16,13 @@ from agentic_perp_trading_bot.schemas import (
     TelegramAgentChannelConfig,
     TelegramAgentPollBatch,
     TelegramAgentRetrievalBatch,
+    TelegramMessageEnvelope,
 )
 from agentic_perp_trading_bot.skills_api import TelegramAgentAPI
 from agentic_perp_trading_bot.telegram_ingestion.normalizer import (
     normalize_telegram_agent_message,
 )
+from agentic_perp_trading_bot.telegram_ingestion.storage import TelegramMessageReceiptStore
 
 
 class TelegramRetrieveCallable(Protocol):
@@ -28,25 +31,8 @@ class TelegramRetrieveCallable(Protocol):
     def __call__(
         self,
         *,
-        messages_since: str | None,
         maximum_messages: int | None,
     ) -> Awaitable[dict[str, Any] | str]: ...
-
-
-class TelegramCursorStore(Protocol):
-    async def load(self, channel_id: str) -> str | None: ...
-
-    async def advance(
-        self,
-        channel_id: str,
-        *,
-        expected_message_id: str | None,
-        new_message_id: str,
-    ) -> None: ...
-
-
-class CursorConflictError(RuntimeError):
-    """Raised when another worker has already advanced a channel cursor."""
 
 
 class CallableTelegramAgentRetriever:
@@ -83,11 +69,9 @@ class CallableTelegramAgentRetriever:
     async def retrieve_messages(
         self,
         *,
-        messages_since: str | None,
         maximum_messages: int | None,
     ) -> TelegramAgentRetrievalBatch:
         payload = await self._retrieve(
-            messages_since=messages_since,
             maximum_messages=maximum_messages,
         )
         if not isinstance(payload, dict):
@@ -98,32 +82,6 @@ class CallableTelegramAgentRetriever:
         )
 
 
-class InMemoryTelegramCursorStore:
-    """Process-local compare-and-set cursor store for tests only."""
-
-    def __init__(self, cursors: Mapping[str, str] | None = None) -> None:
-        self._cursors = dict(cursors or {})
-
-    async def load(self, channel_id: str) -> str | None:
-        return self._cursors.get(channel_id)
-
-    async def advance(
-        self,
-        channel_id: str,
-        *,
-        expected_message_id: str | None,
-        new_message_id: str,
-    ) -> None:
-        current = self._cursors.get(channel_id)
-        if current != expected_message_id:
-            raise CursorConflictError(
-                f"cursor conflict for {channel_id}: expected {expected_message_id}, got {current}"
-            )
-        if current is not None and _message_id_value(new_message_id) <= _message_id_value(current):
-            raise ValueError("new Telegram cursor must be greater than the current cursor")
-        self._cursors[channel_id] = new_message_id
-
-
 class TelegramAgentPoller:
     """Poll configured TelegramAgent retrievers without performing inference."""
 
@@ -131,11 +89,11 @@ class TelegramAgentPoller:
         self,
         *,
         retrievers: Mapping[str, TelegramAgentAPI],
-        cursor_store: TelegramCursorStore,
+        receipt_store: TelegramMessageReceiptStore,
         clock: Callable[[], datetime] | None = None,
     ) -> None:
         self._retrievers = dict(retrievers)
-        self._cursor_store = cursor_store
+        self._receipt_store = receipt_store
         self._clock = clock or (lambda: datetime.now(timezone.utc))
 
     async def poll_once(self, config: TelegramAgentChannelConfig) -> TelegramAgentPollBatch:
@@ -146,15 +104,18 @@ class TelegramAgentPoller:
                 f"configured {config.telegram_chat_id}, retriever {retriever.telegram_chat_id}"
             )
 
-        previous_cursor = await self._cursor_store.load(config.channel_id)
         retrieved = await retriever.retrieve_messages(
-            messages_since=previous_cursor,
             maximum_messages=config.maximum_messages,
         )
         messages = sorted(retrieved.messages, key=lambda message: _message_id_value(message.id))
-        if previous_cursor is not None:
-            previous_value = _message_id_value(previous_cursor)
-            messages = [message for message in messages if _message_id_value(message.id) > previous_value]
+        unacknowledged_messages = []
+        observed_message_ids: set[str] = set()
+        for message in messages:
+            if message.id in observed_message_ids:
+                continue
+            observed_message_ids.add(message.id)
+            if not await self._receipt_store.contains(config.channel_id, message.id):
+                unacknowledged_messages.append(message)
 
         observed_at = self._clock()
         envelopes = [
@@ -162,28 +123,21 @@ class TelegramAgentPoller:
                 message,
                 channel_id=config.channel_id,
                 telegram_chat_id=config.telegram_chat_id,
-                retrieval_cursor=previous_cursor,
                 observed_at=observed_at,
             )
-            for message in messages
+            for message in unacknowledged_messages
         ]
-        next_cursor = messages[-1].id if messages else previous_cursor
         return TelegramAgentPollBatch(
             channel_id=config.channel_id,
             telegram_chat_id=config.telegram_chat_id,
-            previous_cursor=previous_cursor,
-            next_cursor=next_cursor,
             messages=envelopes,
         )
 
-    async def commit(self, batch: TelegramAgentPollBatch) -> None:
-        """Advance after the caller durably stores every message in the batch."""
-        if batch.next_cursor is None or batch.next_cursor == batch.previous_cursor:
-            return
-        await self._cursor_store.advance(
-            batch.channel_id,
-            expected_message_id=batch.previous_cursor,
-            new_message_id=batch.next_cursor,
+    async def commit_message(self, message: TelegramMessageEnvelope) -> None:
+        """Record one message only after its durable processing succeeds."""
+        await self._receipt_store.record(
+            message.channel_id,
+            message.telegram_message_id,
         )
 
 

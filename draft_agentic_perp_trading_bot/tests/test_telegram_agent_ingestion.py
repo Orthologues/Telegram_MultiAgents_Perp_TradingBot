@@ -11,7 +11,6 @@ from agentic_perp_trading_bot.schemas import (
 )
 from agentic_perp_trading_bot.telegram_ingestion.agent_worker import (
     CallableTelegramAgentRetriever,
-    InMemoryTelegramCursorStore,
     TelegramAgentPoller,
 )
 from agentic_perp_trading_bot.telegram_ingestion.normalizer import (
@@ -28,6 +27,7 @@ from agentic_perp_trading_bot.telegram_ingestion.reply_tree import (
 from agentic_perp_trading_bot.telegram_ingestion.storage import (
     InMemoryMessageMetadataRepository,
     InMemoryRawMediaArchive,
+    InMemoryTelegramMessageReceiptStore,
 )
 
 
@@ -58,7 +58,6 @@ def test_telegram_agent_normalizer_preserves_retrieval_provenance() -> None:
         _retrieved_message("123", media=True),
         channel_id="owner_a_channel_a",
         telegram_chat_id="-1001234567890",
-        retrieval_cursor="122",
         observed_at=observed_at,
     )
 
@@ -66,7 +65,6 @@ def test_telegram_agent_normalizer_preserves_retrieval_provenance() -> None:
     assert envelope.source_transport == IngestionTransport.AG2_TELEGRAM_AGENT
     assert envelope.telegram_chat_id == "-1001234567890"
     assert envelope.telegram_message_id == "123"
-    assert envelope.retrieval_cursor == "122"
     assert envelope.source_timestamp == datetime(2026, 7, 20, 9, 30, tzinfo=timezone.utc)
     assert envelope.received_at == observed_at
     assert envelope.raw_media_present is True
@@ -128,17 +126,19 @@ def test_text_hash_shortcut_requires_byte_identical_text() -> None:
     assert first.dedup_key != second.dedup_key
 
 
-def test_poller_reads_after_cursor_and_commits_only_after_processing() -> None:
-    calls: list[tuple[str | None, int | None]] = []
+def test_poller_filters_individual_receipts_and_commits_messages_independently() -> None:
+    calls: list[int | None] = []
 
-    async def retrieve(
-        *, messages_since: str | None, maximum_messages: int | None
-    ) -> dict:
-        calls.append((messages_since, maximum_messages))
+    async def retrieve(*, maximum_messages: int | None) -> dict:
+        calls.append(maximum_messages)
         return {
-            "message_count": 2,
-            "messages": [_retrieved_message("102"), _retrieved_message("101")],
-            "start_time": messages_since or "latest",
+            "message_count": 3,
+            "messages": [
+                _retrieved_message("102"),
+                _retrieved_message("100"),
+                _retrieved_message("101"),
+            ],
+            "start_time": "latest",
         }
 
     async def scenario() -> None:
@@ -146,10 +146,12 @@ def test_poller_reads_after_cursor_and_commits_only_after_processing() -> None:
             telegram_chat_id="-1001234567890",
             retrieve=retrieve,
         )
-        cursor_store = InMemoryTelegramCursorStore({"owner_a_channel_a": "100"})
+        receipt_store = InMemoryTelegramMessageReceiptStore(
+            {"owner_a_channel_a": {"100"}}
+        )
         poller = TelegramAgentPoller(
             retrievers={"owner_a_channel_a": retriever},
-            cursor_store=cursor_store,
+            receipt_store=receipt_store,
         )
         config = TelegramAgentChannelConfig(
             channel_id="owner_a_channel_a",
@@ -159,27 +161,26 @@ def test_poller_reads_after_cursor_and_commits_only_after_processing() -> None:
 
         batch = await poller.poll_once(config)
 
-        assert calls == [("100", 50)]
+        assert calls == [50]
         assert [message.telegram_message_id for message in batch.messages] == ["101", "102"]
-        assert batch.previous_cursor == "100"
-        assert batch.next_cursor == "102"
-        assert await cursor_store.load("owner_a_channel_a") == "100"
+        assert await receipt_store.contains("owner_a_channel_a", "100") is True
+        assert await receipt_store.contains("owner_a_channel_a", "101") is False
+        assert await receipt_store.contains("owner_a_channel_a", "102") is False
 
-        await poller.commit(batch)
+        await poller.commit_message(batch.messages[0])
 
-        assert await cursor_store.load("owner_a_channel_a") == "102"
+        assert await receipt_store.contains("owner_a_channel_a", "101") is True
+        assert await receipt_store.contains("owner_a_channel_a", "102") is False
 
     asyncio.run(scenario())
 
 
 def test_callable_retriever_rejects_inconsistent_ag2_count() -> None:
-    async def retrieve(
-        *, messages_since: str | None, maximum_messages: int | None
-    ) -> dict:
+    async def retrieve(*, maximum_messages: int | None) -> dict:
         return {
             "message_count": 2,
             "messages": [_retrieved_message("101")],
-            "start_time": messages_since or "latest",
+            "start_time": "latest",
         }
 
     async def scenario() -> None:
@@ -189,7 +190,7 @@ def test_callable_retriever_rejects_inconsistent_ag2_count() -> None:
         )
 
         with pytest.raises(ValueError, match="message_count"):
-            await retriever.retrieve_messages(messages_since="100", maximum_messages=50)
+            await retriever.retrieve_messages(maximum_messages=50)
 
     asyncio.run(scenario())
 
@@ -206,7 +207,7 @@ def test_retriever_selects_only_the_agent_retrieve_tool() -> None:
         return {
             "message_count": 1,
             "messages": [_retrieved_message("101")],
-            "start_time": kwargs.get("messages_since") or "latest",
+            "start_time": "latest",
         }
 
     class FakeTool:
@@ -222,7 +223,7 @@ def test_retriever_selects_only_the_agent_retrieve_tool() -> None:
             telegram_chat_id="-1001234567890",
             telegram_agent=FakeTelegramAgent(),
         )
-        batch = await retriever.retrieve_messages(messages_since="100", maximum_messages=50)
+        batch = await retriever.retrieve_messages(maximum_messages=50)
 
         assert [message.id for message in batch.messages] == ["101"]
         assert send_called is False
@@ -243,13 +244,11 @@ def test_retrieval_batch_validates_message_count() -> None:
 
 
 def test_pipeline_persists_records_and_publishes_only_unique_messages() -> None:
-    async def retrieve(
-        *, messages_since: str | None, maximum_messages: int | None
-    ) -> dict:
+    async def retrieve(*, maximum_messages: int | None) -> dict:
         return {
             "message_count": 2,
             "messages": [_retrieved_message("101"), _retrieved_message("102")],
-            "start_time": messages_since or "latest",
+            "start_time": "latest",
         }
 
     published: list[str] = []
@@ -262,10 +261,10 @@ def test_pipeline_persists_records_and_publishes_only_unique_messages() -> None:
             telegram_chat_id="-1001234567890",
             retrieve=retrieve,
         )
-        cursor_store = InMemoryTelegramCursorStore()
+        receipt_store = InMemoryTelegramMessageReceiptStore()
         poller = TelegramAgentPoller(
             retrievers={"owner_a_channel_a": retriever},
-            cursor_store=cursor_store,
+            receipt_store=receipt_store,
         )
         metadata = InMemoryMessageMetadataRepository()
         pipeline = TelegramIngestionPipeline(
@@ -288,15 +287,14 @@ def test_pipeline_persists_records_and_publishes_only_unique_messages() -> None:
             "101",
             "102",
         ]
-        assert await cursor_store.load("owner_a_channel_a") == "102"
+        assert await receipt_store.contains("owner_a_channel_a", "101") is True
+        assert await receipt_store.contains("owner_a_channel_a", "102") is True
 
     asyncio.run(scenario())
 
 
 def test_pipeline_expands_parent_messages_in_chronological_order() -> None:
-    async def retrieve(
-        *, messages_since: str | None, maximum_messages: int | None
-    ) -> dict:
+    async def retrieve(*, maximum_messages: int | None) -> dict:
         return {
             "message_count": 3,
             "messages": [
@@ -304,7 +302,7 @@ def test_pipeline_expands_parent_messages_in_chronological_order() -> None:
                 _retrieved_message("102", text="add", reply_to_msg_id="101"),
                 _retrieved_message("101", text="open"),
             ],
-            "start_time": messages_since or "latest",
+            "start_time": "latest",
         }
 
     published = []
@@ -319,7 +317,7 @@ def test_pipeline_expands_parent_messages_in_chronological_order() -> None:
         )
         poller = TelegramAgentPoller(
             retrievers={"owner_a_channel_a": retriever},
-            cursor_store=InMemoryTelegramCursorStore(),
+            receipt_store=InMemoryTelegramMessageReceiptStore(),
         )
         metadata = InMemoryMessageMetadataRepository()
         pipeline = TelegramIngestionPipeline(
@@ -358,9 +356,7 @@ def test_pipeline_expands_parent_messages_in_chronological_order() -> None:
 
 
 def test_pipeline_traverses_prior_sibling_replies() -> None:
-    async def retrieve(
-        *, messages_since: str | None, maximum_messages: int | None
-    ) -> dict:
+    async def retrieve(*, maximum_messages: int | None) -> dict:
         return {
             "message_count": 3,
             "messages": [
@@ -368,7 +364,7 @@ def test_pipeline_traverses_prior_sibling_replies() -> None:
                 _retrieved_message("102", text=None, media=True, reply_to_msg_id="101"),
                 _retrieved_message("101", text="A"),
             ],
-            "start_time": messages_since or "latest",
+            "start_time": "latest",
         }
 
     published = []
@@ -383,7 +379,7 @@ def test_pipeline_traverses_prior_sibling_replies() -> None:
         )
         poller = TelegramAgentPoller(
             retrievers={"owner_a_channel_a": retriever},
-            cursor_store=InMemoryTelegramCursorStore(),
+            receipt_store=InMemoryTelegramMessageReceiptStore(),
         )
         metadata = InMemoryMessageMetadataRepository()
         pipeline = TelegramIngestionPipeline(

@@ -34,7 +34,7 @@ class BedrockInputPublisher:
 
 
 class TelegramIngestionPipeline:
-    """Persist, deduplicate, publish, and then commit one TelegramAgent batch."""
+    """Persist, publish, and acknowledge each TelegramAgent message."""
 
     def __init__(
         self,
@@ -70,13 +70,14 @@ class TelegramIngestionPipeline:
             reply_tree_index = self._reply_tree_indexes.for_owner(archived_message.owner_id)
             reply_tree_index.add(archived_message)
             if deduplication.is_duplicate:
+                await self._poller.commit_message(archived_message)
                 continue
             await self._bedrock_publisher.publish(
                 reply_tree_index.prompt_context_for(archived_message)
             )
             published.append(archived_message)
+            await self._poller.commit_message(archived_message)
 
-        await self._poller.commit(batch)
         return published
 
     def _resolve_parent_messages(

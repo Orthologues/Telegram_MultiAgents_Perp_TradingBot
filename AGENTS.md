@@ -16,9 +16,9 @@ files. Do not describe placeholders as live trading code.
 
 ```text
 TelegramAgent retrieval
-  -> one Lightsail worker with per-chat adapters and durable cursors
+  -> one Lightsail worker with per-chat adapters and per-message receipts
   -> normalize, hydrate media, deduplicate, and build reply-tree context
-  -> private S3 media + DynamoDB historical metadata
+  -> private S3 media + DynamoDB message and live trade-cursor metadata
   -> one owner-specific QWEN agent per owner
   -> Ministral validation and signal deduplication
   -> weighting and confidence policy
@@ -28,17 +28,24 @@ TelegramAgent retrieval
 - Use one authorized Telegram user session and one shared polling worker.
 - TelegramAgent is pull-based and retrieval-only in the ingestion worker; do
   not register `TelegramSendTool` or connect it directly to an exchange.
-- Poll after the last committed message ID. Persist media and metadata before
-  atomically advancing the channel cursor for at-least-once delivery.
+- Retrieve a bounded recent window without a channel-level cursor. Persist
+  media and metadata, publish each message, and then conditionally record its
+  `(channel_id, telegram_message_id)` receipt; unacknowledged messages may be
+  delivered again.
 - AG2 retrieval exposes a media-presence flag in this scaffold. Use an
   authenticated Telethon hydrator to download, hash, and archive images in
   private S3 before model delivery.
 - Keep one in-memory reply-tree index per owner. For each message, include all
-  available parent IDs and snapshots in chronological order; do not read
-  DynamoDB to assemble live context.
+  available parent IDs and snapshots in chronological order. Query DynamoDB by
+  those parent IDs for active trade cursors, but keep message-body context in
+  the in-memory reply tree.
 - Pass the same ID-labelled `TelegramPromptContext` to QWEN and Ministral.
-- DynamoDB is primarily a replay, backtesting, and strategy-optimization store,
-  including omitted TP/SL inference outcomes and blacklist criteria.
+- Store concurrent `TradeThreadCursor` metadata in DynamoDB. Each cursor tracks
+  one parent-linked symbol, exchange, direction, active-order set, and
+  open-position set; close it only after the position is fully closed and no
+  active orders remain.
+- Retain DynamoDB metadata for live coordination, replay, backtesting, and
+  strategy optimization, including omitted TP/SL outcomes and blacklist data.
 
 ## Agent Boundaries
 
@@ -84,11 +91,12 @@ remains behind the MCP gateway.
   deduplication as separate stages.
 - Keep S3 archival, DynamoDB persistence, and Bedrock handoff behind
   `telegram_ingestion/storage.py` and `pipeline.py`.
+- Keep live parent-linked cursor lifecycle logic in `trade_cursor.py`; use
+  conditional DynamoDB version writes so independent cursors can progress
+  concurrently.
 - Keep exchange-specific behavior behind MCP; agents must not call exchanges.
 - Preserve owner, channel, Telegram message ID, timestamps, parent IDs, media
   hashes, deduplication key, model ID, confidence, and strategy tier.
-- Use conditional writes for one monotonic cursor per logical channel and do
-  not advance it before durable processing completes.
 
 ## Repository Rules
 

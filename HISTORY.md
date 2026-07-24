@@ -124,14 +124,20 @@ QWEN reduce-and-protect hypothesis, and Ministral MCP take-profit fill
 protection. Added typed skill APIs, gateway boundaries, schemas, and focused
 tests; the scaffold remains non-executing and requires human review.
 
-### 2026-07-24 — pending: clarified human-review requirements
+### 2026-07-24 — `f0f609b`: clarified human-review requirements
 
 Clarified in `AGENTS.md` that this prompted-generated scaffold requires careful
 human code review and backtesting of previous Telegram trading signals before
 further use.
 
-### 2026-07-24 — pending: aligned instant-order deviation thresholds
+### 2026-07-24 — `a2c9a5c`: aligned instant-order deviation thresholds
 
 Implemented deterministic `0.5%`, `0.25%`, and `0.125%` price-deviation limits
 for generic altcoins, major/TradFi perpetuals, and BTC, respectively, with
 explicit mixed-channel TradFi classification and boundary tests.
+
+### 2026-07-25 — pending: separated ingestion receipts and live trade cursors
+
+Removed the channel-wide ingestion cursor, retained independent message
+receipts, and added concurrent parent-linked trade cursors with versioned
+BitMart/Bitget order and position metadata for DynamoDB.

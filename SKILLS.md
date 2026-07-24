@@ -27,18 +27,20 @@ copy the entire flowchart into source code comments.
 
 Run one long-lived polling service on Lightsail, with EC2 as the scale-up path,
 and one authorized Telegram user session. Schedule the target channels through
-lightweight per-chat retrieval adapters that preserve each `chat_id`, cursor,
-and provenance boundary. Because AG2 retrieval is scoped to one `chat_id`, an
+lightweight per-chat retrieval adapters that preserve each `chat_id`,
+per-message receipt, and provenance boundary. Because AG2 retrieval is scoped to
+one `chat_id`, an
 adapter may wrap a per-chat TelegramAgent object internally, but these objects
 remain in the same worker and are not independently deployed services. Expose
 only retrieval through the executor. Do not register `TelegramSendTool` and do
 not route TelegramAgent output directly to an exchange or trading model.
 
-TelegramAgent retrieval is pull-based. Poll from the last committed message id,
-normalize Chinese text and image metadata before model inference, archive raw
-media in S3, store searchable metadata in DynamoDB, and compute a stable input
-deduplication key. AG2 exposes only a media-presence flag, so use an adjacent
-authenticated media hydrator to obtain bytes and hashes before cursor commit.
+TelegramAgent retrieval is pull-based. Retrieve a bounded recent window without
+a channel-level cursor, normalize Chinese text and image metadata before model
+inference, archive raw media in S3, store searchable metadata in DynamoDB, and
+compute a stable input deduplication key. AG2 exposes only a media-presence flag,
+so use an adjacent authenticated media hydrator to obtain bytes and hashes
+before recording the message receipt.
 
 For the A-zhu private-chat workflow, use the minimalist Chinese reply skill
 when a short acknowledgment is explicitly required. Keep this response path
@@ -48,32 +50,48 @@ it must not infer trade parameters, confirm execution, or replace QWEN analysis.
 Example path:
 
 ```text
-TelegramAgent retrieval after durable channel cursor
+TelegramAgent retrieval with no channel cursor
   -> validate structured retrieval batch
   -> order messages chronologically
   -> TelegramMessageEnvelope
   -> traverse prior reply-tree messages from the owner QWEN in-memory index
      into parent_messages (oldest first)
   -> TelegramPromptContext with ID-labeled parent blocks and current block last
+  -> query active DynamoDB trade cursors by parent message IDs
+  -> expose matching pair/exchange/order/position state to QWEN and Ministral
   -> pass the same context to QWEN and Ministral prompts
   -> hydrate/archive media and persist metadata
   -> exact content/media identity check
   -> retrieve candidate message history
   -> owner-specific QWEN deduplication reasoning
   -> accepted new or continuation context
-  -> atomically advance channel cursor
+  -> conditionally record each `(channel_id, telegram_message_id)` receipt
 ```
 
-Keep retrieval and cursor commit as separate operations to preserve
-at-least-once delivery. Use a conditional DynamoDB cursor update and only one
-active, leased worker per Telegram user session. Preserve `owner_id`,
+Keep retrieval and per-message receipt recording as separate operations. Use a
+conditional DynamoDB receipt write and only one active, leased worker per
+Telegram user session. Preserve `owner_id`,
 `channel_id`, `telegram_chat_id`, `telegram_message_id`, `source_timestamp`,
-`retrieval_cursor`, `parent_messages`, `asset_group`, and `strategy_tier_hint`
+`parent_messages`, `asset_group`, and `strategy_tier_hint`
 so multiple channels can feed one owner agent without losing provenance.
-Treat the DynamoDB message history primarily as a replay dataset for backtesting
-and strategy optimization. Retain omitted take-profit/stop-loss cases, inferred
-levels, later updates, execution outcomes, and the inputs used for deterministic
-pair-blacklisting analysis; do not read it to assemble live model context.
+DynamoDB is both a live coordination store and a replay dataset. Query active
+trade cursors by parent message IDs, but keep chronological message bodies in
+the owner QWEN in-memory reply tree. Retain omitted take-profit/stop-loss cases,
+inferred levels, later updates, execution outcomes, and pair-blacklisting inputs.
+
+## Concurrent Trade Cursors
+
+Maintain one active `TradeThreadCursor` per parent-linked symbol, exchange, and
+direction. A new message may resolve several concurrent candidates from its
+chronological `parent_messages`; match the intended cursor by canonical symbol,
+BitMart or Bitget exchange, and long/short direction. Store only messages
+assigned to that cursor, not the complete parent list.
+
+Each cursor stores sets of active order IDs and open position IDs in DynamoDB.
+Use conditional version writes so unrelated cursors update independently. An
+order fill, reduction, or partial close updates the sets but does not close the
+cursor. Close it only after a position has opened, no open position remains,
+and all active orders are gone.
 
 ## Minimalist Chinese Reply
 

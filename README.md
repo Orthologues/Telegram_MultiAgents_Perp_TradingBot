@@ -9,13 +9,14 @@ Chinese text in Telegram trading channels, including implicit entries,
 exits, context, screenshots, and owner-specific terminology.
 
 Telegram ingestion runs as one shared polling worker using one authorized user
-session. Channel-specific chat IDs, cursors, and provenance are handled by
-lightweight retrieval adapters within that worker; the scaffold does not
-require one independently deployed TelegramAgent service per channel. Each
+session. Channel-specific chat IDs, per-message receipts, and provenance are
+handled by lightweight retrieval adapters within that worker. The scaffold does
+not require one independently deployed TelegramAgent service per channel. Each
 delivered message includes oldest-to-newest `parent_messages` IDs for serial
 reply-tree context retrieval. The reply-tree index is maintained in memory per
-owner QWEN agent; DynamoDB receives enriched metadata but is not read for this
-context.
+owner QWEN agent. DynamoDB stores enriched message metadata and concurrent live
+trade cursors selected from those parent IDs, including each pair's BitMart or
+Bitget active orders and open positions.
 
 Omitted stop-losses are derived at the Ministral boundary from typed MCP
 liquidity plus KDJ, Bollinger-width, and Average True Range (ATR) inputs at `5m`, `15m`, `1h`, and
@@ -40,6 +41,8 @@ cd draft_agentic_perp_trading_bot && uv sync --extra aws --extra dev && uv run p
   Ministral validation agent.
 - `draft_agentic_perp_trading_bot/src/agentic_perp_trading_bot/qwen_agents/owner_agent.py`:
   owner QWEN API and shared review-only synonym and position-management skills.
+- `draft_agentic_perp_trading_bot/src/agentic_perp_trading_bot/trade_cursor.py`:
+  parent-linked concurrent trade-cursor lifecycle and DynamoDB boundary.
 - `preliminary_flowchart_Figma.png`: local architecture snapshot.
 
 The design source is the [AgenticPerpTradingBotArch flowchart](https://www.figma.com/board/IosVAXW713NeWhTTU962vC/AgenticPerpTradingBotArch).
