@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from agentic_perp_trading_bot.schemas import (
     IntentType,
+    PositionReductionHypothesis,
     QwenSignalHypothesis,
     StrategyTier,
     TelegramMessageEnvelope,
@@ -32,7 +33,7 @@ class OwnerQwenAgent:
         message: TelegramMessageEnvelope,
         prompt_context: TelegramPromptContext | None = None,
     ) -> QwenSignalHypothesis:
-        """Call AWS Bedrock QWEN multimodal inference in the real implementation."""
+        """Infer source parameters, leaving an omitted stop-loss unset for Ministral."""
         context = prompt_context or TelegramPromptContext.from_message(message)
         if context.current_message.telegram_message_id != message.telegram_message_id:
             raise ValueError("prompt context current message does not match QWEN input")
@@ -63,5 +64,25 @@ class OwnerQwenAgent:
             telegram_message_id=message.telegram_message_id,
             confidence=0.0,
             reasons=["placeholder implementation; authentic serial RAG is pending"],
+            needs_human_review=True,
+        )
+
+    async def infer_position_reduction(
+        self,
+        message: TelegramMessageEnvelope,
+        prompt_context: TelegramPromptContext,
+    ) -> PositionReductionHypothesis:
+        """Interpret a reduce-and-protect message without creating an order."""
+        if prompt_context.current_message.telegram_message_id != message.telegram_message_id:
+            raise ValueError("prompt context current message does not match input")
+        _ = self.build_prompt_messages(prompt_context)
+        return PositionReductionHypothesis(
+            owner_id=message.owner_id,
+            channel_id=message.channel_id,
+            telegram_message_id=message.telegram_message_id,
+            confidence=0.0,
+            ambiguities=[
+                "placeholder implementation; live position and order state are required"
+            ],
             needs_human_review=True,
         )

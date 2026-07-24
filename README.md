@@ -17,6 +17,10 @@ reply-tree context retrieval. The reply-tree index is maintained in memory per
 owner QWEN agent; DynamoDB receives enriched metadata but is not read for this
 context.
 
+Omitted stop-losses are derived at the Ministral boundary from typed MCP
+liquidity plus KDJ, Bollinger-width, and ATR inputs at `5m`, `15m`, `1h`, and
+`4h`, constrained to `1.25%`-`7.5%` of current price. QWEN does not infer them.
+
 ## Fastest Test
 
 From the repository root:
@@ -32,9 +36,10 @@ cd draft_agentic_perp_trading_bot && uv sync --extra aws --extra dev && uv run p
 - `AGENTS.md`: architecture contract and repository rules.
 - `SKILLS.md`: concise implementation workflows.
 - `draft_agentic_perp_trading_bot/src/agentic_perp_trading_bot/skills_api/`:
-  typed skill APIs for TelegramAgent, QWEN, Ministral, and synonym inference.
+  typed skill APIs for TelegramAgent, QWEN order-translation agents, and the
+  Ministral validation agent.
 - `draft_agentic_perp_trading_bot/src/agentic_perp_trading_bot/qwen_agents/owner_agent.py`:
-  owner QWEN API and shared review-only trading-message synonym skill.
+  owner QWEN API and shared review-only synonym and position-management skills.
 - `preliminary_flowchart_Figma.png`: local architecture snapshot.
 
 The design source is the [AgenticPerpTradingBotArch flowchart](https://www.figma.com/board/IosVAXW713NeWhTTU962vC/AgenticPerpTradingBotArch).

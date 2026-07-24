@@ -18,8 +18,10 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 - Owner-scoped serial reply trees: `agentic_perp_trading_bot.telegram_ingestion.reply_tree`
 - Telegram multimodal input deduplication: `agentic_perp_trading_bot.telegram_ingestion.deduplication`
 - Agent-owned skill contracts: `agentic_perp_trading_bot.skills_api`
-- Owner QWEN agents and shared synonym skill: `agentic_perp_trading_bot.qwen_agents.owner_agent`
-- Ministral filter and trading-signal deduplication: `agentic_perp_trading_bot.ministral_filter`
+- Owner QWEN agents and shared interpretation skills: `agentic_perp_trading_bot.qwen_agents.owner_agent`
+- Ministral validation, signal deduplication, and MCP fill protection:
+  `agentic_perp_trading_bot.ministral_filter`
+- Deterministic omitted stop-loss policy: `agentic_perp_trading_bot.ministral_filter.stop_loss_policy`
 - Performance and weight engine: `agentic_perp_trading_bot.performance_engine`
 - Confidence engine: `agentic_perp_trading_bot.confidence_engine`
 - Bitget/BitMart MCP gateway: `agentic_perp_trading_bot.mcp_gateway`
@@ -45,6 +47,8 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 - Normalized message handoff: Bedrock publisher after metadata persistence
 - Model inference: AWS Bedrock
 - Exchange live state: ECS WebSocket workers
+- Stop-loss market inputs: MCP price, market cap, 24-hour volume, and KDJ,
+  Bollinger, and ATR snapshots at 5m, 15m, 1h, and 4h
 - Signed execution: AWS Lambda using Secrets Manager
 
 The board's "pushes real-time updates" label maps to near-real-time polling in

@@ -5,9 +5,19 @@ from __future__ import annotations
 from agentic_perp_trading_bot.ministral_filter.signal_deduplication import (
     InMemorySignalDeduplicator,
 )
+from agentic_perp_trading_bot.ministral_filter.stop_loss_policy import (
+    MinistralStopLossPolicy,
+)
+from agentic_perp_trading_bot.ministral_filter.take_profit_protection import (
+    TakeProfitProtectionPolicy,
+)
 from agentic_perp_trading_bot.schemas import (
     FilterDecision,
+    MarketAnalysisSnapshot,
+    OmittedStopLossDecision,
     QwenSignalHypothesis,
+    TakeProfitFillEvent,
+    TakeProfitProtectionDecision,
     TelegramPromptContext,
 )
 
@@ -17,27 +27,63 @@ class MinistralFilterAgent:
         self,
         model_id: str,
         signal_deduplicator: InMemorySignalDeduplicator | None = None,
+        stop_loss_policy: MinistralStopLossPolicy | None = None,
+        take_profit_protection_policy: TakeProfitProtectionPolicy | None = None,
     ):
         self.model_id = model_id
         self.signal_deduplicator = signal_deduplicator
+        self.stop_loss_policy = stop_loss_policy or MinistralStopLossPolicy()
+        self.take_profit_protection_policy = (
+            take_profit_protection_policy or TakeProfitProtectionPolicy()
+        )
 
     def build_prompt_messages(
         self,
         hypothesis: QwenSignalHypothesis,
         prompt_context: TelegramPromptContext,
+        market_snapshot: MarketAnalysisSnapshot | None = None,
+        omitted_stop_loss: OmittedStopLossDecision | None = None,
     ) -> list[dict[str, object]]:
-        return [
+        messages = [
             *prompt_context.to_prompt_messages(),
             {"role": "qwen_hypothesis", **hypothesis.model_dump(mode="json")},
         ]
+        if market_snapshot is not None:
+            messages.append(
+                {"role": "mcp_market_snapshot", **market_snapshot.model_dump(mode="json")}
+            )
+        if omitted_stop_loss is not None:
+            messages.append(
+                {
+                    "role": "deterministic_stop_loss",
+                    **omitted_stop_loss.model_dump(mode="json"),
+                }
+            )
+        return messages
+
+    def resolve_omitted_stop_loss(
+        self,
+        hypothesis: QwenSignalHypothesis,
+        market_snapshot: MarketAnalysisSnapshot | None,
+    ) -> OmittedStopLossDecision | None:
+        if market_snapshot is None:
+            return None
+        return self.stop_loss_policy.derive(hypothesis, market_snapshot)
+
+    async def protect_entry_after_take_profit(
+        self,
+        event: TakeProfitFillEvent,
+    ) -> TakeProfitProtectionDecision:
+        """Return an MCP-executable stop adjustment without calling an exchange."""
+        return self.take_profit_protection_policy.evaluate(event)
 
     async def review(
         self,
         hypothesis: QwenSignalHypothesis,
         prompt_context: TelegramPromptContext,
+        market_snapshot: MarketAnalysisSnapshot | None = None,
     ) -> FilterDecision:
         """Validate, deduplicate, quality-score, and canonicalize a QWEN hypothesis."""
-        _ = self.build_prompt_messages(hypothesis, prompt_context)
         deduplication = None
         if self.signal_deduplicator is not None:
             deduplication = self.signal_deduplicator.check(hypothesis)
@@ -51,6 +97,16 @@ class MinistralFilterAgent:
                     deduplication=deduplication,
                 )
 
+        omitted_stop_loss = self.resolve_omitted_stop_loss(
+            hypothesis,
+            market_snapshot,
+        )
+        _ = self.build_prompt_messages(
+            hypothesis,
+            prompt_context,
+            market_snapshot,
+            omitted_stop_loss,
+        )
         return FilterDecision(
             status="rejected",
             quality_score=0.0,
@@ -58,4 +114,5 @@ class MinistralFilterAgent:
             rejection_reasons=["placeholder implementation"],
             reviewer_model=self.model_id,
             deduplication=deduplication,
+            omitted_stop_loss=omitted_stop_loss,
         )

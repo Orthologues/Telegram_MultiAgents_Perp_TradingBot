@@ -111,3 +111,8 @@ Corrected the Trading Message Synonym Inference skill and added the explicit
 `skills_api/` package. Merged the review-only synonym skill into every
 `OwnerQwenAgent`, updated the scaffold documentation and file map, and kept the
 boundary free of exchange calls.
+
+### 2026-07-23 — `a02e839`: synchronized status and editor imports
+
+Updated `HISTORY.md` and `STATUS.md` for `27cce05` and added the VS Code source
+path needed for Pylance to resolve the package.

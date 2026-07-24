@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
-from typing import Any, Self
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -48,9 +48,39 @@ class TradeAction(StrEnum):
     REDUCE_SHORT = "reduce_short"
 
 
+class PositionDirection(StrEnum):
+    LONG = "long"
+    SHORT = "short"
+
+
+class TakeProfitLevel(StrEnum):
+    TP1 = "TP1"
+    TP2 = "TP2"
+    TP3 = "TP3"
+
+
+class TakeProfitProtectionAction(StrEnum):
+    MOVE_TO_PROTECTED_ENTRY = "move_to_protected_entry"
+    MOVE_TO_TP1 = "move_to_tp1"
+    NO_CHANGE = "no_change"
+
+
 class ExchangeId(StrEnum):
     BITGET = "bitget"
     BITMART = "bitmart"
+
+
+class MarketLiquidityTier(StrEnum):
+    LARGE = "large"
+    MID = "mid"
+    SMALL = "small"
+
+
+class IndicatorTimeframe(StrEnum):
+    FIVE_MINUTES = "5m"
+    FIFTEEN_MINUTES = "15m"
+    ONE_HOUR = "1h"
+    FOUR_HOURS = "4h"
 
 
 class DeduplicationScope(StrEnum):
@@ -238,6 +268,75 @@ class QwenSignalHypothesis(BaseModel):
     source_dedup_key: str | None = None
 
 
+class TechnicalIndicatorSnapshot(BaseModel):
+    """MCP-supplied indicator values used by deterministic Ministral policy."""
+
+    kdj_k: Decimal
+    kdj_d: Decimal
+    kdj_j: Decimal
+    bollinger_upper: Decimal = Field(gt=Decimal("0"))
+    bollinger_middle: Decimal = Field(gt=Decimal("0"))
+    bollinger_lower: Decimal = Field(gt=Decimal("0"))
+    average_true_range: Decimal = Field(ge=Decimal("0"))
+
+    @model_validator(mode="after")
+    def validate_bollinger_bands(self) -> Self:
+        if not (
+            self.bollinger_lower
+            <= self.bollinger_middle
+            <= self.bollinger_upper
+        ):
+            raise ValueError(
+                "Bollinger bands must satisfy lower <= middle <= upper"
+            )
+        return self
+
+
+class MarketAnalysisSnapshot(BaseModel):
+    """Typed Bitget/BitMart MCP input for Ministral validation."""
+
+    exchange_id: ExchangeId
+    symbol: str = Field(min_length=1)
+    current_price: Decimal = Field(gt=Decimal("0"))
+    market_cap_usd: Decimal = Field(gt=Decimal("0"))
+    quote_volume_24h_usd: Decimal = Field(ge=Decimal("0"))
+    indicators: dict[IndicatorTimeframe, TechnicalIndicatorSnapshot]
+    observed_at: datetime
+
+    @field_validator("indicators")
+    @classmethod
+    def validate_indicator_timeframes(
+        cls,
+        indicators: dict[IndicatorTimeframe, TechnicalIndicatorSnapshot],
+    ) -> dict[IndicatorTimeframe, TechnicalIndicatorSnapshot]:
+        required = set(IndicatorTimeframe)
+        supplied = set(indicators)
+        if supplied != required:
+            missing = sorted(timeframe.value for timeframe in required - supplied)
+            unexpected = sorted(timeframe.value for timeframe in supplied - required)
+            raise ValueError(
+                "indicators must contain exactly 5m, 15m, 1h, and 4h; "
+                f"missing={missing}, unexpected={unexpected}"
+            )
+        return indicators
+
+
+class OmittedStopLossDecision(BaseModel):
+    """Deterministic stop-loss derived at the Ministral boundary."""
+
+    stop_loss: Decimal = Field(gt=Decimal("0"))
+    distance_fraction: Decimal = Field(
+        ge=Decimal("0.0125"),
+        le=Decimal("0.075"),
+    )
+    liquidity_tier: MarketLiquidityTier
+    volatility_score: Decimal = Field(ge=Decimal("0"), le=Decimal("1"))
+    market_snapshot: MarketAnalysisSnapshot
+    policy_version: str
+    reasoning_budget_ms: int = Field(default=1000, ge=1, le=1000)
+    evidence: list[str] = Field(default_factory=list)
+
+
 class TradingMessageSynonymDecision(BaseModel):
     """Reviewable baseline-synonym inference, never an execution command."""
 
@@ -251,6 +350,116 @@ class TradingMessageSynonymDecision(BaseModel):
     evidence: list[str] = Field(default_factory=list)
     reasons: list[str] = Field(default_factory=list)
     needs_human_review: bool = True
+
+
+class PositionReductionHypothesis(BaseModel):
+    """Reviewable QWEN interpretation of a reduce-and-protect instruction."""
+
+    owner_id: OwnerId
+    channel_id: str
+    telegram_message_id: str
+    symbol: str | None = None
+    direction: str | None = None
+    selected_reduction_fraction: Decimal | None = Field(
+        default=None,
+        ge=Decimal("0.30"),
+        le=Decimal("0.40"),
+    )
+    minimum_reduction_fraction: Decimal = Field(
+        default=Decimal("0.30"),
+        ge=Decimal("0.30"),
+        le=Decimal("0.30"),
+    )
+    maximum_reduction_fraction: Decimal = Field(
+        default=Decimal("0.40"),
+        ge=Decimal("0.40"),
+        le=Decimal("0.40"),
+    )
+    quantity_basis: Literal[
+        "maximum_total_position_quantity"
+    ] = "maximum_total_position_quantity"
+    stop_loss_profit_offset_fraction: Decimal = Field(
+        default=Decimal("0.0015"),
+        ge=Decimal("0.0015"),
+        le=Decimal("0.0015"),
+    )
+    resize_unfilled_take_profit_orders: Literal[True] = True
+    take_profit_labels: tuple[
+        Literal["TP1"],
+        Literal["TP2"],
+        Literal["TP3"],
+    ] = ("TP1", "TP2", "TP3")
+    confidence: float = Field(ge=0.0, le=1.0)
+    evidence: list[str] = Field(default_factory=list)
+    ambiguities: list[str] = Field(default_factory=list)
+    needs_human_review: bool = True
+
+
+class TakeProfitFillEvent(BaseModel):
+    """Authenticated MCP event used by the Ministral protection policy."""
+
+    event_id: str = Field(min_length=1)
+    exchange_id: ExchangeId
+    symbol: str = Field(min_length=1)
+    position_id: str = Field(min_length=1)
+    direction: PositionDirection
+    triggered_level: TakeProfitLevel
+    configured_levels: list[TakeProfitLevel]
+    filled_levels: list[TakeProfitLevel]
+    average_entry_price: Decimal = Field(gt=Decimal("0"))
+    tp1_price: Decimal = Field(gt=Decimal("0"))
+    current_stop_loss: Decimal | None = Field(default=None, gt=Decimal("0"))
+    occurred_at: datetime
+    source: Literal["mcp_take_profit_fill"] = "mcp_take_profit_fill"
+
+    @model_validator(mode="after")
+    def validate_take_profit_sequence(self) -> Self:
+        level_order = (
+            TakeProfitLevel.TP1,
+            TakeProfitLevel.TP2,
+            TakeProfitLevel.TP3,
+        )
+        for field_name, levels in (
+            ("configured_levels", self.configured_levels),
+            ("filled_levels", self.filled_levels),
+        ):
+            if len(levels) != len(set(levels)):
+                raise ValueError(f"{field_name} must not contain duplicates")
+            expected = [level for level in level_order if level in levels]
+            if levels != expected:
+                raise ValueError(f"{field_name} must be ordered TP1, TP2, TP3")
+        if not set(self.filled_levels).issubset(self.configured_levels):
+            raise ValueError("filled_levels must be a subset of configured_levels")
+        if self.triggered_level not in self.filled_levels:
+            raise ValueError("triggered_level must be present in filled_levels")
+        if self.triggered_level != self.filled_levels[-1]:
+            raise ValueError("triggered_level must be the latest filled level")
+        if self.triggered_level == TakeProfitLevel.TP2 and self.filled_levels[:2] != [
+            TakeProfitLevel.TP1,
+            TakeProfitLevel.TP2,
+        ]:
+            raise ValueError("TP2 protection requires TP1 to have filled first")
+        if self.direction == PositionDirection.LONG:
+            if self.tp1_price <= self.average_entry_price:
+                raise ValueError("long TP1 price must be above average entry")
+        elif self.tp1_price >= self.average_entry_price:
+            raise ValueError("short TP1 price must be below average entry")
+        return self
+
+
+class TakeProfitProtectionDecision(BaseModel):
+    """Typed Ministral decision passed to the MCP execution boundary."""
+
+    event_id: str
+    exchange_id: ExchangeId
+    symbol: str
+    position_id: str
+    action: TakeProfitProtectionAction
+    requested_stop_loss: Decimal | None = Field(default=None, gt=Decimal("0"))
+    trigger_level: TakeProfitLevel
+    policy_version: str
+    idempotency_key: str
+    reasons: list[str] = Field(default_factory=list)
 
 
 class CanonicalTradeIntent(BaseModel):
@@ -275,6 +484,7 @@ class FilterDecision(BaseModel):
     rejection_reasons: list[str] = Field(default_factory=list)
     reviewer_model: str
     deduplication: DeduplicationDecision | None = None
+    omitted_stop_loss: OmittedStopLossDecision | None = None
 
 
 class PositionSizingDecision(BaseModel):

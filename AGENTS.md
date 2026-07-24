@@ -44,11 +44,15 @@ TelegramAgent retrieval
 - QWEN interprets serial Chinese text/images and emits hypotheses, never orders.
   RAG examples must preserve chronological messages, media, intended orders,
   and correct or incorrect outcomes.
-- Ministral validates schema/evidence and deduplicates equivalent hypotheses.
+- Ministral validates schema/evidence, deduplicates equivalent hypotheses,
+  handles authenticated MCP take-profit fill protection, and deterministically
+  derives omitted stop-losses from MCP liquidity and `5m`/`15m`/`1h`/`4h`
+  KDJ, Bollinger-width, and ATR inputs within a one-second budget.
 - Confidence selects the strategy tier. Hard rejection is limited to a
   deterministic pair blacklist or an instant-order MCP current price too far
   from the message reference price. Omitted TP/SL inference remains a
-  backtestable input, not a separate hard rejection.
+  backtestable input, not a separate hard rejection. QWEN must leave an omitted
+  stop-loss unset.
 - A-zhu's private-chat workflow may use a separately authorized minimalist
   Chinese acknowledgment skill; it must not infer parameters or confirm
   execution.
@@ -62,7 +66,9 @@ Typed contracts live in
 TelegramAgentAPI.retrieve_messages(...) -> TelegramAgentRetrievalBatch
 OwnerQwenAPI.infer_signal(...) -> QwenSignalHypothesis
 OwnerQwenAPI.infer_synonym(...) -> TradingMessageSynonymDecision
-MinistralFilterAPI.review(...) -> FilterDecision
+OwnerQwenAPI.infer_position_reduction(...) -> PositionReductionHypothesis
+MinistralFilterAPI.protect_entry_after_take_profit(...) -> TakeProfitProtectionDecision
+MinistralFilterAPI.review(..., market_snapshot) -> FilterDecision
 ```
 
 The shared synonym skill is review-only and is implemented by every

@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime, timezone
+from decimal import Decimal
 
 from agentic_perp_trading_bot.qwen_agents.owner_agent import OwnerQwenAgent
 from agentic_perp_trading_bot.schemas import (
@@ -25,6 +26,8 @@ def test_skills_api_exports_explicit_agent_contracts() -> None:
         "OwnerQwenAPI",
         "MinistralFilterAPI",
     }
+    assert hasattr(OwnerQwenAPI, "infer_position_reduction")
+    assert hasattr(MinistralFilterAPI, "protect_entry_after_take_profit")
 
 
 def _message() -> TelegramMessageEnvelope:
@@ -50,4 +53,24 @@ def test_synonym_inference_returns_a_reviewable_decision() -> None:
 
     assert decision.telegram_message_id == "123"
     assert decision.confidence == 0.0
+    assert decision.needs_human_review is True
+
+
+def test_position_reduction_skill_returns_bounded_reviewable_hypothesis() -> None:
+    message = _message()
+    context = TelegramPromptContext.from_message(message)
+    decision = asyncio.run(
+        OwnerQwenAgent("owner_a.json").infer_position_reduction(
+            message,
+            context,
+        )
+    )
+
+    assert decision.telegram_message_id == "123"
+    assert decision.selected_reduction_fraction is None
+    assert decision.minimum_reduction_fraction == Decimal("0.30")
+    assert decision.maximum_reduction_fraction == Decimal("0.40")
+    assert decision.stop_loss_profit_offset_fraction == Decimal("0.0015")
+    assert decision.take_profit_labels == ("TP1", "TP2", "TP3")
+    assert decision.resize_unfilled_take_profit_orders is True
     assert decision.needs_human_review is True

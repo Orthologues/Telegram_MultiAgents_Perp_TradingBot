@@ -196,8 +196,8 @@ The initial feature groups are:
 
 - owner and strategy performance from recent simulation runs, including recent
   win rate and cumulative gain for the relevant strategy tier;
-- technical alignment across 15-minute, 1-hour, and 4-hour MACD, KDJ, and
-  Bollinger Band features;
+- technical alignment from `5m`, `15m`, `1h`, and `4h` KDJ, Bollinger-width,
+  and ATR features, plus the existing MACD features;
 - 4-hour and 1-day EMA trend features; and
 - recent coin volatility, with higher volatility lowering the volatility
   component of confidence.
@@ -230,47 +230,28 @@ forward-test periods. Until that evaluation is complete, use the synthetic
 score only for analysis or conservative weighting and never as permission to
 execute an order.
 
-## Stop-Loss Inference
+## Deterministic Omitted Stop-Loss
 
-Use this skill when an owner, especially Lao-tu or Bi-jia-suo, gives an instant
-altcoin order without an explicit stop-loss. The owner-specific QWEN agent must
-infer a candidate from the serial Chinese message sequence and RAG examples,
-not from a hardcoded keyword or universal percentage rule.
+When an order omits its stop-loss, QWEN must leave `stop_loss` unset. The
+Bitget/BitMart MCP boundary supplies current price, market capitalization,
+24-hour quote volume, and KDJ, Bollinger bands, and Average True Range snapshots
+for each of `5m`, `15m`, `1h`, and `4h`. Ministral then applies the versioned
+deterministic policy in
+`agentic_perp_trading_bot.ministral_filter.stop_loss_policy`.
 
-The QWEN context should include:
+Market capitalization and volume select a large-, mid-, or small-liquidity
+distance band. The policy averages all four timeframe scores from Bollinger
+bandwidth, price-normalized ATR, and KDJ dispersion, then adjusts the result
+within that band. The final distance must remain between `1.25%` and `7.5%` of
+current price: BTC/ETH-like liquid pairs remain near the minimum, while
+small-cap alts remain near the maximum. The policy places the stop below
+current price for a long and above it for a short.
 
-- the complete signal and execution-message sequence;
-- owner, channel, asset group, strategy tier, and recent channel win rates;
-- analogous correct and incorrectly executed RAG examples;
-- entry price, direction, leverage, current position state, and exchange
-  constraints;
-- the 15-minute, 1-hour, and 4-hour technical context used by the confidence
-  skill; and
-  - recent coin volatility and the relevant account-allocation budget.
-
-The skill returns a candidate and evidence, not an order:
-
-```json
-{
-  "stop_loss_status": "inferred",
-  "stop_loss": "64200",
-  "inference_basis": ["owner_rag_017", "4h_support", "volatility_regime"],
-  "confidence": 0.64,
-  "needs_human_review": false
-}
-```
-
-The provisional `0.8%-1.5%` idea must be recorded as a backtest feature, not
-treated as a universal stop-loss rule. Preserve the inferred level, later
-updates, and execution outcome for strategy optimization. A live instant order
-is rejected only when its pair is blacklisted or its MCP-supplied current price
-is too distant from the message reference price.
-
-Evaluate this skill with chronological backtests containing explicit and
-omitted stop-losses, correct and incorrect executions, different strategy
-tiers, and volatile versus calm markets. Track invalid or missing-stop rate,
-stop-loss hit rate, maximum adverse excursion, false-safe decisions, and
-whether the inferred level changes after later message updates.
+Record the MCP snapshot, liquidity tier, indicator score, distance, policy
+version, and derived price. Keep Ministral stop-loss reasoning within a
+one-second budget. Explicit source stop-losses are preserved, and omitted
+stop-loss derivation does not add another hard-rejection rule. Backtest all
+thresholds and indicator weights before production use.
 
 ## Pair Blacklisting
 
@@ -339,6 +320,42 @@ QWEN hypothesis
 Keep explanations and labels available to the performance engine, but never let
 free-form model reasoning override the pair blacklist or instant-order price
 distance check.
+
+## Reduce Position and Protect Entry (QWEN)
+
+Use this owner-QWEN skill when a Telegram message instructs the bot to reduce an
+existing position and move its stop-loss into profit. Return a reviewable
+position-management hypothesis, not an executable order.
+
+The hypothesis must request a reduction of `30%`-`40%` of the position's
+configured maximum total quantity. Move the stop-loss `0.15%` beyond the
+average entry price in the profitable direction: above entry for a long and
+below entry for a short. The live direction, average entry, maximum quantity,
+exchange constraints, and current order state must come from MCP and be
+validated by Ministral.
+
+After the reduction is confirmed, cancel and replace only the still-unfilled
+TP1, TP2, and TP3 reduce-only limit orders so their quantities match the
+remaining position. Preserve filled take-profit orders and execution history.
+Its API contract is
+`agentic_perp_trading_bot.skills_api.owner_qwen.OwnerQwenAPI.infer_position_reduction`.
+
+## Take-Profit Fill Entry Protection (Ministral)
+
+Use this skill when the MCP boundary emits an authenticated take-profit fill
+event independently of TelegramAgent. After TP1 fills, Ministral must
+immediately request that the stop-loss move `0.15%` beyond the average entry
+price in the profitable direction.
+
+After TP2 fills following TP1, move the stop-loss to the recorded TP1 price only
+when TP3 is configured and remains unfilled. Validate the position direction,
+fill sequence, configured take-profit levels, average entry, TP1 price, and
+current stop-loss. Never loosen a stop that is already more profitable.
+
+Deduplicate repeated fill events by their stable event ID and return a typed
+adjustment decision for MCP execution; Ministral must not call an exchange
+directly. Its API contract is
+`agentic_perp_trading_bot.skills_api.ministral_filter.MinistralFilterAPI.protect_entry_after_take_profit`.
 
 ## Weight and Confidence
 

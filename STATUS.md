@@ -3,7 +3,7 @@
 Maintenance rule: **OVERWRITE** this file on every update. It is the single
 source of current state, not a development log. The log is `HISTORY.md`.
 
-Last updated: 2026-07-23
+Last updated: 2026-07-24
 
 ## Phase
 
@@ -14,9 +14,9 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
 
 - The repository is a human-reviewed, non-executing scaffold; it is not live
   trading software.
-- Seventeen commits are summarized in `HISTORY.md`; current HEAD is `27cce05`.
-- `OwnerQwenAPI` includes the shared review-only synonym skill through
-  `qwen_agents/owner_agent.py`, without direct exchange access from agents.
+- Eighteen commits are summarized in `HISTORY.md`; current HEAD is `a02e839`.
+- `OwnerQwenAPI` includes shared review-only synonym and reduce-and-protect
+  skills through `qwen_agents/owner_agent.py`, without direct exchange access.
 - AG2 TelegramAgent provides pull-based retrieval through one shared Lightsail
   worker, per-chat adapters, one authorized user session, and durable cursors.
 - The scaffold preserves provenance, supports private S3/DynamoDB boundaries,
@@ -24,11 +24,18 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   context to QWEN and Ministral.
 - Confidence selects strategy tiers. Hard rejection is limited to a pair
   blacklist or an instant-order MCP price too far from the message reference.
+- Pending changes move omitted stop-loss derivation from QWEN to a versioned
+  Ministral policy using MCP market cap, volume, and `5m`/`15m`/`1h`/`4h`
+  KDJ, Bollinger-width, and ATR inputs, bounded to `1.25%`-`7.5%` with a
+  one-second reasoning budget.
+- Ministral also exposes typed MCP-event protection for TP1 entry protection
+  and TP2-to-TP1 stop movement while TP3 remains pending.
 - The Telethon image hydrator and authentic serial RAG corpus are not yet
   implemented. Current media archival and QWEN multimodal delivery remain
   scaffold boundaries; synonym inference remains a placeholder until RAG is
   populated.
-- Last verification: 22 tests passed; compilation and diff checks passed.
+- Last verification: 50 tests passed with the active Python 3.11 environment;
+  `uv` remains unavailable in the sandbox because of Snap permissions.
 
 ## Next Actions
 
@@ -60,6 +67,8 @@ serial RAG set with authentic text/image patterns.
 
 - Replace in-memory test storage with production S3 and DynamoDB adapters.
 - Implement model-specific Bedrock QWEN and Ministral multimodal adapters.
+- Implement Bitget/BitMart MCP market-analysis adapters for the typed
+  liquidity and indicator snapshot.
 - Rebuild owner reply-tree indexes after worker restarts without DynamoDB reads
   for live prompt context.
 - Add end-to-end replay tests before any live execution experiment.
