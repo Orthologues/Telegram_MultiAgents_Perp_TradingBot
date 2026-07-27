@@ -30,9 +30,10 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
 - Confidence selects strategy tiers. Hard rejection is limited to a pair
   blacklist or an instant-order MCP price deviating over `0.5%` (generic altcoins), `0.25%` (BNB, ETH, SOL, TradFi perpetual future pairs) or `0.125%` (BTC) the message reference.
 - The scaffold moves omitted stop-loss derivation from QWEN to a versioned
-  Ministral policy using MCP market cap, volume, and `5m`/`15m`/`1h`/`4h`
-  KDJ, Bollinger-width, and ATR inputs, bounded to `1.25%`-`7.5%` with a
-  one-second reasoning budget.
+  Ministral policy using MCP market cap, volume, and `5m`/`15m`/`1h`/`4h` KDJ,
+  Bollinger-width, and ATR inputs. The derived distance is bounded to
+  `1.25%`-`7.5%` from entry 1, or from the average of entry 1 and entry 2 when
+  both are present, within a one-second reasoning budget.
 - Ministral also exposes typed MCP-event protection for TP1 entry protection
   and TP2-to-TP1 stop movement while TP3 remains pending, with idempotent
   decisions that never loosen an existing stop.

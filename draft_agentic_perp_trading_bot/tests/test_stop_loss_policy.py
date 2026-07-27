@@ -34,6 +34,7 @@ def _hypothesis(
     *,
     direction: str = "long",
     stop_loss: Decimal | None = None,
+    entries: list[Decimal] | None = None,
 ) -> QwenSignalHypothesis:
     return QwenSignalHypothesis(
         owner_id=OwnerId.OWNER_B_LAO_TU,
@@ -43,7 +44,7 @@ def _hypothesis(
         intent_type=IntentType.NEW_ORDER,
         symbol="ALTUSDT",
         direction=direction,
-        entries=[Decimal("100")],
+        entries=entries if entries is not None else [Decimal("100")],
         stop_loss=stop_loss,
         confidence=Decimal("0.7"),
     )
@@ -126,6 +127,46 @@ def test_atr_across_all_timeframes_increases_the_stop_distance() -> None:
     assert low_atr is not None
     assert high_atr is not None
     assert high_atr.distance_fraction > low_atr.distance_fraction
+
+
+def test_single_entry_stop_loss_is_bounded_from_entry1() -> None:
+    entry1 = Decimal("120")
+    decision = MinistralStopLossPolicy().derive(
+        _hypothesis(entries=[entry1]),
+        _market(market_cap="50000000", volume="1000000"),
+    )
+
+    assert decision is not None
+    assert decision.stop_loss == entry1 * (
+        Decimal("1") - decision.distance_fraction
+    )
+    assert (entry1 - decision.stop_loss) / entry1 <= Decimal("0.075")
+
+
+def test_two_entries_stop_loss_is_bounded_from_average_entry_price() -> None:
+    entry1 = Decimal("120")
+    entry2 = Decimal("110")
+    reference_price = (entry1 + entry2) / Decimal("2")
+    decision = MinistralStopLossPolicy().derive(
+        _hypothesis(entries=[entry1, entry2]),
+        _market(market_cap="50000000", volume="1000000"),
+    )
+
+    assert decision is not None
+    assert decision.stop_loss == reference_price * (
+        Decimal("1") - decision.distance_fraction
+    )
+    assert (reference_price - decision.stop_loss) / reference_price <= Decimal(
+        "0.075"
+    )
+
+
+def test_omitted_stop_loss_requires_an_entry_reference_price() -> None:
+    with pytest.raises(ValueError, match="at least one entry"):
+        MinistralStopLossPolicy().derive(
+            _hypothesis(entries=[]),
+            _market(market_cap="50000000", volume="1000000"),
+        )
 
 
 def test_market_snapshot_requires_every_indicator_timeframe() -> None:

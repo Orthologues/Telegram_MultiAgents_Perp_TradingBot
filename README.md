@@ -19,8 +19,9 @@ trade cursors selected from those parent IDs, including each pair's BitMart or
 Bitget active orders and open positions.
 
 Omitted stop-losses are derived at the Ministral boundary from typed MCP
-liquidity plus KDJ, Bollinger-width, and Average True Range (ATR) inputs at `5m`, `15m`, `1h`, and
-`4h`, constrained to `1.25%`-`7.5%` of current price. QWEN does not infer them.
+liquidity plus KDJ, Bollinger-width, and Average True Range (ATR) inputs at
+`5m`, `15m`, `1h`, and `4h`, constrained to `1.25%`-`7.5%` from entry 1 or
+the average of entry 1 and entry 2. QWEN does not infer them.
 
 ## Fastest Test
 

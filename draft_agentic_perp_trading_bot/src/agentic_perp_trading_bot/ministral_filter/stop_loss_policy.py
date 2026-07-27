@@ -61,11 +61,12 @@ class MinistralStopLossPolicy:
         lower, upper = _DISTANCE_BANDS[liquidity_tier]
         distance = lower + (upper - lower) * volatility_score
         distance = min(max(distance, MINIMUM_DISTANCE), MAXIMUM_DISTANCE)
+        reference_price = self._entry_reference_price(hypothesis)
 
         if direction == "long":
-            stop_loss = market.current_price * (Decimal("1") - distance)
+            stop_loss = reference_price * (Decimal("1") - distance)
         else:
-            stop_loss = market.current_price * (Decimal("1") + distance)
+            stop_loss = reference_price * (Decimal("1") + distance)
 
         return OmittedStopLossDecision(
             stop_loss=stop_loss,
@@ -82,6 +83,14 @@ class MinistralStopLossPolicy:
                 "mcp_average_true_range_5m_15m_1h_4h",
             ],
         )
+
+    @staticmethod
+    def _entry_reference_price(hypothesis: QwenSignalHypothesis) -> Decimal:
+        if not hypothesis.entries:
+            raise ValueError("omitted stop-loss requires at least one entry price")
+        if len(hypothesis.entries) == 1:
+            return hypothesis.entries[0]
+        return (hypothesis.entries[0] + hypothesis.entries[1]) / Decimal("2")
 
     @staticmethod
     def _liquidity_tier(market: MarketAnalysisSnapshot) -> MarketLiquidityTier:

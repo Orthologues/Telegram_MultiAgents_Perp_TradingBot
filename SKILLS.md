@@ -260,10 +260,11 @@ deterministic policy in
 Market capitalization and volume select a large-, mid-, or small-liquidity
 distance band. The policy averages all four timeframe scores from Bollinger
 bandwidth, price-normalized ATR, and KDJ dispersion, then adjusts the result
-within that band. The final distance must remain between `1.25%` and `7.5%` of
-current price: BTC/ETH-like liquid pairs remain near the minimum, while
-small-cap alts remain near the maximum. The policy places the stop below
-current price for a long and above it for a short.
+within that band. The final distance must remain between `1.25%` and `7.5%`
+from entry 1 when only one entry exists, or from the average of entry 1 and
+entry 2 when both are present. BTC/ETH-like liquid pairs remain near the
+minimum, while small-cap alts remain near the maximum. The policy places the
+stop below the reference entry price for a long and above it for a short.
 
 Record the MCP snapshot, liquidity tier, indicator score, distance, policy
 version, and derived price. Keep Ministral stop-loss reasoning within a
