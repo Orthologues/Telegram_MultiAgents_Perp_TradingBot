@@ -72,7 +72,7 @@ def _market(
         for timeframe in IndicatorTimeframe
     }
     return MarketAnalysisSnapshot(
-        exchange_id=ExchangeId.BITMART,
+        exchange_id=ExchangeId.HYPERLIQUID,
         symbol="ALTUSDT",
         current_price=Decimal("100"),
         market_cap_usd=Decimal(market_cap),
@@ -284,7 +284,7 @@ def test_orchestrator_copies_derived_stop_into_approved_intent() -> None:
                     action=TradeAction.OPEN_LONG,
                     order_type="limit",
                     entries=[Decimal("100")],
-                    target_exchanges=[ExchangeId.BITMART],
+                    target_exchanges=[ExchangeId.HYPERLIQUID],
                 ),
                 reviewer_model="ministral-3-8b",
                 omitted_stop_loss=omitted_stop,

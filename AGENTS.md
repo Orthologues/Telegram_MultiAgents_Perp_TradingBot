@@ -7,7 +7,7 @@ Telegram-driven perpetual-futures bot, generated predominantly by Codex
 GPT-5.6 Sol and GPT-5.6 Luna. Careful human review of the codebase and
 backtesting of previous Telegram trading signals are required before further
 use. Keep changes small and consistent with
-the [Figma architecture flowchart](https://www.figma.com/board/IosVAXW713NeWhTTU962vC/AgenticPerpTradingBotArch-Flowchart)
+the [Figma architecture flowchart](https://www.figma.com/board/IosVAXW713NeWhTTU962vC/AgenticPerpTradingBotArch-Flowchart?node-id=402-140)
 and [`architecture_to_code_mapping.md`](draft_agentic_perp_trading_bot/architecture_to_code_mapping.md).
 Never commit credentials, Telegram sessions, tokens, signatures, or secret
 files. Do not describe placeholders as live trading code.
@@ -18,11 +18,11 @@ files. Do not describe placeholders as live trading code.
 TelegramAgent retrieval
   -> one Lightsail worker with per-chat adapters and per-message receipts
   -> normalize, hydrate media, deduplicate, and build reply-tree context
-  -> private S3 media + DynamoDB message and live trade-cursor metadata
-  -> one owner-specific QWEN agent per owner
+  -> ElastiCache reply trees + private S3 media + DynamoDB metadata
+  -> one owner-specific QWEN agent per owner, producing five strategy tiers
   -> Ministral validation and signal deduplication
-  -> weighting and confidence policy
-  -> Bitget/BitMart MCP gateway and Lambda execution boundary
+  -> confidence/strategy and deterministic risk policies
+  -> Bitget/Hyperliquid MCP gateway and Lambda execution boundary
 ```
 
 - Use one authorized Telegram user session and one shared polling worker.
@@ -35,15 +35,14 @@ TelegramAgent retrieval
 - AG2 retrieval exposes a media-presence flag in this scaffold. Use an
   authenticated Telethon hydrator to download, hash, and archive images in
   private S3 before model delivery.
-- Keep one in-memory reply-tree index per owner. For each message, include all
-  available parent IDs and snapshots in chronological order. Query DynamoDB by
-  those parent IDs for active trade cursors, but keep message-body context in
-  the in-memory reply tree.
+- Keep one ElastiCache-backed reply-tree index per owner, with a process-local
+  read-through cache. Include all available parent IDs and snapshots in
+  chronological order, and query DynamoDB by those IDs for active trade cursors.
 - Pass the same ID-labelled `TelegramPromptContext` to QWEN and Ministral.
 - Store concurrent `TradeThreadCursor` metadata in DynamoDB. Each cursor tracks
   one parent-linked symbol, exchange, direction, active-order set, and
-  open-position set; close it only after the position is fully closed and no
-  active orders remain.
+  open-position set, plus its confidence-selected lifecycle strategy; close it
+  only after the position is fully closed and no active orders remain.
 - Retain DynamoDB metadata for live coordination, replay, backtesting, and
   strategy optimization, including omitted TP/SL outcomes and blacklist data.
 
@@ -51,17 +50,20 @@ TelegramAgent retrieval
 
 - Maintain four owner-specific QWEN agents; channels and asset groups route into
   them and do not create additional agents.
-- QWEN interprets serial Chinese text/images and emits hypotheses, never orders.
+- QWEN interprets serial Chinese text/images and emits one candidate for each
+  tier from ultra-conservative to ultra-radical, never orders.
   RAG examples must preserve chronological messages, media, intended orders,
   and correct or incorrect outcomes.
 - Ministral validates schema/evidence, deduplicates equivalent hypotheses,
   handles authenticated MCP take-profit fill protection, and deterministically
   derives omitted stop-losses from MCP liquidity and `5m`/`15m`/`1h`/`4h`
   KDJ, Bollinger-width, and Average True Range (ATR) inputs within a one-second budget.
-- Confidence selects the strategy tier. Hard rejection is limited to a
-  deterministic pair blacklist or an instant-order MCP current price deviating the message reference price above a certain threshold (SEE `./STATUS.md` for reference). Omitted TP/SL inference remains a
-  backtestable input, not a separate hard rejection. QWEN must leave an omitted
-  stop-loss unset.
+- Confidence selects one of the five initial lifecycle strategies, including
+  its recommended size and leverage. Parent-linked updates inherit that policy;
+  only an explicit `strategy_tier_hint` whose target candidate passes Ministral
+  review may increment its revision. Deterministic risk separately enforces
+  pair blacklisting, instant-order price deviation, leverage, and cumulative
+  owner/pair position-value limits. QWEN must leave an omitted stop-loss unset.
 - A-zhu's private-chat workflow may use a separately authorized minimalist
   Chinese acknowledgment skill; it must not infer parameters or confirm
   execution.
@@ -73,10 +75,12 @@ Typed contracts live in
 
 ```text
 TelegramAgentAPI.retrieve_messages(...) -> TelegramAgentRetrievalBatch
+OwnerQwenAPI.infer_strategy_candidates(...) -> QwenStrategyCandidateSet
 OwnerQwenAPI.infer_signal(...) -> QwenSignalHypothesis
 OwnerQwenAPI.infer_synonym(...) -> TradingMessageSynonymDecision
 OwnerQwenAPI.infer_position_reduction(...) -> PositionReductionHypothesis
 MinistralFilterAPI.protect_entry_after_take_profit(...) -> TakeProfitProtectionDecision
+MinistralFilterAPI.record_execution_event(...) -> None
 MinistralFilterAPI.review(..., market_snapshot) -> FilterDecision
 ```
 

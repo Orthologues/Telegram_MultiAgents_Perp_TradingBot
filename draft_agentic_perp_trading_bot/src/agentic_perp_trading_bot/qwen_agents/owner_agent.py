@@ -11,6 +11,7 @@ from agentic_perp_trading_bot.schemas import (
     IntentType,
     PositionReductionHypothesis,
     QwenSignalHypothesis,
+    QwenStrategyCandidateSet,
     StrategyTier,
     TelegramMessageEnvelope,
     TelegramPromptContext,
@@ -19,8 +20,13 @@ from agentic_perp_trading_bot.schemas import (
 
 
 class OwnerQwenAgent:
-    def __init__(self, owner_profile_path: str):
+    def __init__(
+        self,
+        owner_profile_path: str,
+        model_id: str = "qwen3-vl-235b-a22",
+    ):
         self.owner_profile_path = owner_profile_path
+        self.model_id = model_id
 
     def build_prompt_messages(
         self,
@@ -33,20 +39,41 @@ class OwnerQwenAgent:
         message: TelegramMessageEnvelope,
         prompt_context: TelegramPromptContext | None = None,
     ) -> QwenSignalHypothesis:
-        """Infer source parameters, leaving an omitted stop-loss unset for Ministral."""
+        """Return the intermediate candidate for compatibility with focused skills."""
+        candidates = await self.infer_strategy_candidates(message, prompt_context)
+        return candidates.candidates[StrategyTier.INTERMEDIATE]
+
+    async def infer_strategy_candidates(
+        self,
+        message: TelegramMessageEnvelope,
+        prompt_context: TelegramPromptContext | None = None,
+    ) -> QwenStrategyCandidateSet:
+        """Infer one reviewable candidate for each architecture strategy tier."""
         context = prompt_context or TelegramPromptContext.from_message(message)
         if context.current_message.telegram_message_id != message.telegram_message_id:
             raise ValueError("prompt context current message does not match QWEN input")
         _ = self.build_prompt_messages(context)
-        return QwenSignalHypothesis(
+        return QwenStrategyCandidateSet(
             owner_id=message.owner_id,
             channel_id=message.channel_id,
             asset_group=message.asset_group,
-            strategy_tier=message.strategy_tier_hint or StrategyTier.INTERMEDIATE,
-            intent_type=IntentType.IGNORE,
-            confidence=0.0,
-            evidence=[],
-            ambiguities=["placeholder implementation"],
+            model_id=self.model_id,
+            interpretation_confidence=0.0,
+            candidates={
+                tier: QwenSignalHypothesis(
+                    owner_id=message.owner_id,
+                    channel_id=message.channel_id,
+                    asset_group=message.asset_group,
+                    model_id=self.model_id,
+                    strategy_tier=tier,
+                    intent_type=IntentType.IGNORE,
+                    confidence=0.0,
+                    evidence=[],
+                    ambiguities=["placeholder implementation"],
+                    source_dedup_key=message.dedup_key,
+                )
+                for tier in StrategyTier
+            },
             source_dedup_key=message.dedup_key,
         )
 

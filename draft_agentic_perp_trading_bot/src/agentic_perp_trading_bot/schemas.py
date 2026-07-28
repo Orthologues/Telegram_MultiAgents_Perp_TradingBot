@@ -20,14 +20,23 @@ class OwnerId(StrEnum):
 class AssetGroup(StrEnum):
     BTC_ETH = "btc_eth"
     ALTS = "alts"
+    ALTS_TRADFI = "alts_tradfi"
+    CRYPTO = "crypto"
     TRADFI = "tradfi"
     MIXED = "mixed"
 
 
 class StrategyTier(StrEnum):
+    ULTRA_CONSERVATIVE = "ultra_conservative"
     CONSERVATIVE = "conservative"
     INTERMEDIATE = "intermediate"
     RADICAL = "radical"
+    ULTRA_RADICAL = "ultra_radical"
+
+
+class LifecycleStrategySource(StrEnum):
+    INITIAL_CONFIDENCE = "initial_confidence"
+    TELEGRAM_TRANSITION = "telegram_transition"
 
 
 class IntentType(StrEnum):
@@ -67,7 +76,7 @@ class TakeProfitProtectionAction(StrEnum):
 
 class ExchangeId(StrEnum):
     BITGET = "bitget"
-    BITMART = "bitmart"
+    HYPERLIQUID = "hyperliquid"
 
 
 class TradeCursorStatus(StrEnum):
@@ -196,6 +205,40 @@ class ExchangeTradeState(BaseModel):
         return identifiers
 
 
+class PositionLifecycleStrategy(BaseModel):
+    """Persisted confidence-selected policy for one position lifecycle."""
+
+    strategy_tier: StrategyTier
+    confidence: float = Field(ge=0.0, le=1.0)
+    source_confidence: float = Field(ge=0.0, le=1.0)
+    quality_score: float | None = Field(default=None, ge=0.0, le=1.0)
+    performance_score: float | None = Field(default=None, ge=0.0, le=1.0)
+    formula_version: str = Field(min_length=1)
+    owner_weight: float = Field(ge=0.0)
+    asset_group_weight: float = Field(ge=0.0)
+    position_notional_usdt: Decimal = Field(ge=Decimal("0"))
+    leverage: int = Field(ge=1, le=125)
+    source: LifecycleStrategySource
+    source_telegram_message_id: str = Field(pattern=r"^[0-9]+$")
+    selected_at: datetime
+    revision: int = Field(default=0, ge=0)
+    reasons: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_revision_source(self) -> Self:
+        if (
+            self.source == LifecycleStrategySource.INITIAL_CONFIDENCE
+            and self.revision != 0
+        ):
+            raise ValueError("an initial confidence policy must use revision 0")
+        if (
+            self.source == LifecycleStrategySource.TELEGRAM_TRANSITION
+            and self.revision == 0
+        ):
+            raise ValueError("a Telegram strategy transition must increment revision")
+        return self
+
+
 class TradeThreadCursor(BaseModel):
     """Concurrent live trade thread selected through Telegram parent messages."""
 
@@ -209,6 +252,7 @@ class TradeThreadCursor(BaseModel):
     direction: PositionDirection
     active_order_ids: set[str] = Field(default_factory=set)
     open_position_ids: set[str] = Field(default_factory=set)
+    lifecycle_strategy: PositionLifecycleStrategy
     position_was_opened: bool = False
     status: TradeCursorStatus = TradeCursorStatus.ACTIVE
     opened_at: datetime
@@ -231,6 +275,18 @@ class TradeThreadCursor(BaseModel):
     def validate_cursor_lifecycle(self) -> Self:
         if self.origin_message_id not in self.message_ids:
             raise ValueError("origin_message_id must be included in message_ids")
+        if self.lifecycle_strategy.source_telegram_message_id not in self.message_ids:
+            raise ValueError(
+                "lifecycle strategy source message must be included in message_ids"
+            )
+        if (
+            self.lifecycle_strategy.revision == 0
+            and self.lifecycle_strategy.source_telegram_message_id
+            != self.origin_message_id
+        ):
+            raise ValueError(
+                "the initial lifecycle strategy must originate from the cursor root"
+            )
         if self.status == TradeCursorStatus.CLOSED:
             if not self.position_was_opened:
                 raise ValueError("a cursor cannot close before a position has opened")
@@ -326,6 +382,7 @@ class QwenSignalHypothesis(BaseModel):
     owner_id: OwnerId
     channel_id: str
     asset_group: AssetGroup
+    model_id: str | None = None
     strategy_tier: StrategyTier
     intent_type: IntentType
     symbol: str | None = None
@@ -337,6 +394,45 @@ class QwenSignalHypothesis(BaseModel):
     evidence: list[str] = Field(default_factory=list)
     ambiguities: list[str] = Field(default_factory=list)
     source_dedup_key: str | None = None
+
+
+class QwenStrategyCandidateSet(BaseModel):
+    """One owner QWEN interpretation expanded into all five strategy tiers."""
+
+    owner_id: OwnerId
+    channel_id: str
+    asset_group: AssetGroup
+    model_id: str
+    interpretation_confidence: float = Field(ge=0.0, le=1.0)
+    candidates: dict[StrategyTier, QwenSignalHypothesis]
+    source_dedup_key: str | None = None
+
+    @model_validator(mode="after")
+    def validate_complete_consistent_candidates(self) -> Self:
+        supplied = set(self.candidates)
+        required = set(StrategyTier)
+        if supplied != required:
+            missing = sorted(tier.value for tier in required - supplied)
+            unexpected = sorted(tier.value for tier in supplied - required)
+            raise ValueError(
+                "candidates must contain all five strategy tiers; "
+                f"missing={missing}, unexpected={unexpected}"
+            )
+
+        expected_identity = (self.owner_id, self.channel_id, self.asset_group)
+        for tier, candidate in self.candidates.items():
+            candidate_identity = (
+                candidate.owner_id,
+                candidate.channel_id,
+                candidate.asset_group,
+            )
+            if candidate_identity != expected_identity:
+                raise ValueError(f"{tier.value} candidate has inconsistent source identity")
+            if candidate.strategy_tier != tier:
+                raise ValueError(f"{tier.value} candidate has a mismatched strategy_tier")
+            if candidate.model_id != self.model_id:
+                raise ValueError(f"{tier.value} candidate has a mismatched model_id")
+        return self
 
 
 class TechnicalIndicatorSnapshot(BaseModel):
@@ -364,7 +460,7 @@ class TechnicalIndicatorSnapshot(BaseModel):
 
 
 class MarketAnalysisSnapshot(BaseModel):
-    """Typed Bitget/BitMart MCP input for Ministral validation."""
+    """Typed Bitget/Hyperliquid MCP input for Ministral validation."""
 
     exchange_id: ExchangeId
     symbol: str = Field(min_length=1)
@@ -547,6 +643,18 @@ class CanonicalTradeIntent(BaseModel):
     target_exchanges: list[ExchangeId]
     signal_dedup_key: str | None = None
 
+    @field_validator("target_exchanges")
+    @classmethod
+    def validate_target_exchanges(
+        cls,
+        exchange_ids: list[ExchangeId],
+    ) -> list[ExchangeId]:
+        if not exchange_ids:
+            raise ValueError("target_exchanges must not be empty")
+        if len(exchange_ids) != len(set(exchange_ids)):
+            raise ValueError("target_exchanges must not contain duplicates")
+        return exchange_ids
+
 
 class FilterDecision(BaseModel):
     status: str
@@ -566,12 +674,56 @@ class PositionSizingDecision(BaseModel):
     owner_weight: float = Field(ge=0.0)
     asset_group_weight: float = Field(ge=0.0)
     final_position_notional_usdt: Decimal = Field(ge=Decimal("0"))
+    leverage: int = Field(ge=1, le=125)
 
 
 class ConfidenceDecision(BaseModel):
-    approved: bool = True
     confidence: float = Field(ge=0.0, le=1.0)
     strategy_tier: StrategyTier
+    source_confidence: float = Field(ge=0.0, le=1.0)
+    quality_score: float | None = Field(default=None, ge=0.0, le=1.0)
+    performance_score: float | None = Field(default=None, ge=0.0, le=1.0)
+    formula_version: str
+    reasons: list[str] = Field(default_factory=list)
+
+
+class PerformanceMetricsSnapshot(BaseModel):
+    """Replayable strategy features derived from closed execution lifecycles."""
+
+    owner_id: OwnerId
+    channel_id: str
+    asset_group: AssetGroup
+    strategy_tier: StrategyTier
+    sample_size: int = Field(ge=0)
+    tp1_hit_rate: float = Field(ge=0.0, le=1.0)
+    tp2_hit_rate: float = Field(ge=0.0, le=1.0)
+    stop_loss_rate: float = Field(ge=0.0, le=1.0)
+    cumulative_pnl_percentage: Decimal
+    immediate_reversal_after_stop_rate: float = Field(ge=0.0, le=1.0)
+    observed_at: datetime
+
+
+class PairRiskLimit(BaseModel):
+    """Owner/exchange/pair bounds applied after confidence-based sizing."""
+
+    owner_id: OwnerId
+    exchange_id: ExchangeId
+    symbol: str = Field(min_length=1)
+    maximum_cumulative_position_notional_usdt: Decimal = Field(gt=Decimal("0"))
+    maximum_leverage: int = Field(ge=1, le=125)
+    policy_version: str
+
+
+class DeterministicRiskDecision(BaseModel):
+    approved: bool
+    owner_id: OwnerId
+    exchange_id: ExchangeId
+    symbol: str
+    requested_position_notional_usdt: Decimal = Field(ge=Decimal("0"))
+    existing_position_notional_usdt: Decimal = Field(ge=Decimal("0"))
+    cumulative_position_notional_usdt: Decimal = Field(ge=Decimal("0"))
+    requested_leverage: int = Field(ge=1, le=125)
+    limits: PairRiskLimit
     reasons: list[str] = Field(default_factory=list)
     instant_price_deviation: Decimal | None = Field(
         default=None,
@@ -583,11 +735,124 @@ class ConfidenceDecision(BaseModel):
     )
 
 
+class ClosedTradeOutcome(BaseModel):
+    """Net closed-trade result used by deterministic pair blacklisting."""
+
+    exchange_id: ExchangeId
+    symbol: str = Field(min_length=1)
+    closed_at: datetime
+    realized_pnl_usdt: Decimal
+    fees_usdt: Decimal = Field(default=Decimal("0"), ge=Decimal("0"))
+    funding_usdt: Decimal = Decimal("0")
+    execution_cost_usdt: Decimal = Field(default=Decimal("0"), ge=Decimal("0"))
+    stopped_out: bool = False
+    reversed_after_stop: bool = False
+
+    @property
+    def net_pnl_usdt(self) -> Decimal:
+        return (
+            self.realized_pnl_usdt
+            - self.fees_usdt
+            - self.funding_usdt
+            - self.execution_cost_usdt
+        )
+
+
+class PairBlacklistDecision(BaseModel):
+    exchange_id: ExchangeId
+    symbol: str
+    blacklisted: bool
+    window_days: int = Field(ge=1)
+    closed_trades: int = Field(ge=0)
+    wins: int = Field(ge=0)
+    losses: int = Field(ge=0)
+    win_loss_ratio: Decimal | None = Field(default=None, ge=Decimal("0"))
+    stop_reversal_rate: Decimal | None = Field(
+        default=None,
+        ge=Decimal("0"),
+        le=Decimal("1"),
+    )
+    reasons: list[str] = Field(default_factory=list)
+    policy_version: str
+    computed_at: datetime
+
+
+class PositionLifecycleEvent(BaseModel):
+    """DynamoDB metadata for execution, P/L, and position-lifecycle replay."""
+
+    event_id: str = Field(min_length=1)
+    owner_id: OwnerId
+    channel_id: str
+    strategy_tier: StrategyTier
+    exchange_id: ExchangeId
+    symbol: str = Field(min_length=1)
+    position_id: str = Field(min_length=1)
+    trade_cursor_id: str | None = None
+    event_type: Literal[
+        "order_submitted",
+        "order_filled",
+        "take_profit_filled",
+        "stop_loss_filled",
+        "position_reduced",
+        "position_closed",
+    ]
+    realized_pnl_usdt: Decimal | None = None
+    occurred_at: datetime
+    source_telegram_message_ids: list[str] = Field(default_factory=list)
+
+
 class ApprovedExecutionRequest(BaseModel):
     intent: CanonicalTradeIntent
     sizing: PositionSizingDecision
     confidence: ConfidenceDecision
+    lifecycle_strategy: PositionLifecycleStrategy
+    risk_decisions: list[DeterministicRiskDecision] = Field(min_length=1)
     idempotency_key: str
     source_telegram_message_id: str | None = None
     parent_message_ids: list[str] = Field(default_factory=list)
     trade_cursor_ids: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_execution_approval(self) -> Self:
+        target_exchanges = set(self.intent.target_exchanges)
+        risk_exchanges = {decision.exchange_id for decision in self.risk_decisions}
+        if risk_exchanges != target_exchanges:
+            raise ValueError("risk decisions must cover every target exchange exactly once")
+        if len(self.risk_decisions) != len(risk_exchanges):
+            raise ValueError("risk decisions must not contain duplicate exchanges")
+        if any(not decision.approved for decision in self.risk_decisions):
+            raise ValueError("an approved execution request cannot contain rejected risk")
+        if any(
+            decision.owner_id != self.intent.owner_id
+            or decision.symbol.upper() != self.intent.symbol.upper()
+            for decision in self.risk_decisions
+        ):
+            raise ValueError("risk decisions must match the intent owner and symbol")
+        if self.intent.strategy_tier != self.confidence.strategy_tier:
+            raise ValueError("intent and confidence strategy tiers must match")
+        if self.intent.strategy_tier != self.sizing.strategy_tier:
+            raise ValueError("intent and sizing strategy tiers must match")
+        if self.intent.strategy_tier != self.lifecycle_strategy.strategy_tier:
+            raise ValueError("intent and lifecycle strategy tiers must match")
+        if (
+            self.sizing.owner_weight != self.lifecycle_strategy.owner_weight
+            or self.sizing.asset_group_weight
+            != self.lifecycle_strategy.asset_group_weight
+            or self.sizing.final_position_notional_usdt
+            != self.lifecycle_strategy.position_notional_usdt
+            or self.sizing.leverage != self.lifecycle_strategy.leverage
+        ):
+            raise ValueError("sizing must match the persisted lifecycle strategy")
+        if (
+            self.confidence.confidence != self.lifecycle_strategy.confidence
+            or self.confidence.source_confidence
+            != self.lifecycle_strategy.source_confidence
+            or self.confidence.quality_score
+            != self.lifecycle_strategy.quality_score
+            or self.confidence.performance_score
+            != self.lifecycle_strategy.performance_score
+            or self.confidence.formula_version
+            != self.lifecycle_strategy.formula_version
+        ):
+            raise ValueError("confidence must match the lifecycle strategy provenance")
+        return self

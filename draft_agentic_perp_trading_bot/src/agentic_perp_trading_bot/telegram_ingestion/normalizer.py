@@ -20,10 +20,37 @@ OWNER_CHANNEL_MAP: dict[str, tuple[OwnerId, AssetGroup]] = {
     "owner_a_channel_a": (OwnerId.OWNER_A_SHU_QIN, AssetGroup.MIXED),
     "owner_b_channel_a": (OwnerId.OWNER_B_LAO_TU, AssetGroup.MIXED),
     "owner_c_btc_eth": (OwnerId.OWNER_C_BI_JIA_SUO, AssetGroup.BTC_ETH),
-    "owner_c_alts_tradfi": (OwnerId.OWNER_C_BI_JIA_SUO, AssetGroup.ALTS),
+    "owner_c_alts_tradfi": (
+        OwnerId.OWNER_C_BI_JIA_SUO,
+        AssetGroup.ALTS_TRADFI,
+    ),
+    "owner_d_legacy_btc_eth": (
+        OwnerId.OWNER_D_A_ZHU,
+        AssetGroup.BTC_ETH,
+    ),
+    "owner_d_legacy_alts_day": (
+        OwnerId.OWNER_D_A_ZHU,
+        AssetGroup.ALTS_TRADFI,
+    ),
+    "owner_d_legacy_alts_longer": (
+        OwnerId.OWNER_D_A_ZHU,
+        AssetGroup.ALTS_TRADFI,
+    ),
+    "owner_d_active_private_chat": (
+        OwnerId.OWNER_D_A_ZHU,
+        AssetGroup.CRYPTO,
+    ),
+    "owner_d_active_public_channel": (
+        OwnerId.OWNER_D_A_ZHU,
+        AssetGroup.CRYPTO,
+    ),
+    # Retained aliases for previously versioned replay fixtures.
     "owner_d_btc_eth": (OwnerId.OWNER_D_A_ZHU, AssetGroup.BTC_ETH),
-    "owner_d_alts_day": (OwnerId.OWNER_D_A_ZHU, AssetGroup.ALTS),
-    "owner_d_alts_longer": (OwnerId.OWNER_D_A_ZHU, AssetGroup.ALTS),
+    "owner_d_alts_day": (OwnerId.OWNER_D_A_ZHU, AssetGroup.ALTS_TRADFI),
+    "owner_d_alts_longer": (
+        OwnerId.OWNER_D_A_ZHU,
+        AssetGroup.ALTS_TRADFI,
+    ),
 }
 
 

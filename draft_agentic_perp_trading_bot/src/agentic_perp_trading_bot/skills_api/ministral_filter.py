@@ -7,6 +7,7 @@ from typing import Protocol
 from agentic_perp_trading_bot.schemas import (
     FilterDecision,
     MarketAnalysisSnapshot,
+    PositionLifecycleEvent,
     QwenSignalHypothesis,
     TakeProfitFillEvent,
     TakeProfitProtectionDecision,
@@ -15,6 +16,11 @@ from agentic_perp_trading_bot.schemas import (
 
 
 class MinistralFilterAPI(Protocol):
+    async def record_execution_event(
+        self,
+        event: PositionLifecycleEvent,
+    ) -> None: ...
+
     async def protect_entry_after_take_profit(
         self,
         event: TakeProfitFillEvent,

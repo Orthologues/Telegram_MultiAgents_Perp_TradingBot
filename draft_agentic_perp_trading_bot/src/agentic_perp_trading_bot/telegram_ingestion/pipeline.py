@@ -3,19 +3,22 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+from typing import Protocol
 
 from agentic_perp_trading_bot.schemas import (
     TelegramAgentChannelConfig,
     TelegramIngestionRecord,
     TelegramMessageEnvelope,
     TelegramPromptContext,
+    TradeThreadCursor,
 )
 from agentic_perp_trading_bot.telegram_ingestion.agent_worker import TelegramAgentPoller
 from agentic_perp_trading_bot.telegram_ingestion.deduplication import (
     InMemoryTelegramDeduplicator,
 )
 from agentic_perp_trading_bot.telegram_ingestion.reply_tree import (
-    InMemoryReplyTreeIndexRegistry,
+    InMemoryReplyTreeStore,
+    ReplyTreeStore,
 )
 from agentic_perp_trading_bot.telegram_ingestion.storage import (
     DynamoDBMessageMetadataRepository,
@@ -33,6 +36,13 @@ class BedrockInputPublisher:
         await self._publish(context)
 
 
+class TradeCursorResolver(Protocol):
+    async def resolve_for_message(
+        self,
+        message: TelegramMessageEnvelope,
+    ) -> list[TradeThreadCursor]: ...
+
+
 class TelegramIngestionPipeline:
     """Persist, publish, and acknowledge each TelegramAgent message."""
 
@@ -44,21 +54,23 @@ class TelegramIngestionPipeline:
         metadata_repository: DynamoDBMessageMetadataRepository,
         bedrock_publisher: BedrockInputPublisher,
         input_deduplicator: InMemoryTelegramDeduplicator | None = None,
-        reply_tree_indexes: InMemoryReplyTreeIndexRegistry | None = None,
+        reply_tree_store: ReplyTreeStore | None = None,
+        trade_cursor_resolver: TradeCursorResolver | None = None,
     ) -> None:
         self._poller = poller
         self._raw_media_archive = raw_media_archive
         self._metadata_repository = metadata_repository
         self._bedrock_publisher = bedrock_publisher
         self._input_deduplicator = input_deduplicator or InMemoryTelegramDeduplicator()
-        self._reply_tree_indexes = reply_tree_indexes or InMemoryReplyTreeIndexRegistry()
+        self._reply_tree_store = reply_tree_store or InMemoryReplyTreeStore()
+        self._trade_cursor_resolver = trade_cursor_resolver
 
     async def process_once(self, config: TelegramAgentChannelConfig) -> list[TelegramMessageEnvelope]:
         batch = await self._poller.poll_once(config)
         published: list[TelegramMessageEnvelope] = []
 
         for message in batch.messages:
-            contextualized_message = self._resolve_parent_messages(message)
+            contextualized_message = await self._resolve_parent_messages(message)
             archived_message = await self._raw_media_archive.archive(contextualized_message)
             deduplication = self._input_deduplicator.check(archived_message)
             await self._metadata_repository.put(
@@ -67,26 +79,34 @@ class TelegramIngestionPipeline:
                     input_deduplication=deduplication,
                 )
             )
-            reply_tree_index = self._reply_tree_indexes.for_owner(archived_message.owner_id)
-            reply_tree_index.add(archived_message)
+            await self._reply_tree_store.add(archived_message)
             if deduplication.is_duplicate:
                 await self._poller.commit_message(archived_message)
                 continue
-            await self._bedrock_publisher.publish(
-                reply_tree_index.prompt_context_for(archived_message)
+            context = await self._reply_tree_store.prompt_context_for(
+                archived_message
             )
+            if self._trade_cursor_resolver is not None:
+                context = context.model_copy(
+                    update={
+                        "active_trade_cursors": (
+                            await self._trade_cursor_resolver.resolve_for_message(
+                                archived_message
+                            )
+                        )
+                    }
+                )
+            await self._bedrock_publisher.publish(context)
             published.append(archived_message)
             await self._poller.commit_message(archived_message)
 
         return published
 
-    def _resolve_parent_messages(
+    async def _resolve_parent_messages(
         self,
         message: TelegramMessageEnvelope,
     ) -> TelegramMessageEnvelope:
-        parent_messages = self._reply_tree_indexes.for_owner(message.owner_id).parent_messages_for(
-            message
-        )
+        parent_messages = await self._reply_tree_store.parent_messages_for(message)
         return TelegramMessageEnvelope.model_validate(
             {**message.model_dump(), "parent_messages": parent_messages}
         )

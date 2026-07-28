@@ -141,3 +141,10 @@ explicit mixed-channel TradFi classification and boundary tests.
 Removed the channel-wide ingestion cursor, retained independent message
 receipts, and added concurrent parent-linked trade cursors with versioned
 BitMart/Bitget order and position metadata for DynamoDB.
+
+### 2026-07-28 — committed-history reconciliation
+
+Recorded the previously omitted `ec30dc3`, `cb076bb`, `eb79b05`, `f2360bb`,
+and `7200911` commits. They resolved root documentation, synchronized status,
+finalized concurrent parent-linked trade cursors, and anchored omitted
+stop-losses to entry prices.

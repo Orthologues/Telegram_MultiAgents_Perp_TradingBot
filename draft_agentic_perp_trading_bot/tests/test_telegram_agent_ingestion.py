@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 import pytest
 
 from agentic_perp_trading_bot.schemas import (
+    AssetGroup,
     IngestionTransport,
     OwnerId,
     TelegramAgentChannelConfig,
@@ -22,6 +23,7 @@ from agentic_perp_trading_bot.telegram_ingestion.pipeline import (
     TelegramIngestionPipeline,
 )
 from agentic_perp_trading_bot.telegram_ingestion.reply_tree import (
+    ElastiCacheReplyTreeStore,
     InMemoryReplyTreeIndexRegistry,
 )
 from agentic_perp_trading_bot.telegram_ingestion.storage import (
@@ -80,6 +82,27 @@ def test_normalizer_preserves_direct_parent_message_id() -> None:
 
     assert envelope.reply_to_message_id == "121"
     assert envelope.parent_messages == ["121"]
+
+
+@pytest.mark.parametrize(
+    ("channel_id", "expected_asset_group"),
+    [
+        ("owner_c_alts_tradfi", AssetGroup.ALTS_TRADFI),
+        ("owner_d_active_private_chat", AssetGroup.CRYPTO),
+        ("owner_d_active_public_channel", AssetGroup.CRYPTO),
+    ],
+)
+def test_corrected_figma_channel_routes_preserve_asset_scope(
+    channel_id: str,
+    expected_asset_group: AssetGroup,
+) -> None:
+    envelope = normalize_telegram_agent_message(
+        _retrieved_message("123"),
+        channel_id=channel_id,
+        telegram_chat_id="-1001234567890",
+    )
+
+    assert envelope.asset_group == expected_asset_group
 
 
 def test_unhydrated_media_messages_do_not_share_an_exact_dedup_key() -> None:
@@ -443,3 +466,54 @@ def test_reply_tree_index_is_scoped_to_each_owner_qwen_agent() -> None:
     assert registry.for_owner(OwnerId.OWNER_B_LAO_TU).parent_messages_for(current_owner_b) == [
         "100"
     ]
+
+
+def test_elasticache_reply_tree_preserves_sibling_context_and_owner_scope() -> None:
+    class FakeElastiCache:
+        def __init__(self) -> None:
+            self.values: dict[str, str] = {}
+            self.sets: dict[str, set[str]] = {}
+
+        async def get(self, key: str):
+            return self.values.get(key)
+
+        async def set(self, key: str, value: str):
+            self.values[key] = value
+
+        async def sadd(self, key: str, *values: str):
+            self.sets.setdefault(key, set()).update(values)
+
+        async def srem(self, key: str, *values: str):
+            self.sets.setdefault(key, set()).difference_update(values)
+
+        async def smembers(self, key: str):
+            return set(self.sets.get(key, set()))
+
+    async def scenario() -> None:
+        store = ElastiCacheReplyTreeStore(FakeElastiCache())
+        root = normalize_telegram_agent_message(
+            _retrieved_message("100", text="A"),
+            channel_id="owner_a_channel_a",
+            telegram_chat_id="-1001234567890",
+        )
+        sibling = normalize_telegram_agent_message(
+            _retrieved_message("101", text="B", reply_to_msg_id="100"),
+            channel_id="owner_a_channel_a",
+            telegram_chat_id="-1001234567890",
+        )
+        current = normalize_telegram_agent_message(
+            _retrieved_message("102", text="C", reply_to_msg_id="100"),
+            channel_id="owner_a_channel_a",
+            telegram_chat_id="-1001234567890",
+        )
+
+        await store.add(root)
+        await store.add(sibling)
+
+        assert await store.parent_messages_for(current) == ["100", "101"]
+        context = await store.prompt_context_for(current)
+        assert [
+            item.telegram_message_id for item in context.parent_messages
+        ] == ["100", "101"]
+
+    asyncio.run(scenario())

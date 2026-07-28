@@ -11,10 +11,14 @@ from agentic_perp_trading_bot.ministral_filter.stop_loss_policy import (
 from agentic_perp_trading_bot.ministral_filter.take_profit_protection import (
     TakeProfitProtectionPolicy,
 )
+from agentic_perp_trading_bot.performance_engine.history import (
+    DynamoDBExecutionHistoryRepository,
+)
 from agentic_perp_trading_bot.schemas import (
     FilterDecision,
     MarketAnalysisSnapshot,
     OmittedStopLossDecision,
+    PositionLifecycleEvent,
     QwenSignalHypothesis,
     TakeProfitFillEvent,
     TakeProfitProtectionDecision,
@@ -29,6 +33,7 @@ class MinistralFilterAgent:
         signal_deduplicator: InMemorySignalDeduplicator | None = None,
         stop_loss_policy: MinistralStopLossPolicy | None = None,
         take_profit_protection_policy: TakeProfitProtectionPolicy | None = None,
+        execution_history_repository: DynamoDBExecutionHistoryRepository | None = None,
     ):
         self.model_id = model_id
         self.signal_deduplicator = signal_deduplicator
@@ -36,6 +41,16 @@ class MinistralFilterAgent:
         self.take_profit_protection_policy = (
             take_profit_protection_policy or TakeProfitProtectionPolicy()
         )
+        self.execution_history_repository = execution_history_repository
+
+    async def record_execution_event(
+        self,
+        event: PositionLifecycleEvent,
+    ) -> None:
+        """Persist authenticated execution/P&L metadata through DynamoDB."""
+        if self.execution_history_repository is None:
+            raise RuntimeError("execution history repository is not configured")
+        await self.execution_history_repository.append(event)
 
     def build_prompt_messages(
         self,

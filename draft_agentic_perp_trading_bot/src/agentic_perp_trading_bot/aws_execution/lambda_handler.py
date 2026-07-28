@@ -10,7 +10,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     Real implementation responsibilities:
     - parse ApprovedExecutionRequest
-    - load Bitget/BitMart credentials from AWS Secrets Manager
+    - load Bitget/Hyperliquid credentials from AWS Secrets Manager
     - sign exchange REST requests
     - enforce kill-switch config
     - write execution audit logs

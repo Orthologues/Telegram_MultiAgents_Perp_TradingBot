@@ -12,9 +12,12 @@ from agentic_perp_trading_bot.schemas import (
     ExchangeTradeState,
     FilterDecision,
     IntentType,
+    LifecycleStrategySource,
     OwnerId,
+    PositionLifecycleStrategy,
     PositionDirection,
     QwenSignalHypothesis,
+    QwenStrategyCandidateSet,
     StrategyTier,
     TelegramMessageEnvelope,
     TradeAction,
@@ -34,6 +37,7 @@ def _message(
     message_id: str,
     *,
     parent_messages: list[str] | None = None,
+    strategy_tier_hint: StrategyTier | None = None,
 ) -> TelegramMessageEnvelope:
     return TelegramMessageEnvelope(
         owner_id=OwnerId.OWNER_A_SHU_QIN,
@@ -42,6 +46,7 @@ def _message(
         telegram_message_id=message_id,
         received_at=NOW + timedelta(seconds=int(message_id)),
         parent_messages=parent_messages or [],
+        strategy_tier_hint=strategy_tier_hint,
         dedup_key=f"message-{message_id}",
     )
 
@@ -65,6 +70,26 @@ def _state(
     )
 
 
+def _lifecycle_strategy(
+    message_id: str,
+    tier: StrategyTier = StrategyTier.INTERMEDIATE,
+) -> PositionLifecycleStrategy:
+    return PositionLifecycleStrategy(
+        strategy_tier=tier,
+        confidence=0.5,
+        source_confidence=0.5,
+        quality_score=0.5,
+        formula_version="test-v1",
+        owner_weight=1.0,
+        asset_group_weight=1.0,
+        position_notional_usdt=Decimal("100"),
+        leverage=3,
+        source=LifecycleStrategySource.INITIAL_CONFIDENCE,
+        source_telegram_message_id=message_id,
+        selected_at=NOW + timedelta(seconds=int(message_id)),
+    )
+
+
 def test_parent_chain_resolves_concurrent_pair_cursors_independently() -> None:
     async def scenario() -> None:
         repository = InMemoryTradeCursorRepository()
@@ -72,12 +97,13 @@ def test_parent_chain_resolves_concurrent_pair_cursors_independently() -> None:
         btc_cursor = await manager.register_exchange_state(
             _message("100"),
             _state(
-                exchange_id=ExchangeId.BITMART,
+                exchange_id=ExchangeId.HYPERLIQUID,
                 symbol="BTCUSDT",
                 direction=PositionDirection.LONG,
                 active_order_ids={"btc-tp1"},
                 open_position_ids={"btc-position"},
             ),
+            lifecycle_strategy=_lifecycle_strategy("100"),
             force_new_cursor=True,
         )
         eth_cursor = await manager.register_exchange_state(
@@ -89,6 +115,7 @@ def test_parent_chain_resolves_concurrent_pair_cursors_independently() -> None:
                 active_order_ids={"eth-tp1"},
                 open_position_ids={"eth-position"},
             ),
+            lifecycle_strategy=_lifecycle_strategy("101"),
             force_new_cursor=True,
         )
 
@@ -111,7 +138,7 @@ def test_parent_chain_resolves_concurrent_pair_cursors_independently() -> None:
                 action=TradeAction.REDUCE_LONG,
                 order_type="market",
                 entries=[Decimal("100000")],
-                target_exchanges=[ExchangeId.BITMART],
+                target_exchanges=[ExchangeId.HYPERLIQUID],
             ),
             IntentType.CLOSE_POSITION,
         )
@@ -134,19 +161,20 @@ def test_cursor_closes_only_after_open_position_and_active_orders_are_gone() -> 
         cursor = await manager.register_exchange_state(
             _message("100"),
             _state(
-                exchange_id=ExchangeId.BITMART,
+                exchange_id=ExchangeId.HYPERLIQUID,
                 symbol="BTCUSDT",
                 direction=PositionDirection.LONG,
                 active_order_ids={"tp1"},
                 open_position_ids={"position-1"},
             ),
+            lifecycle_strategy=_lifecycle_strategy("100"),
             force_new_cursor=True,
         )
 
         position_flat_with_order = await manager.refresh_exchange_state(
             cursor.cursor_id,
             _state(
-                exchange_id=ExchangeId.BITMART,
+                exchange_id=ExchangeId.HYPERLIQUID,
                 symbol="BTCUSDT",
                 direction=PositionDirection.LONG,
                 active_order_ids={"tp1"},
@@ -159,7 +187,7 @@ def test_cursor_closes_only_after_open_position_and_active_orders_are_gone() -> 
         closed = await manager.refresh_exchange_state(
             cursor.cursor_id,
             _state(
-                exchange_id=ExchangeId.BITMART,
+                exchange_id=ExchangeId.HYPERLIQUID,
                 symbol="BTCUSDT",
                 direction=PositionDirection.LONG,
                 active_order_ids=set(),
@@ -189,6 +217,7 @@ def test_unfilled_order_cursor_does_not_close_as_a_position() -> None:
                 active_order_ids={"entry-order"},
                 open_position_ids=set(),
             ),
+            lifecycle_strategy=_lifecycle_strategy("100"),
             force_new_cursor=True,
         )
         refreshed = await manager.refresh_exchange_state(
@@ -222,6 +251,7 @@ def test_cursor_versions_reject_stale_concurrent_writes() -> None:
                 active_order_ids={"entry-order"},
                 open_position_ids=set(),
             ),
+            lifecycle_strategy=_lifecycle_strategy("100"),
             force_new_cursor=True,
         )
         first_update = cursor.model_copy(update={"version": 1})
@@ -241,12 +271,13 @@ def test_orchestrator_passes_parent_cursor_state_to_agents_and_execution() -> No
         cursor = await manager.register_exchange_state(
             _message("100"),
             _state(
-                exchange_id=ExchangeId.BITMART,
+                exchange_id=ExchangeId.HYPERLIQUID,
                 symbol="BTCUSDT",
                 direction=PositionDirection.LONG,
                 active_order_ids={"tp1"},
                 open_position_ids={"position-1"},
             ),
+            lifecycle_strategy=_lifecycle_strategy("100"),
             force_new_cursor=True,
         )
         incoming = _message("101", parent_messages=["100"])
@@ -291,7 +322,7 @@ def test_orchestrator_passes_parent_cursor_state_to_agents_and_execution() -> No
                         order_type="limit",
                         entries=[Decimal("100000")],
                         stop_loss=Decimal("95000"),
-                        target_exchanges=[ExchangeId.BITMART],
+                        target_exchanges=[ExchangeId.HYPERLIQUID],
                     ),
                     reviewer_model="ministral-test",
                 )
@@ -307,8 +338,103 @@ def test_orchestrator_passes_parent_cursor_state_to_agents_and_execution() -> No
         assert observed_cursor_ids == [cursor.cursor_id]
         assert request.trade_cursor_ids == [cursor.cursor_id]
         assert request.parent_message_ids == ["100"]
+        assert request.confidence.confidence == 0.5
+        assert request.lifecycle_strategy == cursor.lifecycle_strategy
+        assert request.sizing.final_position_notional_usdt == Decimal("100")
+        assert request.sizing.leverage == 3
         updated = await repository.get(cursor.cursor_id)
         assert updated is not None
         assert updated.message_ids == ["100", "101"]
+        assert updated.lifecycle_strategy == cursor.lifecycle_strategy
+
+    asyncio.run(scenario())
+
+
+def test_parent_linked_telegram_hint_revises_lifecycle_strategy_once() -> None:
+    async def scenario() -> None:
+        repository = InMemoryTradeCursorRepository()
+        manager = ConcurrentTradeCursorManager(repository)
+        cursor = await manager.register_exchange_state(
+            _message("100"),
+            _state(
+                exchange_id=ExchangeId.HYPERLIQUID,
+                symbol="BTCUSDT",
+                direction=PositionDirection.LONG,
+                active_order_ids={"tp1"},
+                open_position_ids={"position-1"},
+            ),
+            lifecycle_strategy=_lifecycle_strategy("100"),
+            force_new_cursor=True,
+        )
+        incoming = _message(
+            "101",
+            parent_messages=["100"],
+            strategy_tier_hint=StrategyTier.RADICAL,
+        )
+
+        class QwenStub:
+            async def infer_strategy_candidates(self, message, prompt_context=None):
+                return QwenStrategyCandidateSet(
+                    owner_id=message.owner_id,
+                    channel_id=message.channel_id,
+                    asset_group=message.asset_group,
+                    model_id="qwen-test",
+                    interpretation_confidence=0.9,
+                    candidates={
+                        tier: QwenSignalHypothesis(
+                            owner_id=message.owner_id,
+                            channel_id=message.channel_id,
+                            asset_group=message.asset_group,
+                            model_id="qwen-test",
+                            strategy_tier=tier,
+                            intent_type=IntentType.ADD_POSITION,
+                            symbol="BTCUSDT",
+                            direction="long",
+                            confidence=0.9,
+                        )
+                        for tier in StrategyTier
+                    },
+                )
+
+        class MinistralStub:
+            async def review(self, hypothesis, prompt_context, market_snapshot=None):
+                return FilterDecision(
+                    status="approved",
+                    quality_score=0.9,
+                    canonical_intent=CanonicalTradeIntent(
+                        owner_id=hypothesis.owner_id,
+                        channel_id=hypothesis.channel_id,
+                        asset_group=hypothesis.asset_group,
+                        strategy_tier=hypothesis.strategy_tier,
+                        symbol="BTCUSDT",
+                        action=TradeAction.OPEN_LONG,
+                        order_type="limit",
+                        entries=[Decimal("100000")],
+                        stop_loss=Decimal("95000"),
+                        target_exchanges=[ExchangeId.HYPERLIQUID],
+                    ),
+                    reviewer_model="ministral-test",
+                )
+
+        request = await process_message(
+            incoming,
+            QwenStub(),
+            MinistralStub(),
+            trade_cursor_manager=manager,
+        )
+
+        assert request is not None
+        assert request.intent.strategy_tier == StrategyTier.RADICAL
+        assert (
+            request.lifecycle_strategy.source
+            == LifecycleStrategySource.TELEGRAM_TRANSITION
+        )
+        assert request.lifecycle_strategy.revision == 1
+        assert request.lifecycle_strategy.source_telegram_message_id == "101"
+        assert request.lifecycle_strategy.leverage == 4
+        updated = await repository.get(cursor.cursor_id)
+        assert updated is not None
+        assert updated.message_ids == ["100", "101"]
+        assert updated.lifecycle_strategy == request.lifecycle_strategy
 
     asyncio.run(scenario())

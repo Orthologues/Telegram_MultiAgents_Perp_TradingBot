@@ -76,15 +76,16 @@ Telegram user session. Preserve `owner_id`,
 so multiple channels can feed one owner agent without losing provenance.
 DynamoDB is both a live coordination store and a replay dataset. Query active
 trade cursors by parent message IDs, but keep chronological message bodies in
-the owner QWEN in-memory reply tree. Retain omitted take-profit/stop-loss cases,
-inferred levels, later updates, execution outcomes, and pair-blacklisting inputs.
+the owner QWEN ElastiCache reply tree with a process-local read-through cache.
+Retain omitted take-profit/stop-loss cases, inferred levels, later updates,
+execution outcomes, and pair-blacklisting inputs.
 
 ## Concurrent Trade Cursors
 
 Maintain one active `TradeThreadCursor` per parent-linked symbol, exchange, and
 direction. A new message may resolve several concurrent candidates from its
 chronological `parent_messages`; match the intended cursor by canonical symbol,
-BitMart or Bitget exchange, and long/short direction. Store only messages
+Hyperliquid or Bitget exchange, and long/short direction. Store only messages
 assigned to that cursor, not the complete parent list.
 
 Each cursor stores sets of active order IDs and open position IDs in DynamoDB.
@@ -178,9 +179,10 @@ repeated-message pairs.
 ## Owner QWEN Agent
 
 Load the owner-specific serial JSON RAG profile, provide recent signal and
-position context, and request only a `QwenSignalHypothesis`. Include the same
-`TelegramPromptContext` supplied by ingestion: parent messages must remain
-ID-labeled, ordered oldest-to-newest, and available to both QWEN and Ministral.
+position context, and request a `QwenStrategyCandidateSet` containing all five
+tiers. Include the same `TelegramPromptContext` supplied by ingestion: parent
+messages must remain ID-labeled, ordered oldest-to-newest, and available to both
+QWEN and Ministral.
 
 Example output boundary:
 
@@ -206,9 +208,12 @@ position sizing to the model prompt as a substitute for deterministic policy.
 ## Confidence Calculation
 
 Confidence is a synthetic, traceable feature for ranking trade hypotheses and
-selecting conservative, intermediate, or radical strategy tiers. The only hard
-rejections are a deterministic pair blacklist and an instant-order current
-price that is too distant from the message reference price.
+selecting one of five tiers from ultra-conservative to ultra-radical. It does
+not perform hard rejection; deterministic risk owns execution constraints.
+Persist the selected tier, recommended size, leverage, and confidence
+provenance on each trade cursor. Parent-linked lifecycle updates inherit this
+policy; only an explicit `strategy_tier_hint` with a Ministral-approved target
+candidate creates the next policy revision.
 
 The initial feature groups are:
 
@@ -251,7 +256,7 @@ execute an order.
 ## Deterministic Omitted Stop-Loss
 
 When an order omits its stop-loss, QWEN must leave `stop_loss` unset. The
-Bitget/BitMart MCP boundary supplies current price, market capitalization,
+Bitget/Hyperliquid MCP boundary supplies current price, market capitalization,
 24-hour quote volume, and KDJ, Bollinger bands, and Average True Range snapshots
 for each of `5m`, `15m`, `1h`, and `4h`. Ministral then applies the versioned
 deterministic policy in
@@ -276,7 +281,7 @@ thresholds and indicator weights before production use.
 
 Use a deterministic temporary blacklist to reject exchange/symbol pairs whose
 recent realized performance is persistently poor. This is a deterministic
-confidence rejection, not a QWEN decision.
+risk rejection, not a QWEN decision.
 
 For each canonical `(exchange_id, symbol)` pair, use closed trades whose close
 timestamp is within the trailing 90 days from the evaluation time:
@@ -296,7 +301,7 @@ Example decision:
 
 ```json
 {
-  "exchange_id": "bitmart",
+  "exchange_id": "hyperliquid",
   "symbol": "ALTUSDT",
   "window_days": 90,
   "wins": 3,
@@ -311,8 +316,10 @@ Example decision:
 
 Persist the window, trade counts, net-P/L definition, threshold, minimum
 sample settings, computation time, and policy version with every decision.
-Apply the blacklist before MCP validation or order execution, and do not allow
-QWEN, Ministral, or a confidence score to override it. If profit-to-loss amount
+Apply the blacklist before order execution, and do not allow QWEN, Ministral,
+or a confidence score to override it. Deterministic risk also enforces
+instant-order price deviation plus owner/pair leverage and cumulative
+position-value limits. If profit-to-loss amount
 is later used instead of win/loss count, define it as a separate metric rather
 than silently changing this ratio.
 
@@ -380,9 +387,8 @@ directly. Its API contract is
 
 Use realized, replayable metrics such as TP1/TP2 hit rate, stop-loss rate,
 cumulative P/L, and post-stop-loss reversal rate to update owner/channel and
-strategy-tier weights. The confidence engine selects the strategy tier; the
-pair blacklist and instant-order price-distance check are the only hard
-execution rejections.
+strategy-tier weights. The confidence engine selects the strategy tier, while
+the deterministic risk engine enforces execution constraints.
 
 Example order path:
 
@@ -390,6 +396,7 @@ Example order path:
 canonical intent
   -> weight-adjusted sizing
   -> confidence-based strategy tier
+  -> deterministic risk constraints
   -> ApprovedExecutionRequest
 ```
 
@@ -401,13 +408,13 @@ conditional strategy profile indexed by the trading pair's reference price at
 message time. Map each incoming Telegram message to its closest baseline
 synonym and return the matched class, strategy identifier, evidence, and
 confidence. Pass this structured result to Ministral for validation. This skill
-produces no execution command and must not call Bitget or BitMart APIs.
+produces no execution command and must not call Bitget or Hyperliquid APIs.
 Its API contract is
 `agentic_perp_trading_bot.skills_api.owner_qwen.OwnerQwenAPI.infer_synonym`.
 
 ## Exchange and AWS Boundary
 
-Keep Bitget and BitMart adapters behind the MCP gateway. Use ECS WebSockets for
+Keep Bitget and Hyperliquid adapters behind the MCP gateway. Use ECS WebSockets for
 market-data transport when low latency is required, and signed HTTPS REST for
 order execution. Lambda retrieves exchange credentials and kill-switch settings
 from Secrets Manager. The Telegram worker separately retrieves Telegram API

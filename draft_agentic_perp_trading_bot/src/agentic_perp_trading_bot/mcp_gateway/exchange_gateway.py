@@ -49,5 +49,5 @@ class BitgetGateway:
     exchange_id = "bitget"
 
 
-class BitMartGateway:
-    exchange_id = "bitmart"
+class HyperliquidGateway:
+    exchange_id = "hyperliquid"

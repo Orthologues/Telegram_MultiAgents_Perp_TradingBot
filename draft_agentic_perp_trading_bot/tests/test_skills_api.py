@@ -6,6 +6,7 @@ from agentic_perp_trading_bot.qwen_agents.owner_agent import OwnerQwenAgent
 from agentic_perp_trading_bot.schemas import (
     AssetGroup,
     OwnerId,
+    StrategyTier,
     TelegramMessageEnvelope,
     TelegramPromptContext,
 )
@@ -27,7 +28,9 @@ def test_skills_api_exports_explicit_agent_contracts() -> None:
         "MinistralFilterAPI",
     }
     assert hasattr(OwnerQwenAPI, "infer_position_reduction")
+    assert hasattr(OwnerQwenAPI, "infer_strategy_candidates")
     assert hasattr(MinistralFilterAPI, "protect_entry_after_take_profit")
+    assert hasattr(MinistralFilterAPI, "record_execution_event")
 
 
 def _message() -> TelegramMessageEnvelope:
@@ -54,6 +57,21 @@ def test_synonym_inference_returns_a_reviewable_decision() -> None:
     assert decision.telegram_message_id == "123"
     assert decision.confidence == 0.0
     assert decision.needs_human_review is True
+
+
+def test_owner_qwen_exposes_exactly_five_strategy_candidates() -> None:
+    message = _message()
+    candidates = asyncio.run(
+        OwnerQwenAgent("owner_a.json").infer_strategy_candidates(
+            message,
+            TelegramPromptContext.from_message(message),
+        )
+    )
+
+    assert list(candidates.candidates) == list(StrategyTier)
+    assert {
+        candidate.strategy_tier for candidate in candidates.candidates.values()
+    } == set(StrategyTier)
 
 
 def test_position_reduction_skill_returns_bounded_reviewable_hypothesis() -> None:

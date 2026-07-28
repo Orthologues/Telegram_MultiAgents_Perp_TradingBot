@@ -1,1 +1,1 @@
-"""Confidence-based strategy selection with narrow execution rejections."""
+"""Replayable confidence scoring and five-tier strategy selection."""

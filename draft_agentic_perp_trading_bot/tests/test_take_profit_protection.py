@@ -39,7 +39,7 @@ def _event(
     long_position = direction == PositionDirection.LONG
     return TakeProfitFillEvent(
         event_id="fill-123",
-        exchange_id=ExchangeId.BITMART,
+        exchange_id=ExchangeId.HYPERLIQUID,
         symbol="BTCUSDT",
         position_id="position-1",
         direction=direction,

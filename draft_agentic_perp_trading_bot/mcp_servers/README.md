@@ -3,8 +3,8 @@
 This folder contains exchange-specific MCP servers that back the scaffolded
 exchange gateway.
 
-- `bitmart_mcp/`: existing BitMart Futures v2 Streamable HTTP MCP boilerplate.
-- `bitget_mcp/`: planned Bitget perpetual futures MCP server.
+- `hyperliquid_mcp/`: Hyperliquid read and guarded Lambda-handoff scaffold.
+- `bitget_mcp/`: Bitget read and guarded Lambda-handoff scaffold.
 
 The intended split is:
 
@@ -14,4 +14,4 @@ The intended split is:
   volume, and KDJ, Bollinger, and ATR snapshots at 5m, 15m, 1h, and 4h
 - authenticated take-profit fill events for idempotent Ministral stop protection
 - signed order execution: REST requests or AWS Lambda execution after filter
-  and explicit confidence-policy approval
+  plus explicit confidence and deterministic-risk decisions

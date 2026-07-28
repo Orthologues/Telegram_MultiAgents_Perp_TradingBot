@@ -3,7 +3,7 @@
 Maintenance rule: **OVERWRITE** this file on every update. It is the single
 source of current state, not a development log. The log is `HISTORY.md`.
 
-Last updated: 2026-07-25
+Last updated: 2026-07-28
 
 ## Phase
 
@@ -12,23 +12,27 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
 
 ## Current State
 
-- The repository is a human-reviewed, non-executing scaffold; it is not live
+- The repository is a human-harnessed, non-executing scaffold; it is not live
   trading software.
-- Twenty-two commits are summarized in `HISTORY.md`; current HEAD is `a2c9a5c`.
+- Twenty-seven commits are summarized in `HISTORY.md`; current HEAD is `7200911`.
 - `OwnerQwenAPI` includes shared review-only synonym and reduce-and-protect
   skills, while `MinistralFilterAPI` includes MCP take-profit protection; no
   agent has direct exchange access.
 - AG2 TelegramAgent provides pull-based retrieval through one shared Lightsail
   worker, per-chat adapters, one authorized user session, and per-message
   durable receipts rather than a channel-level cursor.
-- The scaffold preserves provenance, supports private S3/DynamoDB boundaries,
-  maintains owner-scoped in-memory reply trees, and sends chronological parent
+- The scaffold preserves provenance, uses ElastiCache-compatible owner reply
+  trees, supports private S3/DynamoDB boundaries, and sends chronological parent
   context to QWEN and Ministral.
 - Parent-message IDs resolve concurrent live trade cursors by symbol, exchange,
-  and direction. Each cursor retains active BitMart/Bitget order and position
+  and direction. Each cursor retains active Hyperliquid/Bitget order and position
   IDs in a DynamoDB repository boundary until the position is fully closed.
-- Confidence selects strategy tiers. Hard rejection is limited to a pair
-  blacklist or an instant-order MCP price deviating over `0.5%` (generic altcoins), `0.25%` (BNB, ETH, SOL, TradFi perpetual future pairs) or `0.125%` (BTC) the message reference.
+- Each owner QWEN agent emits five strategy candidates. Confidence selects one;
+  its tier, recommended size, leverage, and provenance persist for the position
+  lifecycle unless an explicit parent-linked update advances the policy
+  revision. Deterministic risk separately enforces pair blacklisting,
+  price-deviation thresholds, leverage, and cumulative owner/pair
+  position-value limits.
 - The scaffold moves omitted stop-loss derivation from QWEN to a versioned
   Ministral policy using MCP market cap, volume, and `5m`/`15m`/`1h`/`4h` KDJ,
   Bollinger-width, and ATR inputs. The derived distance is bounded to
@@ -41,7 +45,7 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   implemented. Current media archival and QWEN multimodal delivery remain
   scaffold boundaries; synonym inference remains a placeholder until RAG is
   populated.
-- Last verification: 63 tests passed with the active Python 3.11 environment;
+- Last verification: 71 tests passed with the active Python 3.11 environment;
   `uv` remains unavailable in the sandbox because of Snap permissions.
 
 ## Next Actions
@@ -75,7 +79,7 @@ serial RAG set with authentic text/image patterns.
 - Replace in-memory test storage with production S3, message-receipt, and
   versioned trade-cursor DynamoDB adapters.
 - Implement model-specific Bedrock QWEN and Ministral multimodal adapters.
-- Implement Bitget/BitMart MCP market-analysis adapters for the typed
+- Complete Bitget/Hyperliquid MCP market-analysis adapters for the typed
   liquidity and indicator snapshot.
 - Rebuild owner reply-tree indexes after worker restarts without DynamoDB reads
   for live prompt context.
