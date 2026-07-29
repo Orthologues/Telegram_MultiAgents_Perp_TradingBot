@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime, timezone
 from decimal import Decimal
+from pathlib import Path
 
 from agentic_perp_trading_bot.qwen_agents.owner_agent import OwnerQwenAgent
 from agentic_perp_trading_bot.schemas import (
@@ -72,6 +73,20 @@ def test_owner_qwen_exposes_exactly_five_strategy_candidates() -> None:
     assert {
         candidate.strategy_tier for candidate in candidates.candidates.values()
     } == set(StrategyTier)
+
+
+def test_owner_qwen_loads_typed_rag_profile_provenance() -> None:
+    profile_path = (
+        Path(__file__).parents[1]
+        / "rag_profiles"
+        / "owner_a_shu_qin"
+        / "shared_style.json"
+    )
+    profile = OwnerQwenAgent(str(profile_path)).load_rag_profile()
+
+    assert profile.owner_id == OwnerId.OWNER_A_SHU_QIN
+    assert profile.s3_archive_prefix.startswith("s3://")
+    assert profile.serial_rag_examples == []
 
 
 def test_position_reduction_skill_returns_bounded_reviewable_hypothesis() -> None:

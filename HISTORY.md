@@ -148,3 +148,10 @@ Recorded the previously omitted `ec30dc3`, `cb076bb`, `eb79b05`, `f2360bb`,
 and `7200911` commits. They resolved root documentation, synchronized status,
 finalized concurrent parent-linked trade cursors, and anchored omitted
 stop-losses to entry prices.
+
+### 2026-07-29 — pending: clarified lifecycle candidates and RAG provenance
+
+Clarified that each incoming new or continuation signal receives five QWEN
+strategy candidates. Added typed serial-RAG JSON references for chronological
+Telegram message IDs and URLs with private S3 archive URIs, and marked manual
+code review plus authentic RAG curation as priorities.

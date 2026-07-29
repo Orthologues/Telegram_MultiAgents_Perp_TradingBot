@@ -4,5 +4,7 @@
   "channels": ["owner_b_channel_a"],
   "asset_groups": ["btc_eth", "alts", "tradfi"],
   "trading_horizons": ["day"],
+  "s3_archive_prefix": "s3://PRIVATE_RAG_BUCKET/owner_b_lao_tu/",
+  "serial_rag_examples": [],
   "notes": ["TODO: encode owner-specific simplified/traditional Chinese signal patterns."]
 }

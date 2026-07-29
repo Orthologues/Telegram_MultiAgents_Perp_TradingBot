@@ -7,8 +7,12 @@ tools.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from agentic_perp_trading_bot.schemas import (
     IntentType,
+    OwnerRagProfile,
     PositionReductionHypothesis,
     QwenSignalHypothesis,
     QwenStrategyCandidateSet,
@@ -27,6 +31,13 @@ class OwnerQwenAgent:
     ):
         self.owner_profile_path = owner_profile_path
         self.model_id = model_id
+
+    def load_rag_profile(self) -> OwnerRagProfile:
+        """Load and validate the owner JSON profile before model integration."""
+        profile_path = Path(self.owner_profile_path)
+        return OwnerRagProfile.model_validate(
+            json.loads(profile_path.read_text(encoding="utf-8"))
+        )
 
     def build_prompt_messages(
         self,

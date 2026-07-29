@@ -53,7 +53,9 @@ TelegramAgent retrieval
 - QWEN interprets serial Chinese text/images and emits one candidate for each
   tier from ultra-conservative to ultra-radical, never orders.
   RAG examples must preserve chronological messages, media, intended orders,
-  and correct or incorrect outcomes.
+  and correct or incorrect outcomes. Each manually curated JSON example must
+  include every Telegram message ID and URL in order, plus the private S3 URI
+  containing the archived example.
 - Ministral validates schema/evidence, deduplicates equivalent hypotheses,
   handles authenticated MCP take-profit fill protection, and deterministically
   derives omitted stop-losses from MCP liquidity and `5m`/`15m`/`1h`/`4h`
@@ -106,7 +108,8 @@ remains behind the MCP gateway.
 
 - Application code: `draft_agentic_perp_trading_bot/src/`
 - Tests: `draft_agentic_perp_trading_bot/tests/`
-- Owner RAG profiles: versioned JSON without credentials.
+- Owner RAG profiles: versioned JSON without credentials. Populate them
+  manually with authentic serial examples and their Telegram/S3 provenance.
 - For Chinese interpretation, use serial RAG and QWEN reasoning; do not add
   keyword, substring, or regular-expression trading rules.
 - Add focused tests for behavior changes and run:

@@ -17,10 +17,16 @@ reply-tree context retrieval. ElastiCache stores the owner reply-tree indexes,
 while DynamoDB stores enriched metadata and concurrent live trade cursors,
 including Hyperliquid or Bitget active orders and open positions.
 
-Each owner QWEN agent emits five reviewable strategy-tier candidates.
+Each owner QWEN agent emits five reviewable strategy-tier candidates for every
+incoming trading signal, including continuations of an existing perpetual
+position lifecycle.
 Ministral validates them; confidence selects and persists one position-lifecycle
 strategy, including recommended size and leverage, while deterministic risk
 enforces pair, price, leverage, and cumulative position-value limits.
+
+Manual serial RAG JSON profiles will preserve each example message's Telegram
+ID and URL together with its private AWS S3 archive URI; authentic examples are
+not yet populated.
 
 Omitted stop-losses are derived at the Ministral boundary from typed MCP
 liquidity plus KDJ, Bollinger-width, and Average True Range (ATR) inputs at

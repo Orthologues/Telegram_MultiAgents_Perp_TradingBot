@@ -22,6 +22,8 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 - Agent-owned skill contracts: `agentic_perp_trading_bot.skills_api`
 - Owner QWEN agents, five-tier candidates, and shared interpretation skills:
   `agentic_perp_trading_bot.qwen_agents.owner_agent`
+- Owner serial RAG JSON profiles with Telegram/S3 provenance:
+  `draft_agentic_perp_trading_bot/rag_profiles/`
 - Ministral validation, signal deduplication, and MCP fill protection:
   `agentic_perp_trading_bot.ministral_filter`
 - Deterministic omitted stop-loss policy: `agentic_perp_trading_bot.ministral_filter.stop_loss_policy`

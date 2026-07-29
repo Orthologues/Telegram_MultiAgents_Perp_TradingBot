@@ -137,13 +137,28 @@ message:
 
 ```json
 {
+  "example_id": "owner-c-btc-001",
   "strategy_tier": "conservative",
-  "messages": ["... Chinese signal ...", "... Chinese execution update ..."],
-  "intended_execution": {"symbol": "BTCUSDT", "direction": "long"},
+  "messages": [
+    {
+      "telegram_message_id": "1001",
+      "telegram_message_url": "https://t.me/c/123456/1001"
+    },
+    {
+      "telegram_message_id": "1002",
+      "telegram_message_url": "https://t.me/c/123456/1002"
+    }
+  ],
+  "s3_archive_uri": "s3://PRIVATE_RAG_BUCKET/owner_c_btc-001.json",
   "execution_label": "incorrect",
   "error_reason": "stop-loss update was applied to the wrong position"
 }
 ```
+
+Manually add authentic examples only. Keep their Telegram IDs and URLs in the
+owner JSON profile, archive the complete text/media sequence in private S3,
+and record its S3 URI in the same example object. Do not invent message URLs,
+IDs, or execution outcomes.
 
 Use these relations:
 

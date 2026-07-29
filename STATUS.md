@@ -3,7 +3,7 @@
 Maintenance rule: **OVERWRITE** this file on every update. It is the single
 source of current state, not a development log. The log is `HISTORY.md`.
 
-Last updated: 2026-07-28
+Last updated: 2026-07-29
 
 ## Phase
 
@@ -14,6 +14,8 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
 
 - The repository is a human-harnessed, non-executing scaffold; it is not live
   trading software.
+- Manual codebase review by the repository owner and manual addition of
+  authentic serial RAG examples are explicit priorities before further use.
 - Twenty-seven commits are summarized in `HISTORY.md`; current HEAD is `7200911`.
 - `OwnerQwenAPI` includes shared review-only synonym and reduce-and-protect
   skills, while `MinistralFilterAPI` includes MCP take-profit protection; no
@@ -44,8 +46,9 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
 - The Telethon image hydrator and authentic serial RAG corpus are not yet
   implemented. Current media archival and QWEN multimodal delivery remain
   scaffold boundaries; synonym inference remains a placeholder until RAG is
-  populated.
-- Last verification: 71 tests passed with the active Python 3.11 environment;
+  populated. RAG profile JSON now reserves ordered Telegram message IDs and
+  URLs plus a private S3 archive URI, but no authentic examples are fabricated.
+- Last verification: 74 tests passed with the active Python 3.11 environment;
   `uv` remains unavailable in the sandbox because of Snap permissions.
 
 ## Next Actions
@@ -66,13 +69,16 @@ hash, and private S3 provenance before its message receipt is recorded.
 
 - Add authorized chronological text/image sequences for every owner and
   channel, including multi-level replies.
+- Record every example message's Telegram ID and URL in JSON and archive the
+  complete example in private AWS S3 with its URI in the same JSON object.
 - Label `new_signal`, `continuation`, `duplicate`, and `ambiguous` cases.
 - Preserve omitted TP/SL updates, intended orders, media provenance, and
   correct or incorrect outcomes; redact unnecessary personal data.
 - Version the JSON profiles and add replay fixtures and evaluation metrics.
 
-Complete when every owner QWEN agent has a small, human-reviewed, replayable
-serial RAG set with authentic text/image patterns.
+Complete when every owner QWEN agent has a small, manually added and
+human-reviewed replayable serial RAG set with authentic text/image patterns,
+Telegram IDs/URLs, and S3 archive references.
 
 ## Further Priorities
 

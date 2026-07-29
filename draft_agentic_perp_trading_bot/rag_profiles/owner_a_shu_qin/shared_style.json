@@ -4,5 +4,7 @@
   "channels": ["owner_a_channel_a"],
   "asset_groups": ["btc_eth", "alts", "tradfi"],
   "trading_horizons": ["day", "longer"],
+  "s3_archive_prefix": "s3://PRIVATE_RAG_BUCKET/owner_a_shu_qin/",
+  "serial_rag_examples": [],
   "notes": ["TODO: encode owner-specific Chinese wording, order-call style, and examples."]
 }

@@ -4,5 +4,7 @@
   "channels": ["owner_d_btc_eth", "owner_d_alts_day", "owner_d_alts_longer"],
   "asset_groups": ["btc_eth", "alts", "tradfi"],
   "trading_horizons": ["day", "longer"],
+  "s3_archive_prefix": "s3://PRIVATE_RAG_BUCKET/owner_d_a_zhu/",
+  "serial_rag_examples": [],
   "notes": ["TODO: distinguish day-trading and longer-trading channel behavior."]
 }

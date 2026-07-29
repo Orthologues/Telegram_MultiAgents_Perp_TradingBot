@@ -7,7 +7,7 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import Any, Literal, Self
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import AnyHttpUrl, BaseModel, Field, field_validator, model_validator
 
 
 class OwnerId(StrEnum):
@@ -32,6 +32,50 @@ class StrategyTier(StrEnum):
     INTERMEDIATE = "intermediate"
     RADICAL = "radical"
     ULTRA_RADICAL = "ultra_radical"
+
+
+class TelegramRagMessageReference(BaseModel):
+    """Telegram provenance required for one manually curated RAG message."""
+
+    telegram_message_id: str = Field(pattern=r"^[0-9]+$")
+    telegram_message_url: AnyHttpUrl
+
+
+class SerialRagExample(BaseModel):
+    """Chronological owner example archived as one private S3 object."""
+
+    example_id: str = Field(min_length=1)
+    strategy_tier: StrategyTier
+    messages: list[TelegramRagMessageReference] = Field(min_length=1)
+    s3_archive_uri: str = Field(pattern=r"^s3://[^/]+/.+")
+    execution_label: Literal["correct", "incorrect", "ambiguous"]
+    error_reason: str | None = None
+
+    @field_validator("messages")
+    @classmethod
+    def validate_message_order(
+        cls,
+        messages: list[TelegramRagMessageReference],
+    ) -> list[TelegramRagMessageReference]:
+        message_ids = [message.telegram_message_id for message in messages]
+        if len(message_ids) != len(set(message_ids)):
+            raise ValueError("serial RAG message IDs must not repeat")
+        if message_ids != sorted(message_ids, key=int):
+            raise ValueError("serial RAG messages must be chronological")
+        return messages
+
+
+class OwnerRagProfile(BaseModel):
+    """Typed owner profile with manually curated serial RAG references."""
+
+    owner_id: OwnerId
+    display_name: str = Field(min_length=1)
+    channels: list[str] = Field(min_length=1)
+    asset_groups: list[AssetGroup] = Field(min_length=1)
+    trading_horizons: list[str] = Field(min_length=1)
+    s3_archive_prefix: str = Field(pattern=r"^s3://[^/]+/.+")
+    serial_rag_examples: list[SerialRagExample] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
 
 
 class LifecycleStrategySource(StrEnum):
