@@ -16,7 +16,9 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   trading software.
 - Manual codebase review by the repository owner and manual addition of
   authentic serial RAG examples are explicit priorities before further use.
-- Twenty-seven commits are summarized in `HISTORY.md`; current HEAD is `7200911`.
+- README wording now clarifies that five-tier candidates cover every incoming
+  signal, primarily lifecycle continuations.
+- Twenty-nine commits are summarized in `HISTORY.md`; current HEAD is `1d0ea8a`.
 - `OwnerQwenAPI` includes shared review-only synonym and reduce-and-protect
   skills, while `MinistralFilterAPI` includes MCP take-profit protection; no
   agent has direct exchange access.
@@ -29,12 +31,12 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
 - Parent-message IDs resolve concurrent live trade cursors by symbol, exchange,
   and direction. Each cursor retains active Hyperliquid/Bitget order and position
   IDs in a DynamoDB repository boundary until the position is fully closed.
-- Each owner QWEN agent emits five strategy candidates. Confidence selects one;
-  its tier, recommended size, leverage, and provenance persist for the position
-  lifecycle unless an explicit parent-linked update advances the policy
-  revision. Deterministic risk separately enforces pair blacklisting,
-  price-deviation thresholds, leverage, and cumulative owner/pair
-  position-value limits.
+- Each owner QWEN agent emits five strategy candidates for every incoming
+  signal. At lifecycle commencement, confidence selects the initial tier,
+  recommended size, leverage, and provenance; continuations inherit that
+  policy unless an explicit parent-linked update advances its revision.
+  Deterministic risk separately enforces pair blacklisting, price-deviation
+  thresholds, leverage, and cumulative owner/pair position-value limits.
 - The scaffold moves omitted stop-loss derivation from QWEN to a versioned
   Ministral policy using MCP market cap, volume, and `5m`/`15m`/`1h`/`4h` KDJ,
   Bollinger-width, and ATR inputs. The derived distance is bounded to

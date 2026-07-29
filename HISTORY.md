@@ -136,22 +136,33 @@ Implemented deterministic `0.5%`, `0.25%`, and `0.125%` price-deviation limits
 for generic altcoins, major/TradFi perpetuals, and BTC, respectively, with
 explicit mixed-channel TradFi classification and boundary tests.
 
-### 2026-07-25 — pending: separated ingestion receipts and live trade cursors
+### 2026-07-25 — `f2360bb`: separated ingestion receipts and live trade cursors
 
 Removed the channel-wide ingestion cursor, retained independent message
 receipts, and added concurrent parent-linked trade cursors with versioned
 BitMart/Bitget order and position metadata for DynamoDB.
 
-### 2026-07-28 — committed-history reconciliation
+### 2026-07-28 — `eb79b05`: committed-history reconciliation
 
 Recorded the previously omitted `ec30dc3`, `cb076bb`, `eb79b05`, `f2360bb`,
 and `7200911` commits. They resolved root documentation, synchronized status,
 finalized concurrent parent-linked trade cursors, and anchored omitted
 stop-losses to entry prices.
 
-### 2026-07-29 — pending: clarified lifecycle candidates and RAG provenance
+### 2026-07-28 — `1d73978`: reconstructed the Figma architecture scaffold
+
+Reconstructed the code scaffold against the current Figma architecture,
+including the revised TelegramAgent, QWEN/Ministral, lifecycle, MCP, and AWS
+execution boundaries.
+
+### 2026-07-29 — `1d0ea8a`: clarified lifecycle candidates and RAG provenance
 
 Clarified that each incoming new or continuation signal receives five QWEN
 strategy candidates. Added typed serial-RAG JSON references for chronological
 Telegram message IDs and URLs with private S3 archive URIs, and marked manual
 code review plus authentic RAG curation as priorities.
+
+### 2026-07-29 — pending: corrected README lifecycle wording
+
+Clarified that five-tier QWEN candidates cover every incoming signal, with
+existing perpetual-position continuations as the primary lifecycle case.

@@ -18,7 +18,7 @@ while DynamoDB stores enriched metadata and concurrent live trade cursors,
 including Hyperliquid or Bitget active orders and open positions.
 
 Each owner QWEN agent emits five reviewable strategy-tier candidates for every
-incoming trading signal, including continuations of an existing perpetual
+incoming trading signal, primarily for continuations of an existing perpetual
 position lifecycle.
 Ministral validates them; confidence selects and persists one position-lifecycle
 strategy, including recommended size and leverage, while deterministic risk
