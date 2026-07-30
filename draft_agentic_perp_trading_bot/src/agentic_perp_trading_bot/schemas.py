@@ -119,8 +119,35 @@ class TakeProfitProtectionAction(StrEnum):
 
 
 class ExchangeId(StrEnum):
-    BITGET = "bitget"
+    ASTER = "aster"
     HYPERLIQUID = "hyperliquid"
+
+
+class ExchangeNetwork(StrEnum):
+    TESTNET = "testnet"
+    MAINNET = "mainnet"
+
+
+class SettlementAsset(StrEnum):
+    USDT = "USDT"
+    USDC = "USDC"
+
+
+def settlement_asset_for_exchange(exchange_id: ExchangeId) -> SettlementAsset:
+    if exchange_id == ExchangeId.ASTER:
+        return SettlementAsset.USDT
+    return SettlementAsset.USDC
+
+
+def _validate_settlement_asset(
+    exchange_id: ExchangeId,
+    settlement_asset: SettlementAsset,
+) -> None:
+    expected = settlement_asset_for_exchange(exchange_id)
+    if settlement_asset != expected:
+        raise ValueError(
+            f"{exchange_id.value} perpetuals require {expected.value} settlement"
+        )
 
 
 class TradeCursorStatus(StrEnum):
@@ -235,6 +262,8 @@ class ExchangeTradeState(BaseModel):
     """MCP-observed live orders and positions for one exchange trading pair."""
 
     exchange_id: ExchangeId
+    network: ExchangeNetwork = ExchangeNetwork.TESTNET
+    settlement_asset: SettlementAsset
     symbol: str = Field(min_length=1)
     direction: PositionDirection
     active_order_ids: set[str] = Field(default_factory=set)
@@ -248,6 +277,11 @@ class ExchangeTradeState(BaseModel):
             raise ValueError("exchange order and position IDs must not be blank")
         return identifiers
 
+    @model_validator(mode="after")
+    def validate_venue(self) -> Self:
+        _validate_settlement_asset(self.exchange_id, self.settlement_asset)
+        return self
+
 
 class PositionLifecycleStrategy(BaseModel):
     """Persisted confidence-selected policy for one position lifecycle."""
@@ -260,7 +294,7 @@ class PositionLifecycleStrategy(BaseModel):
     formula_version: str = Field(min_length=1)
     owner_weight: float = Field(ge=0.0)
     asset_group_weight: float = Field(ge=0.0)
-    position_notional_usdt: Decimal = Field(ge=Decimal("0"))
+    position_notional_usd: Decimal = Field(ge=Decimal("0"))
     leverage: int = Field(ge=1, le=125)
     source: LifecycleStrategySource
     source_telegram_message_id: str = Field(pattern=r"^[0-9]+$")
@@ -292,6 +326,8 @@ class TradeThreadCursor(BaseModel):
     origin_message_id: str = Field(pattern=r"^[0-9]+$")
     message_ids: list[str] = Field(min_length=1)
     exchange_id: ExchangeId
+    network: ExchangeNetwork = ExchangeNetwork.TESTNET
+    settlement_asset: SettlementAsset
     symbol: str = Field(min_length=1)
     direction: PositionDirection
     active_order_ids: set[str] = Field(default_factory=set)
@@ -317,6 +353,7 @@ class TradeThreadCursor(BaseModel):
 
     @model_validator(mode="after")
     def validate_cursor_lifecycle(self) -> Self:
+        _validate_settlement_asset(self.exchange_id, self.settlement_asset)
         if self.origin_message_id not in self.message_ids:
             raise ValueError("origin_message_id must be included in message_ids")
         if self.lifecycle_strategy.source_telegram_message_id not in self.message_ids:
@@ -504,9 +541,11 @@ class TechnicalIndicatorSnapshot(BaseModel):
 
 
 class MarketAnalysisSnapshot(BaseModel):
-    """Typed Bitget/Hyperliquid MCP input for Ministral validation."""
+    """Typed Aster/Hyperliquid MCP input for Ministral validation."""
 
     exchange_id: ExchangeId
+    network: ExchangeNetwork = ExchangeNetwork.TESTNET
+    settlement_asset: SettlementAsset
     symbol: str = Field(min_length=1)
     current_price: Decimal = Field(gt=Decimal("0"))
     market_cap_usd: Decimal = Field(gt=Decimal("0"))
@@ -530,6 +569,11 @@ class MarketAnalysisSnapshot(BaseModel):
                 f"missing={missing}, unexpected={unexpected}"
             )
         return indicators
+
+    @model_validator(mode="after")
+    def validate_venue(self) -> Self:
+        _validate_settlement_asset(self.exchange_id, self.settlement_asset)
+        return self
 
 
 class OmittedStopLossDecision(BaseModel):
@@ -611,6 +655,8 @@ class TakeProfitFillEvent(BaseModel):
 
     event_id: str = Field(min_length=1)
     exchange_id: ExchangeId
+    network: ExchangeNetwork = ExchangeNetwork.TESTNET
+    settlement_asset: SettlementAsset
     symbol: str = Field(min_length=1)
     position_id: str = Field(min_length=1)
     direction: PositionDirection
@@ -625,6 +671,7 @@ class TakeProfitFillEvent(BaseModel):
 
     @model_validator(mode="after")
     def validate_take_profit_sequence(self) -> Self:
+        _validate_settlement_asset(self.exchange_id, self.settlement_asset)
         level_order = (
             TakeProfitLevel.TP1,
             TakeProfitLevel.TP2,
@@ -663,6 +710,8 @@ class TakeProfitProtectionDecision(BaseModel):
 
     event_id: str
     exchange_id: ExchangeId
+    network: ExchangeNetwork = ExchangeNetwork.TESTNET
+    settlement_asset: SettlementAsset
     symbol: str
     position_id: str
     action: TakeProfitProtectionAction
@@ -671,6 +720,11 @@ class TakeProfitProtectionDecision(BaseModel):
     policy_version: str
     idempotency_key: str
     reasons: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_venue(self) -> Self:
+        _validate_settlement_asset(self.exchange_id, self.settlement_asset)
+        return self
 
 
 class CanonicalTradeIntent(BaseModel):
@@ -685,6 +739,7 @@ class CanonicalTradeIntent(BaseModel):
     stop_loss: Decimal | None = None
     take_profit: list[Decimal] = Field(default_factory=list)
     target_exchanges: list[ExchangeId]
+    execution_network: ExchangeNetwork = ExchangeNetwork.TESTNET
     signal_dedup_key: str | None = None
 
     @field_validator("target_exchanges")
@@ -717,7 +772,7 @@ class PositionSizingDecision(BaseModel):
     strategy_tier: StrategyTier
     owner_weight: float = Field(ge=0.0)
     asset_group_weight: float = Field(ge=0.0)
-    final_position_notional_usdt: Decimal = Field(ge=Decimal("0"))
+    final_position_notional_usd: Decimal = Field(ge=Decimal("0"))
     leverage: int = Field(ge=1, le=125)
 
 
@@ -752,8 +807,9 @@ class PairRiskLimit(BaseModel):
 
     owner_id: OwnerId
     exchange_id: ExchangeId
+    network: ExchangeNetwork = ExchangeNetwork.TESTNET
     symbol: str = Field(min_length=1)
-    maximum_cumulative_position_notional_usdt: Decimal = Field(gt=Decimal("0"))
+    maximum_cumulative_position_notional_usd: Decimal = Field(gt=Decimal("0"))
     maximum_leverage: int = Field(ge=1, le=125)
     policy_version: str
 
@@ -762,10 +818,11 @@ class DeterministicRiskDecision(BaseModel):
     approved: bool
     owner_id: OwnerId
     exchange_id: ExchangeId
+    network: ExchangeNetwork = ExchangeNetwork.TESTNET
     symbol: str
-    requested_position_notional_usdt: Decimal = Field(ge=Decimal("0"))
-    existing_position_notional_usdt: Decimal = Field(ge=Decimal("0"))
-    cumulative_position_notional_usdt: Decimal = Field(ge=Decimal("0"))
+    requested_position_notional_usd: Decimal = Field(ge=Decimal("0"))
+    existing_position_notional_usd: Decimal = Field(ge=Decimal("0"))
+    cumulative_position_notional_usd: Decimal = Field(ge=Decimal("0"))
     requested_leverage: int = Field(ge=1, le=125)
     limits: PairRiskLimit
     reasons: list[str] = Field(default_factory=list)
@@ -783,27 +840,87 @@ class ClosedTradeOutcome(BaseModel):
     """Net closed-trade result used by deterministic pair blacklisting."""
 
     exchange_id: ExchangeId
+    network: ExchangeNetwork = ExchangeNetwork.TESTNET
+    settlement_asset: SettlementAsset
     symbol: str = Field(min_length=1)
+    signal_dedup_key: str | None = None
+    entry_notional_quote: Decimal = Field(gt=Decimal("0"))
     closed_at: datetime
-    realized_pnl_usdt: Decimal
-    fees_usdt: Decimal = Field(default=Decimal("0"), ge=Decimal("0"))
-    funding_usdt: Decimal = Decimal("0")
-    execution_cost_usdt: Decimal = Field(default=Decimal("0"), ge=Decimal("0"))
+    realized_pnl_quote: Decimal
+    fees_quote: Decimal = Field(default=Decimal("0"), ge=Decimal("0"))
+    funding_quote: Decimal = Decimal("0")
+    execution_cost_quote: Decimal = Field(default=Decimal("0"), ge=Decimal("0"))
     stopped_out: bool = False
     reversed_after_stop: bool = False
 
+    @model_validator(mode="after")
+    def validate_venue(self) -> Self:
+        _validate_settlement_asset(self.exchange_id, self.settlement_asset)
+        return self
+
     @property
-    def net_pnl_usdt(self) -> Decimal:
+    def net_pnl_quote(self) -> Decimal:
         return (
-            self.realized_pnl_usdt
-            - self.fees_usdt
-            - self.funding_usdt
-            - self.execution_cost_usdt
+            self.realized_pnl_quote
+            - self.fees_quote
+            - self.funding_quote
+            - self.execution_cost_quote
         )
+
+    @property
+    def net_pnl_percentage(self) -> Decimal:
+        return self.net_pnl_quote / self.entry_notional_quote * Decimal("100")
+
+
+class VenuePerformanceSummary(BaseModel):
+    """P/L summary for one venue over identical paired testnet signals."""
+
+    exchange_id: ExchangeId
+    network: Literal[ExchangeNetwork.TESTNET] = ExchangeNetwork.TESTNET
+    settlement_asset: SettlementAsset
+    matched_signals: int = Field(ge=0)
+    profitable_signals: int = Field(ge=0)
+    losing_signals: int = Field(ge=0)
+    breakeven_signals: int = Field(ge=0)
+    gross_profit_percentage: Decimal = Field(ge=Decimal("0"))
+    gross_loss_percentage: Decimal = Field(ge=Decimal("0"))
+    net_pnl_percentage: Decimal
+    mean_pnl_percentage: Decimal
+    profit_loss_ratio: Decimal | None = Field(default=None, ge=Decimal("0"))
+
+    @model_validator(mode="after")
+    def validate_venue(self) -> Self:
+        _validate_settlement_asset(self.exchange_id, self.settlement_asset)
+        return self
+
+
+class TestnetVenuePerformanceComparison(BaseModel):
+    """Paired Aster/Hyperliquid performance over shared executed signals."""
+
+    matched_signal_keys: list[str]
+    aster: VenuePerformanceSummary
+    hyperliquid: VenuePerformanceSummary
+    higher_net_pnl_exchange: ExchangeId | None = None
+    computed_at: datetime
+
+    @model_validator(mode="after")
+    def validate_venue_pair(self) -> Self:
+        if self.aster.exchange_id != ExchangeId.ASTER:
+            raise ValueError("aster summary must use the Aster exchange")
+        if self.hyperliquid.exchange_id != ExchangeId.HYPERLIQUID:
+            raise ValueError("hyperliquid summary must use the Hyperliquid exchange")
+        matched = len(self.matched_signal_keys)
+        if (
+            self.aster.matched_signals != matched
+            or self.hyperliquid.matched_signals != matched
+        ):
+            raise ValueError("venue summaries must cover the paired signal intersection")
+        return self
 
 
 class PairBlacklistDecision(BaseModel):
     exchange_id: ExchangeId
+    network: ExchangeNetwork = ExchangeNetwork.TESTNET
     symbol: str
     blacklisted: bool
     window_days: int = Field(ge=1)
@@ -829,6 +946,8 @@ class PositionLifecycleEvent(BaseModel):
     channel_id: str
     strategy_tier: StrategyTier
     exchange_id: ExchangeId
+    network: ExchangeNetwork = ExchangeNetwork.TESTNET
+    settlement_asset: SettlementAsset
     symbol: str = Field(min_length=1)
     position_id: str = Field(min_length=1)
     trade_cursor_id: str | None = None
@@ -840,9 +959,14 @@ class PositionLifecycleEvent(BaseModel):
         "position_reduced",
         "position_closed",
     ]
-    realized_pnl_usdt: Decimal | None = None
+    realized_pnl_quote: Decimal | None = None
     occurred_at: datetime
     source_telegram_message_ids: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_venue(self) -> Self:
+        _validate_settlement_asset(self.exchange_id, self.settlement_asset)
+        return self
 
 
 class ApprovedExecutionRequest(BaseModel):
@@ -869,9 +993,12 @@ class ApprovedExecutionRequest(BaseModel):
         if any(
             decision.owner_id != self.intent.owner_id
             or decision.symbol.upper() != self.intent.symbol.upper()
+            or decision.network != self.intent.execution_network
             for decision in self.risk_decisions
         ):
-            raise ValueError("risk decisions must match the intent owner and symbol")
+            raise ValueError(
+                "risk decisions must match the intent owner, symbol, and network"
+            )
         if self.intent.strategy_tier != self.confidence.strategy_tier:
             raise ValueError("intent and confidence strategy tiers must match")
         if self.intent.strategy_tier != self.sizing.strategy_tier:
@@ -882,8 +1009,8 @@ class ApprovedExecutionRequest(BaseModel):
             self.sizing.owner_weight != self.lifecycle_strategy.owner_weight
             or self.sizing.asset_group_weight
             != self.lifecycle_strategy.asset_group_weight
-            or self.sizing.final_position_notional_usdt
-            != self.lifecycle_strategy.position_notional_usdt
+            or self.sizing.final_position_notional_usd
+            != self.lifecycle_strategy.position_notional_usd
             or self.sizing.leverage != self.lifecycle_strategy.leverage
         ):
             raise ValueError("sizing must match the persisted lifecycle strategy")

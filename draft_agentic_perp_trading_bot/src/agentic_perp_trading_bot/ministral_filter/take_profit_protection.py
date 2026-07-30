@@ -50,6 +50,8 @@ class TakeProfitProtectionPolicy:
         return TakeProfitProtectionDecision(
             event_id=event.event_id,
             exchange_id=event.exchange_id,
+            network=event.network,
+            settlement_asset=event.settlement_asset,
             symbol=event.symbol,
             position_id=event.position_id,
             action=action,

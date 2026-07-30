@@ -76,7 +76,7 @@ def test_orchestrator_reviews_five_tiers_and_selects_one_for_both_exchanges() ->
                     stop_loss=hypothesis.stop_loss,
                     target_exchanges=[
                         ExchangeId.HYPERLIQUID,
-                        ExchangeId.BITGET,
+                        ExchangeId.ASTER,
                     ],
                 ),
                 reviewer_model="ministral-test",
@@ -99,12 +99,12 @@ def test_orchestrator_reviews_five_tiers_and_selects_one_for_both_exchanges() ->
         == LifecycleStrategySource.INITIAL_CONFIDENCE
     )
     assert request.lifecycle_strategy.strategy_tier == StrategyTier.ULTRA_RADICAL
-    assert request.lifecycle_strategy.position_notional_usdt == (
-        request.sizing.final_position_notional_usdt
+    assert request.lifecycle_strategy.position_notional_usd == (
+        request.sizing.final_position_notional_usd
     )
     assert request.lifecycle_strategy.leverage == request.sizing.leverage
     assert request.lifecycle_strategy.source_telegram_message_id == "123"
     assert request.lifecycle_strategy.revision == 0
     assert {
         decision.exchange_id for decision in request.risk_decisions
-    } == {ExchangeId.HYPERLIQUID, ExchangeId.BITGET}
+    } == {ExchangeId.HYPERLIQUID, ExchangeId.ASTER}

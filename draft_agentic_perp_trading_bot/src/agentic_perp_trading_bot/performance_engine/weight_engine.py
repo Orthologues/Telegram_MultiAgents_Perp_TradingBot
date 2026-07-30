@@ -29,7 +29,7 @@ _TIER_LEVERAGE = {
 
 def compute_position_size(
     decision: FilterDecision,
-    base_notional_usdt: Decimal = Decimal("100"),
+    base_notional_usd: Decimal = Decimal("100"),
 ) -> PositionSizingDecision:
     """Compute dynamic notional from owner, asset-group, and quality weights."""
     if decision.canonical_intent is None:
@@ -39,7 +39,7 @@ def compute_position_size(
     owner_weight = Decimal("1.0")
     asset_group_weight = Decimal("1.0")
     strategy_tier = intent.strategy_tier
-    final_notional = base_notional_usdt * owner_weight * asset_group_weight
+    final_notional = base_notional_usd * owner_weight * asset_group_weight
     final_notional *= Decimal(str(decision.quality_score))
     final_notional *= _TIER_NOTIONAL_MULTIPLIER[strategy_tier]
 
@@ -50,6 +50,6 @@ def compute_position_size(
         strategy_tier=strategy_tier,
         owner_weight=float(owner_weight),
         asset_group_weight=float(asset_group_weight),
-        final_position_notional_usdt=final_notional,
+        final_position_notional_usd=final_notional,
         leverage=_TIER_LEVERAGE[strategy_tier],
     )

@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from enum import StrEnum
 
+from agentic_perp_trading_bot.schemas import ExchangeId
+
 
 class SecretName(StrEnum):
-    BITGET_API_CREDENTIALS = "agentic-perp-trading-bot/bitget/api-credentials"
+    ASTER_SIGNER_WALLET = "agentic-perp-trading-bot/aster/signer-wallet"
     HYPERLIQUID_API_WALLET = "agentic-perp-trading-bot/hyperliquid/api-wallet"
     TELEGRAM_API_CREDENTIALS = "agentic-perp-trading-bot/telegram/api-credentials"
     TELEGRAM_USER_SESSION = "agentic-perp-trading-bot/telegram/user-session"
@@ -17,3 +19,9 @@ class SecretName(StrEnum):
 def get_secret_payload(secret_name: SecretName) -> dict:
     """Retrieve and JSON-decode a secret in the real AWS implementation."""
     raise NotImplementedError(f"Secrets Manager retrieval not implemented: {secret_name}")
+
+
+def exchange_signing_secret(exchange_id: ExchangeId) -> SecretName:
+    if exchange_id == ExchangeId.ASTER:
+        return SecretName.ASTER_SIGNER_WALLET
+    return SecretName.HYPERLIQUID_API_WALLET

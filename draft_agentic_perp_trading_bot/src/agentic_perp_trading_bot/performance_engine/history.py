@@ -5,7 +5,11 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Protocol
 
-from agentic_perp_trading_bot.schemas import ExchangeId, PositionLifecycleEvent
+from agentic_perp_trading_bot.schemas import (
+    ExchangeId,
+    ExchangeNetwork,
+    PositionLifecycleEvent,
+)
 
 
 class DynamoDBExecutionHistoryRepository(Protocol):
@@ -15,6 +19,7 @@ class DynamoDBExecutionHistoryRepository(Protocol):
         self,
         *,
         exchange_id: ExchangeId,
+        network: ExchangeNetwork,
         position_id: str,
     ) -> list[PositionLifecycleEvent]: ...
 
@@ -36,6 +41,7 @@ class InMemoryExecutionHistoryRepository:
         self,
         *,
         exchange_id: ExchangeId,
+        network: ExchangeNetwork,
         position_id: str,
     ) -> list[PositionLifecycleEvent]:
         return sorted(
@@ -43,6 +49,7 @@ class InMemoryExecutionHistoryRepository:
                 event
                 for event in self.events
                 if event.exchange_id == exchange_id
+                and event.network == network
                 and event.position_id == position_id
             ),
             key=lambda event: event.occurred_at,

@@ -15,7 +15,7 @@ not require one independently deployed TelegramAgent service per channel. Each
 delivered message includes oldest-to-newest `parent_messages` IDs for serial
 reply-tree context retrieval. ElastiCache stores the owner reply-tree indexes,
 while DynamoDB stores enriched metadata and concurrent live trade cursors,
-including Hyperliquid or Bitget active orders and open positions.
+including Aster or Hyperliquid active orders and open positions.
 
 Each owner QWEN agent emits five reviewable strategy-tier candidates for every
 incoming trading signal, primarily for continuations of an existing perpetual
@@ -23,6 +23,8 @@ position lifecycle.
 Ministral validates them; confidence selects and persists one position-lifecycle
 strategy, including recommended size and leverage, while deterministic risk
 enforces pair, price, leverage, and cumulative position-value limits.
+Paired testnet P/L summaries compare only identical signals executed on both
+Aster-USDT and Hyperliquid-USDC.
 
 Manual serial RAG JSON profiles will preserve each example message's Telegram
 ID and URL together with its private AWS S3 archive URI; authentic examples are
@@ -44,7 +46,7 @@ cd draft_agentic_perp_trading_bot && uv sync --extra aws --extra dev && uv run p
 ## Repository Map
 
 - `draft_agentic_perp_trading_bot/`: source package, schemas, tests, RAG
-  profiles, and Bitget/Hyperliquid MCP drafts.
+  profiles, and Aster/Hyperliquid MCP drafts.
 - `AGENTS.md`: architecture contract and repository rules.
 - `SKILLS.md`: concise implementation workflows.
 - `draft_agentic_perp_trading_bot/src/agentic_perp_trading_bot/skills_api/`:

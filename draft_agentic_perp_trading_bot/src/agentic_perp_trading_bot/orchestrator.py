@@ -13,6 +13,7 @@ from agentic_perp_trading_bot.schemas import (
     CanonicalTradeIntent,
     ConfidenceDecision,
     ExchangeId,
+    ExchangeNetwork,
     FilterDecision,
     IntentType,
     LifecycleStrategySource,
@@ -161,10 +162,16 @@ async def process_message(
         evaluate_deterministic_risk(
             sizing,
             exchange_id=exchange_id,
+            network=intent.execution_network,
             symbol=intent.symbol,
             limits=limits_by_exchange.get(exchange_id)
-            or _default_risk_limit(message, exchange_id, intent.symbol),
-            existing_position_notional_usdt=current_notional_by_exchange.get(
+            or _default_risk_limit(
+                message,
+                exchange_id,
+                intent.execution_network,
+                intent.symbol,
+            ),
+            existing_position_notional_usd=current_notional_by_exchange.get(
                 exchange_id,
                 Decimal("0"),
             ),
@@ -278,7 +285,7 @@ def _sizing_from_lifecycle(
         strategy_tier=strategy.strategy_tier,
         owner_weight=strategy.owner_weight,
         asset_group_weight=strategy.asset_group_weight,
-        final_position_notional_usdt=strategy.position_notional_usdt,
+        final_position_notional_usd=strategy.position_notional_usd,
         leverage=strategy.leverage,
     )
 
@@ -300,7 +307,7 @@ def _new_lifecycle_strategy(
         formula_version=confidence.formula_version,
         owner_weight=sizing.owner_weight,
         asset_group_weight=sizing.asset_group_weight,
-        position_notional_usdt=sizing.final_position_notional_usdt,
+        position_notional_usd=sizing.final_position_notional_usd,
         leverage=sizing.leverage,
         source=(
             LifecycleStrategySource.TELEGRAM_TRANSITION
@@ -330,6 +337,7 @@ def _cursor_matches_intent(
 ) -> bool:
     return (
         cursor.exchange_id in intent.target_exchanges
+        and cursor.network == intent.execution_network
         and cursor.symbol.upper() == intent.symbol.upper()
         and cursor.direction == _direction_for_action(intent.action)
     )
@@ -338,14 +346,16 @@ def _cursor_matches_intent(
 def _default_risk_limit(
     message: TelegramMessageEnvelope,
     exchange_id: ExchangeId,
+    network: ExchangeNetwork,
     symbol: str,
 ) -> PairRiskLimit:
     """Non-production default used until owner/pair limits are loaded from policy."""
     return PairRiskLimit(
         owner_id=message.owner_id,
         exchange_id=exchange_id,
+        network=network,
         symbol=symbol.upper(),
-        maximum_cumulative_position_notional_usdt=Decimal("1000"),
+        maximum_cumulative_position_notional_usd=Decimal("1000"),
         maximum_leverage=5,
         policy_version="scaffold-default-v1",
     )

@@ -14,6 +14,7 @@ from agentic_perp_trading_bot.ministral_filter.take_profit_protection import (
 from agentic_perp_trading_bot.schemas import (
     ExchangeId,
     PositionDirection,
+    SettlementAsset,
     TakeProfitFillEvent,
     TakeProfitLevel,
     TakeProfitProtectionAction,
@@ -40,6 +41,7 @@ def _event(
     return TakeProfitFillEvent(
         event_id="fill-123",
         exchange_id=ExchangeId.HYPERLIQUID,
+        settlement_asset=SettlementAsset.USDC,
         symbol="BTCUSDT",
         position_id="position-1",
         direction=direction,

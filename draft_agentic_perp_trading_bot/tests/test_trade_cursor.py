@@ -22,6 +22,7 @@ from agentic_perp_trading_bot.schemas import (
     TelegramMessageEnvelope,
     TradeAction,
     TradeCursorStatus,
+    settlement_asset_for_exchange,
 )
 from agentic_perp_trading_bot.trade_cursor import (
     ConcurrentTradeCursorManager,
@@ -62,6 +63,7 @@ def _state(
 ) -> ExchangeTradeState:
     return ExchangeTradeState(
         exchange_id=exchange_id,
+        settlement_asset=settlement_asset_for_exchange(exchange_id),
         symbol=symbol,
         direction=direction,
         active_order_ids=active_order_ids,
@@ -82,7 +84,7 @@ def _lifecycle_strategy(
         formula_version="test-v1",
         owner_weight=1.0,
         asset_group_weight=1.0,
-        position_notional_usdt=Decimal("100"),
+        position_notional_usd=Decimal("100"),
         leverage=3,
         source=LifecycleStrategySource.INITIAL_CONFIDENCE,
         source_telegram_message_id=message_id,
@@ -109,7 +111,7 @@ def test_parent_chain_resolves_concurrent_pair_cursors_independently() -> None:
         eth_cursor = await manager.register_exchange_state(
             _message("101", parent_messages=["100"]),
             _state(
-                exchange_id=ExchangeId.BITGET,
+                exchange_id=ExchangeId.ASTER,
                 symbol="ETHUSDT",
                 direction=PositionDirection.SHORT,
                 active_order_ids={"eth-tp1"},
@@ -211,7 +213,7 @@ def test_unfilled_order_cursor_does_not_close_as_a_position() -> None:
         cursor = await manager.register_exchange_state(
             _message("100"),
             _state(
-                exchange_id=ExchangeId.BITGET,
+                exchange_id=ExchangeId.ASTER,
                 symbol="SOLUSDT",
                 direction=PositionDirection.LONG,
                 active_order_ids={"entry-order"},
@@ -223,7 +225,7 @@ def test_unfilled_order_cursor_does_not_close_as_a_position() -> None:
         refreshed = await manager.refresh_exchange_state(
             cursor.cursor_id,
             _state(
-                exchange_id=ExchangeId.BITGET,
+                exchange_id=ExchangeId.ASTER,
                 symbol="SOLUSDT",
                 direction=PositionDirection.LONG,
                 active_order_ids=set(),
@@ -245,7 +247,7 @@ def test_cursor_versions_reject_stale_concurrent_writes() -> None:
         cursor = await manager.register_exchange_state(
             _message("100"),
             _state(
-                exchange_id=ExchangeId.BITGET,
+                exchange_id=ExchangeId.ASTER,
                 symbol="ETHUSDT",
                 direction=PositionDirection.SHORT,
                 active_order_ids={"entry-order"},
@@ -340,7 +342,7 @@ def test_orchestrator_passes_parent_cursor_state_to_agents_and_execution() -> No
         assert request.parent_message_ids == ["100"]
         assert request.confidence.confidence == 0.5
         assert request.lifecycle_strategy == cursor.lifecycle_strategy
-        assert request.sizing.final_position_notional_usdt == Decimal("100")
+        assert request.sizing.final_position_notional_usd == Decimal("100")
         assert request.sizing.leverage == 3
         updated = await repository.get(cursor.cursor_id)
         assert updated is not None

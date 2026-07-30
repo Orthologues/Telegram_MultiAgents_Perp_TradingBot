@@ -14,6 +14,7 @@ from agentic_perp_trading_bot.schemas import (
     ExchangeId,
     OwnerId,
     PositionLifecycleEvent,
+    SettlementAsset,
     StrategyTier,
 )
 
@@ -33,10 +34,11 @@ def test_ministral_execution_history_is_append_only_and_idempotent() -> None:
             channel_id="owner_a_channel_a",
             strategy_tier=StrategyTier.INTERMEDIATE,
             exchange_id=ExchangeId.HYPERLIQUID,
+            settlement_asset=SettlementAsset.USDC,
             symbol="BTCUSDT",
             position_id="position-1",
             event_type="take_profit_filled",
-            realized_pnl_usdt=Decimal("5"),
+            realized_pnl_quote=Decimal("5"),
             occurred_at=NOW,
             source_telegram_message_ids=["100"],
         )
@@ -53,9 +55,11 @@ def test_pair_blacklist_uses_recent_net_results_and_stop_reversals() -> None:
     outcomes = [
         ClosedTradeOutcome(
             exchange_id=ExchangeId.HYPERLIQUID,
+            settlement_asset=SettlementAsset.USDC,
             symbol="ALTUSDT",
+            entry_notional_quote=Decimal("100"),
             closed_at=NOW - timedelta(days=index),
-            realized_pnl_usdt=Decimal("-1"),
+            realized_pnl_quote=Decimal("-1"),
             stopped_out=True,
             reversed_after_stop=index < 7,
         )
@@ -64,9 +68,11 @@ def test_pair_blacklist_uses_recent_net_results_and_stop_reversals() -> None:
     outcomes.extend(
         ClosedTradeOutcome(
             exchange_id=ExchangeId.HYPERLIQUID,
+            settlement_asset=SettlementAsset.USDC,
             symbol="ALTUSDT",
+            entry_notional_quote=Decimal("100"),
             closed_at=NOW - timedelta(days=10 + index),
-            realized_pnl_usdt=Decimal("1"),
+            realized_pnl_quote=Decimal("1"),
         )
         for index in range(3)
     )

@@ -10,6 +10,7 @@ from agentic_perp_trading_bot.schemas import (
     ClosedTradeOutcome,
     DeterministicRiskDecision,
     ExchangeId,
+    ExchangeNetwork,
     PairBlacklistDecision,
     PairRiskLimit,
     PositionSizingDecision,
@@ -29,7 +30,8 @@ def evaluate_deterministic_risk(
     exchange_id: ExchangeId,
     symbol: str,
     limits: PairRiskLimit,
-    existing_position_notional_usdt: Decimal = Decimal("0"),
+    network: ExchangeNetwork = ExchangeNetwork.TESTNET,
+    existing_position_notional_usd: Decimal = Decimal("0"),
     pair_blacklisted: bool = False,
     instant_order: bool = False,
     reference_price: Decimal | None = None,
@@ -38,12 +40,12 @@ def evaluate_deterministic_risk(
     tradfi_perpetual_pair: bool = False,
 ) -> DeterministicRiskDecision:
     """Apply only reproducible execution constraints to one exchange request."""
-    _validate_limit_identity(sizing, exchange_id, symbol, limits)
-    if existing_position_notional_usdt < 0:
-        raise ValueError("existing_position_notional_usdt must not be negative")
+    _validate_limit_identity(sizing, exchange_id, network, symbol, limits)
+    if existing_position_notional_usd < 0:
+        raise ValueError("existing_position_notional_usd must not be negative")
 
     cumulative_notional = (
-        existing_position_notional_usdt + sizing.final_position_notional_usdt
+        existing_position_notional_usd + sizing.final_position_notional_usd
     )
     reasons: list[str] = []
     deviation: Decimal | None = None
@@ -53,7 +55,7 @@ def evaluate_deterministic_risk(
         reasons.append("trading_pair_blacklisted")
     if sizing.leverage > limits.maximum_leverage:
         reasons.append("requested_leverage_exceeds_pair_limit")
-    if cumulative_notional > limits.maximum_cumulative_position_notional_usdt:
+    if cumulative_notional > limits.maximum_cumulative_position_notional_usd:
         reasons.append("cumulative_position_notional_exceeds_pair_limit")
 
     if instant_order:
@@ -75,10 +77,11 @@ def evaluate_deterministic_risk(
         approved=not reasons,
         owner_id=sizing.owner_id,
         exchange_id=exchange_id,
+        network=network,
         symbol=symbol.upper(),
-        requested_position_notional_usdt=sizing.final_position_notional_usdt,
-        existing_position_notional_usdt=existing_position_notional_usdt,
-        cumulative_position_notional_usdt=cumulative_notional,
+        requested_position_notional_usd=sizing.final_position_notional_usd,
+        existing_position_notional_usd=existing_position_notional_usd,
+        cumulative_position_notional_usd=cumulative_notional,
         requested_leverage=sizing.leverage,
         limits=limits,
         reasons=reasons,
@@ -132,6 +135,7 @@ class PairBlacklistPolicy:
         self,
         *,
         exchange_id: ExchangeId,
+        network: ExchangeNetwork = ExchangeNetwork.TESTNET,
         symbol: str,
         outcomes: list[ClosedTradeOutcome],
         computed_at: datetime | None = None,
@@ -142,12 +146,13 @@ class PairBlacklistPolicy:
             outcome
             for outcome in outcomes
             if outcome.exchange_id == exchange_id
+            and outcome.network == network
             and outcome.symbol.upper() == symbol.upper()
             and cutoff <= outcome.closed_at <= evaluated_at
-            and outcome.net_pnl_usdt != 0
+            and outcome.net_pnl_quote != 0
         ]
-        wins = sum(outcome.net_pnl_usdt > 0 for outcome in matching)
-        losses = sum(outcome.net_pnl_usdt < 0 for outcome in matching)
+        wins = sum(outcome.net_pnl_quote > 0 for outcome in matching)
+        losses = sum(outcome.net_pnl_quote < 0 for outcome in matching)
         ratio = Decimal(wins) / Decimal(losses) if losses else None
         stopped = [outcome for outcome in matching if outcome.stopped_out]
         reversal_rate = (
@@ -173,6 +178,7 @@ class PairBlacklistPolicy:
 
         return PairBlacklistDecision(
             exchange_id=exchange_id,
+            network=network,
             symbol=symbol.upper(),
             blacklisted=bool(reasons),
             window_days=self.window_days,
@@ -190,6 +196,7 @@ class PairBlacklistPolicy:
 def _validate_limit_identity(
     sizing: PositionSizingDecision,
     exchange_id: ExchangeId,
+    network: ExchangeNetwork,
     symbol: str,
     limits: PairRiskLimit,
 ) -> None:
@@ -197,6 +204,8 @@ def _validate_limit_identity(
         raise ValueError("risk limit owner does not match sizing owner")
     if limits.exchange_id != exchange_id:
         raise ValueError("risk limit exchange does not match request exchange")
+    if limits.network != network:
+        raise ValueError("risk limit network does not match request network")
     if limits.symbol.upper() != symbol.upper():
         raise ValueError("risk limit symbol does not match request symbol")
 

@@ -85,8 +85,8 @@ execution outcomes, and pair-blacklisting inputs.
 Maintain one active `TradeThreadCursor` per parent-linked symbol, exchange, and
 direction. A new message may resolve several concurrent candidates from its
 chronological `parent_messages`; match the intended cursor by canonical symbol,
-Hyperliquid or Bitget exchange, and long/short direction. Store only messages
-assigned to that cursor, not the complete parent list.
+Aster or Hyperliquid exchange, network, and long/short direction. Store only
+messages assigned to that cursor, not the complete parent list.
 
 Each cursor stores sets of active order IDs and open position IDs in DynamoDB.
 Use conditional version writes so unrelated cursors update independently. An
@@ -271,7 +271,7 @@ execute an order.
 ## Deterministic Omitted Stop-Loss
 
 When an order omits its stop-loss, QWEN must leave `stop_loss` unset. The
-Bitget/Hyperliquid MCP boundary supplies current price, market capitalization,
+Aster/Hyperliquid MCP boundary supplies current price, market capitalization,
 24-hour quote volume, and KDJ, Bollinger bands, and Average True Range snapshots
 for each of `5m`, `15m`, `1h`, and `4h`. Ministral then applies the versioned
 deterministic policy in
@@ -415,6 +415,16 @@ canonical intent
   -> ApprovedExecutionRequest
 ```
 
+## Paired Testnet Venue Performance
+
+Compare Aster and Hyperliquid reliability only over the intersection of closed
+testnet positions sharing the same `signal_dedup_key`. Aggregate partial closes
+per signal and venue, normalize net P/L by entry notional, and report wins,
+losses, gross profit, gross loss, net P/L, mean P/L, and profit-to-loss ratio.
+Exclude unmatched signals and all mainnet outcomes so differences in signal
+selection do not contaminate the Aster-USDT versus Hyperliquid-USDC comparison.
+Use `performance_engine.compare_testnet_venue_performance`.
+
 ## Trading Message Synonym Inference
 
 Use QWEN reasoning to infer the meaning of Chinese trading messages quickly.
@@ -423,17 +433,16 @@ conditional strategy profile indexed by the trading pair's reference price at
 message time. Map each incoming Telegram message to its closest baseline
 synonym and return the matched class, strategy identifier, evidence, and
 confidence. Pass this structured result to Ministral for validation. This skill
-produces no execution command and must not call Bitget or Hyperliquid APIs.
+produces no execution command and must not call Aster or Hyperliquid APIs.
 Its API contract is
 `agentic_perp_trading_bot.skills_api.owner_qwen.OwnerQwenAPI.infer_synonym`.
 
 ## Exchange and AWS Boundary
 
-Keep Bitget and Hyperliquid adapters behind the MCP gateway. Use ECS WebSockets for
-market-data transport when low latency is required, and signed HTTPS REST for
-order execution. Lambda retrieves exchange credentials and kill-switch settings
-from Secrets Manager. The Telegram worker separately retrieves Telegram API
-ID/hash and the authorized user-session bootstrap. Secrets never enter logs,
+Keep Aster and Hyperliquid adapters behind the MCP gateway and default both to
+testnet. Use ECS WebSockets for low-latency market data and signed HTTPS REST for
+execution. Lambda retrieves the Aster EIP-712 signer or Hyperliquid API wallet
+and kill-switch settings from Secrets Manager. Secrets never enter logs,
 fixtures, RAG files, or commits.
 
 ## Verification

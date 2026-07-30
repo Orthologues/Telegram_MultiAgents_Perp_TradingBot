@@ -155,6 +155,7 @@ class ConcurrentTradeCursorManager:
                 cursor
                 for cursor in candidates
                 if cursor.exchange_id == exchange_id
+                and cursor.network == intent.execution_network
                 and cursor.symbol.upper() == intent.symbol.upper()
                 and cursor.direction == direction
             ]
@@ -186,6 +187,7 @@ class ConcurrentTradeCursorManager:
             cursor
             for cursor in candidates
             if cursor.exchange_id == state.exchange_id
+            and cursor.network == state.network
             and cursor.symbol.upper() == state.symbol.upper()
             and cursor.direction == state.direction
         ]
@@ -213,6 +215,8 @@ class ConcurrentTradeCursorManager:
             origin_message_id=message.telegram_message_id,
             message_ids=[message.telegram_message_id],
             exchange_id=state.exchange_id,
+            network=state.network,
+            settlement_asset=state.settlement_asset,
             symbol=state.symbol.upper(),
             direction=state.direction,
             active_order_ids=set(state.active_order_ids),
@@ -333,6 +337,7 @@ def _cursor_id(
             message.channel_id,
             message.telegram_message_id,
             state.exchange_id,
+            state.network,
             state.symbol.upper(),
             state.direction,
         )
@@ -354,8 +359,20 @@ def _validate_state_identity(
     cursor: TradeThreadCursor,
     state: ExchangeTradeState,
 ) -> None:
-    identity = (cursor.exchange_id, cursor.symbol.upper(), cursor.direction)
-    state_identity = (state.exchange_id, state.symbol.upper(), state.direction)
+    identity = (
+        cursor.exchange_id,
+        cursor.network,
+        cursor.settlement_asset,
+        cursor.symbol.upper(),
+        cursor.direction,
+    )
+    state_identity = (
+        state.exchange_id,
+        state.network,
+        state.settlement_asset,
+        state.symbol.upper(),
+        state.direction,
+    )
     if identity != state_identity:
         raise ValueError(
             f"exchange state {state_identity} does not match cursor {identity}"

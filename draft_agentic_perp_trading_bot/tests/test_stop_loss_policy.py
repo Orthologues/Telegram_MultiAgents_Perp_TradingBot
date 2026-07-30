@@ -22,6 +22,7 @@ from agentic_perp_trading_bot.schemas import (
     MarketLiquidityTier,
     OwnerId,
     QwenSignalHypothesis,
+    SettlementAsset,
     StrategyTier,
     TechnicalIndicatorSnapshot,
     TradeAction,
@@ -73,6 +74,7 @@ def _market(
     }
     return MarketAnalysisSnapshot(
         exchange_id=ExchangeId.HYPERLIQUID,
+        settlement_asset=SettlementAsset.USDC,
         symbol="ALTUSDT",
         current_price=Decimal("100"),
         market_cap_usd=Decimal(market_cap),

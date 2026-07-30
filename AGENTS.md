@@ -22,7 +22,7 @@ TelegramAgent retrieval
   -> one owner-specific QWEN agent per owner, producing five strategy tiers
   -> Ministral validation and signal deduplication
   -> confidence/strategy and deterministic risk policies
-  -> Bitget/Hyperliquid MCP gateway and Lambda execution boundary
+  -> Aster/Hyperliquid MCP gateway and Lambda execution boundary
 ```
 
 - Use one authorized Telegram user session and one shared polling worker.
@@ -40,11 +40,14 @@ TelegramAgent retrieval
   chronological order, and query DynamoDB by those IDs for active trade cursors.
 - Pass the same ID-labelled `TelegramPromptContext` to QWEN and Ministral.
 - Store concurrent `TradeThreadCursor` metadata in DynamoDB. Each cursor tracks
-  one parent-linked symbol, exchange, direction, active-order set, and
-  open-position set, plus its confidence-selected lifecycle strategy; close it
-  only after the position is fully closed and no active orders remain.
+  one parent-linked symbol, exchange network, settlement asset, direction,
+  active-order set, and open-position set, plus its confidence-selected
+  lifecycle strategy; close it only after the position is fully closed and no
+  active orders remain.
 - Retain DynamoDB metadata for live coordination, replay, backtesting, and
   strategy optimization, including omitted TP/SL outcomes and blacklist data.
+- Compare Aster-USDT and Hyperliquid-USDC testnet P/L only across the intersection
+  of closed positions sharing the same signal deduplication key.
 
 ## Agent Boundaries
 
@@ -101,6 +104,8 @@ remains behind the MCP gateway.
   conditional DynamoDB version writes so independent cursors can progress
   concurrently.
 - Keep exchange-specific behavior behind MCP; agents must not call exchanges.
+- Default both venues to testnet. Keep Aster EIP-712 signer and Hyperliquid API
+  wallet signing inside the Secrets Manager and Lambda boundary.
 - Preserve owner, channel, Telegram message ID, timestamps, parent IDs, media
   hashes, deduplication key, model ID, confidence, and strategy tier.
 

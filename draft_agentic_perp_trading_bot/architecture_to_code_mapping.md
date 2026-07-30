@@ -33,7 +33,7 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
   `agentic_perp_trading_bot.confidence_engine`
 - Deterministic blacklist, price, leverage, and cumulative-notional limits:
   `agentic_perp_trading_bot.risk_engine`
-- Bitget/Hyperliquid MCP gateway: `agentic_perp_trading_bot.mcp_gateway`
+- Aster/Hyperliquid MCP gateway: `agentic_perp_trading_bot.mcp_gateway`
 - AWS Secrets Manager and Lambda execution: `agentic_perp_trading_bot.aws_execution`
 
 ## Deduplication Split
@@ -54,7 +54,7 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 - Message metadata: DynamoDB
 - Reply-tree context: owner-scoped ElastiCache indexes with process-local read-through caches
 - Live trade state: parent-linked, versioned DynamoDB cursors containing active
-  Hyperliquid/Bitget order IDs, open position IDs, and the persisted
+  Aster/Hyperliquid order IDs, open position IDs, and the persisted
   confidence-selected lifecycle strategy
 - Execution and P/L history: append-only DynamoDB position-lifecycle events
 - Normalized message handoff: Bedrock publisher after metadata persistence
@@ -63,8 +63,9 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 - Exchange live state: ECS WebSocket workers
 - Stop-loss market inputs: MCP price, market cap, 24-hour volume, and KDJ,
   Bollinger, and ATR snapshots at 5m, 15m, 1h, and 4h
-- Signed execution: AWS Lambda using Secrets Manager for Bitget credentials and
-  the Hyperliquid API wallet
+- Venue comparison: paired testnet P/L for identical signal deduplication keys
+- Signed execution: AWS Lambda using Secrets Manager for the Aster EIP-712
+  signer and Hyperliquid API wallet
 
 The board's "pushes real-time updates" label maps to near-real-time polling in
 the scaffold. AG2 TelegramAgent does not expose a native push listener or

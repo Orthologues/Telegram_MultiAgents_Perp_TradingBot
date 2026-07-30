@@ -140,7 +140,7 @@ explicit mixed-channel TradFi classification and boundary tests.
 
 Removed the channel-wide ingestion cursor, retained independent message
 receipts, and added concurrent parent-linked trade cursors with versioned
-BitMart/Bitget order and position metadata for DynamoDB.
+exchange order and position metadata for DynamoDB.
 
 ### 2026-07-28 — `eb79b05`: committed-history reconciliation
 
@@ -162,7 +162,12 @@ strategy candidates. Added typed serial-RAG JSON references for chronological
 Telegram message IDs and URLs with private S3 archive URIs, and marked manual
 code review plus authentic RAG curation as priorities.
 
-### 2026-07-29 — pending: corrected README lifecycle wording
+### 2026-07-29 — `20c843f`: corrected README lifecycle wording
 
 Clarified that five-tier QWEN candidates cover every incoming signal, with
 existing perpetual-position continuations as the primary lifecycle case.
+
+### 2026-07-30 — pending: replaced the exchange scaffold with Aster
+
+Replaced the legacy exchange adapter with testnet-first Aster/Hyperliquid
+contracts and added paired testnet P/L comparison for identical signals.

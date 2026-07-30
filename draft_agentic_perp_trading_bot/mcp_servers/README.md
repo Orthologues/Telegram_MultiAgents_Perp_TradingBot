@@ -4,7 +4,7 @@ This folder contains exchange-specific MCP servers that back the scaffolded
 exchange gateway.
 
 - `hyperliquid_mcp/`: Hyperliquid read and guarded Lambda-handoff scaffold.
-- `bitget_mcp/`: Bitget read and guarded Lambda-handoff scaffold.
+- `aster_mcp/`: Aster Futures v3 read and guarded Lambda-handoff scaffold.
 
 The intended split is:
 
@@ -15,3 +15,5 @@ The intended split is:
 - authenticated take-profit fill events for idempotent Ministral stop protection
 - signed order execution: REST requests or AWS Lambda execution after filter
   plus explicit confidence and deterministic-risk decisions
+- network policy: testnet by default, with distinct Aster-USDT and
+  Hyperliquid-USDC metadata

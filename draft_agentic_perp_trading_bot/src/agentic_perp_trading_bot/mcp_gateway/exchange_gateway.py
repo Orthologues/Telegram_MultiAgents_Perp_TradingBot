@@ -7,18 +7,30 @@ should use REST or the AWS Lambda execution boundary.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Protocol
 
+from agentic_perp_trading_bot.mcp_gateway.venue_contracts import (
+    ExchangeEndpointProfile,
+    get_exchange_profile,
+)
 from agentic_perp_trading_bot.schemas import (
     ApprovedExecutionRequest,
+    ExchangeId,
+    ExchangeNetwork,
     ExchangeTradeState,
     MarketAnalysisSnapshot,
     PositionDirection,
+    SettlementAsset,
     TakeProfitProtectionDecision,
 )
 
 
 class ExchangeGateway(Protocol):
+    exchange_id: ExchangeId
+    network: ExchangeNetwork
+    settlement_asset: SettlementAsset
+
     async def get_market_analysis(self, symbol: str) -> MarketAnalysisSnapshot:
         """Return liquidity and 5m/15m/1h/4h indicator inputs for Ministral."""
 
@@ -45,9 +57,27 @@ class ExchangeGateway(Protocol):
         """Cancel an order through a narrow signed endpoint."""
 
 
-class BitgetGateway:
-    exchange_id = "bitget"
+@dataclass(frozen=True, slots=True)
+class AsterGateway:
+    """Aster USDT-perpetual adapter marker; testnet is the default."""
+
+    network: ExchangeNetwork = ExchangeNetwork.TESTNET
+    exchange_id: ExchangeId = ExchangeId.ASTER
+    settlement_asset: SettlementAsset = SettlementAsset.USDT
+
+    @property
+    def endpoints(self) -> ExchangeEndpointProfile:
+        return get_exchange_profile(self.exchange_id, self.network)
 
 
+@dataclass(frozen=True, slots=True)
 class HyperliquidGateway:
-    exchange_id = "hyperliquid"
+    """Hyperliquid USDC-perpetual adapter marker; testnet is the default."""
+
+    network: ExchangeNetwork = ExchangeNetwork.TESTNET
+    exchange_id: ExchangeId = ExchangeId.HYPERLIQUID
+    settlement_asset: SettlementAsset = SettlementAsset.USDC
+
+    @property
+    def endpoints(self) -> ExchangeEndpointProfile:
+        return get_exchange_profile(self.exchange_id, self.network)

@@ -28,7 +28,7 @@ def _sizing(
         strategy_tier=StrategyTier.INTERMEDIATE,
         owner_weight=1.0,
         asset_group_weight=1.0,
-        final_position_notional_usdt=Decimal(notional),
+        final_position_notional_usd=Decimal(notional),
         leverage=leverage,
     )
 
@@ -42,7 +42,7 @@ def _limits(
         owner_id=OwnerId.OWNER_A_SHU_QIN,
         exchange_id=ExchangeId.HYPERLIQUID,
         symbol="ALTUSDT",
-        maximum_cumulative_position_notional_usdt=Decimal(notional),
+        maximum_cumulative_position_notional_usd=Decimal(notional),
         maximum_leverage=leverage,
         policy_version="test-v1",
     )
@@ -99,7 +99,7 @@ def test_leverage_and_cumulative_notional_are_bounded_per_pair() -> None:
         exchange_id=ExchangeId.HYPERLIQUID,
         symbol="ALTUSDT",
         limits=_limits(notional="200", leverage=3),
-        existing_position_notional_usdt=Decimal("75"),
+        existing_position_notional_usd=Decimal("75"),
     )
 
     assert decision.approved is False

@@ -3,7 +3,7 @@
 Maintenance rule: **OVERWRITE** this file on every update. It is the single
 source of current state, not a development log. The log is `HISTORY.md`.
 
-Last updated: 2026-07-29
+Last updated: 2026-07-30
 
 ## Phase
 
@@ -18,7 +18,7 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   authentic serial RAG examples are explicit priorities before further use.
 - README wording now clarifies that five-tier candidates cover every incoming
   signal, primarily lifecycle continuations.
-- Twenty-nine commits are summarized in `HISTORY.md`; current HEAD is `1d0ea8a`.
+- Thirty commits are summarized in `HISTORY.md`; current HEAD is `20c843f`.
 - `OwnerQwenAPI` includes shared review-only synonym and reduce-and-protect
   skills, while `MinistralFilterAPI` includes MCP take-profit protection; no
   agent has direct exchange access.
@@ -28,9 +28,13 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
 - The scaffold preserves provenance, uses ElastiCache-compatible owner reply
   trees, supports private S3/DynamoDB boundaries, and sends chronological parent
   context to QWEN and Ministral.
-- Parent-message IDs resolve concurrent live trade cursors by symbol, exchange,
-  and direction. Each cursor retains active Hyperliquid/Bitget order and position
-  IDs in a DynamoDB repository boundary until the position is fully closed.
+- Parent-message IDs resolve concurrent live trade cursors by symbol, exchange
+  network, and direction. Each cursor retains active Aster/Hyperliquid order and
+  position IDs in a DynamoDB repository boundary until the position is fully
+  closed.
+- Aster-USDT and Hyperliquid-USDC use separate testnet-first endpoint, signing,
+  symbol, and settlement contracts; paired P/L comparison uses only identical
+  signals executed on both testnets.
 - Each owner QWEN agent emits five strategy candidates for every incoming
   signal. At lifecycle commencement, confidence selects the initial tier,
   recommended size, leverage, and provenance; continuations inherit that
@@ -50,7 +54,7 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   scaffold boundaries; synonym inference remains a placeholder until RAG is
   populated. RAG profile JSON now reserves ordered Telegram message IDs and
   URLs plus a private S3 archive URI, but no authentic examples are fabricated.
-- Last verification: 74 tests passed with the active Python 3.11 environment;
+- Last verification: 83 tests passed with the active Python 3.11 environment;
   `uv` remains unavailable in the sandbox because of Snap permissions.
 
 ## Next Actions
@@ -87,7 +91,7 @@ Telegram IDs/URLs, and S3 archive references.
 - Replace in-memory test storage with production S3, message-receipt, and
   versioned trade-cursor DynamoDB adapters.
 - Implement model-specific Bedrock QWEN and Ministral multimodal adapters.
-- Complete Bitget/Hyperliquid MCP market-analysis adapters for the typed
+- Complete Aster/Hyperliquid MCP market-analysis adapters for the typed
   liquidity and indicator snapshot.
 - Rebuild owner reply-tree indexes after worker restarts without DynamoDB reads
   for live prompt context.
