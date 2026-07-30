@@ -18,7 +18,7 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   authentic serial RAG examples are explicit priorities before further use.
 - README wording now clarifies that five-tier candidates cover every incoming
   signal, primarily lifecycle continuations.
-- Thirty commits are summarized in `HISTORY.md`; current HEAD is `20c843f`.
+- Thirty-one commits are summarized in `HISTORY.md`; current HEAD is `c9f04a5`.
 - `OwnerQwenAPI` includes shared review-only synonym and reduce-and-protect
   skills, while `MinistralFilterAPI` includes MCP take-profit protection; no
   agent has direct exchange access.
@@ -54,8 +54,7 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   scaffold boundaries; synonym inference remains a placeholder until RAG is
   populated. RAG profile JSON now reserves ordered Telegram message IDs and
   URLs plus a private S3 archive URI, but no authentic examples are fabricated.
-- Last verification: 83 tests passed with the active Python 3.11 environment;
-  `uv` remains unavailable in the sandbox because of Snap permissions.
+- Last verification: `uv run pytest -q` passed all 83 tests under Python 3.11.
 
 ## Next Actions
 

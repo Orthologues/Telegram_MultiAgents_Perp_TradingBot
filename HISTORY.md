@@ -167,7 +167,12 @@ code review plus authentic RAG curation as priorities.
 Clarified that five-tier QWEN candidates cover every incoming signal, with
 existing perpetual-position continuations as the primary lifecycle case.
 
-### 2026-07-30 — pending: replaced the exchange scaffold with Aster
+### 2026-07-30 — `c9f04a5`: replaced the exchange scaffold with Aster
 
 Replaced the legacy exchange adapter with testnet-first Aster/Hyperliquid
 contracts and added paired testnet P/L comparison for identical signals.
+
+### 2026-07-30 — pending: fixed standalone MCP test imports
+
+Made MCP server tests load their standalone modules by repository path so
+`uv run pytest` passes without relying on the repository root being importable.

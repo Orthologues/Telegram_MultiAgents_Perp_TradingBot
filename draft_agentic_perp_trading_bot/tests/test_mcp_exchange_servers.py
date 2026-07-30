@@ -1,16 +1,39 @@
 import asyncio
 from decimal import Decimal
+from importlib.util import module_from_spec, spec_from_file_location
+from pathlib import Path
+import sys
 
 import pytest
 from pydantic import ValidationError
 
 from agentic_perp_trading_bot.schemas import ExchangeNetwork
-from mcp_servers.aster_mcp.server import AsterConfig, AsterPublicClient
-from mcp_servers.hyperliquid_mcp.server import (
-    HyperliquidConfig,
-    HyperliquidInfoClient,
-    HyperliquidOrderIntent,
+
+
+def _load_server_module(module_name: str, relative_path: str):
+    module_path = Path(__file__).parents[1] / relative_path
+    spec = spec_from_file_location(module_name, module_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Could not load MCP server module: {module_path}")
+    module = module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+aster_server = _load_server_module(
+    "aster_mcp_server",
+    "mcp_servers/aster_mcp/server.py",
 )
+hyperliquid_server = _load_server_module(
+    "hyperliquid_mcp_server",
+    "mcp_servers/hyperliquid_mcp/server.py",
+)
+AsterConfig = aster_server.AsterConfig
+AsterPublicClient = aster_server.AsterPublicClient
+HyperliquidConfig = hyperliquid_server.HyperliquidConfig
+HyperliquidInfoClient = hyperliquid_server.HyperliquidInfoClient
+HyperliquidOrderIntent = hyperliquid_server.HyperliquidOrderIntent
 
 
 def test_mainnet_handoffs_require_an_independent_opt_in() -> None:
