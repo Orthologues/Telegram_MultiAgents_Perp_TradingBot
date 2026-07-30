@@ -17,8 +17,8 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     Real implementation responsibilities:
     - parse ApprovedExecutionRequest
-    - load Aster signer-wallet or Hyperliquid API-wallet secrets
-    - sign Aster EIP-712 or Hyperliquid SDK exchange actions
+    - load Aster API-key/HMAC or Hyperliquid API-wallet secrets
+    - sign Aster v1 REST queries or Hyperliquid SDK exchange actions
     - enforce kill-switch config
     - write execution audit logs
     """
@@ -45,7 +45,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         }
     return {
         "status": "not_implemented",
-        "message": "Validated testnet request; signing is not implemented.",
+        "message": "Validated testnet request; venue request submission is not implemented.",
         "network": request.intent.execution_network.value,
         "target_exchanges": [exchange_id.value for exchange_id in request.intent.target_exchanges],
         "request_id": getattr(context, "aws_request_id", None),

@@ -172,7 +172,12 @@ existing perpetual-position continuations as the primary lifecycle case.
 Replaced the legacy exchange adapter with testnet-first Aster/Hyperliquid
 contracts and added paired testnet P/L comparison for identical signals.
 
-### 2026-07-30 — pending: fixed standalone MCP test imports
+### 2026-07-30 — `a9abb7e`: fixed standalone MCP test imports
 
 Made MCP server tests load their standalone modules by repository path so
 `uv run pytest` passes without relying on the repository root being importable.
+
+### 2026-07-30 — pending: switched Aster execution to v1 REST/HMAC
+
+Replaced the Aster v3 EIP-712 contract with v1 REST paths, API-key/HMAC secret
+isolation, deterministic request signing, and focused tests.

@@ -23,7 +23,7 @@ class ExchangeEndpointProfile:
     metadata_path: str
     order_path: str
     signing_scheme: str
-    chain_id: int | None = None
+    api_key_header: str | None = None
 
 
 _PROFILES = {
@@ -34,10 +34,10 @@ _PROFILES = {
         rest_url="https://fapi.asterdex.com",
         market_websocket_url="wss://fstream.asterdex.com",
         user_websocket_url="wss://fstream.asterdex.com",
-        metadata_path="/fapi/v3/exchangeInfo",
-        order_path="/fapi/v3/order",
-        signing_scheme="eip712_signer",
-        chain_id=1666,
+        metadata_path="/fapi/v1/exchangeInfo",
+        order_path="/fapi/v1/order",
+        signing_scheme="hmac_sha256_api_key",
+        api_key_header="X-MBX-APIKEY",
     ),
     (ExchangeId.ASTER, ExchangeNetwork.TESTNET): ExchangeEndpointProfile(
         exchange_id=ExchangeId.ASTER,
@@ -46,10 +46,10 @@ _PROFILES = {
         rest_url="https://fapi.asterdex-testnet.com",
         market_websocket_url="wss://fstream5.asterdex-testnet.com",
         user_websocket_url="wss://fstream.asterdex-testnet.com",
-        metadata_path="/fapi/v3/exchangeInfo",
-        order_path="/fapi/v3/order",
-        signing_scheme="eip712_signer",
-        chain_id=714,
+        metadata_path="/fapi/v1/exchangeInfo",
+        order_path="/fapi/v1/order",
+        signing_scheme="hmac_sha256_api_key",
+        api_key_header="X-MBX-APIKEY",
     ),
     (ExchangeId.HYPERLIQUID, ExchangeNetwork.MAINNET): ExchangeEndpointProfile(
         exchange_id=ExchangeId.HYPERLIQUID,

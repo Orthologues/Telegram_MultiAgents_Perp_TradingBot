@@ -4,7 +4,7 @@ This folder contains exchange-specific MCP servers that back the scaffolded
 exchange gateway.
 
 - `hyperliquid_mcp/`: Hyperliquid read and guarded Lambda-handoff scaffold.
-- `aster_mcp/`: Aster Futures v3 read and guarded Lambda-handoff scaffold.
+- `aster_mcp/`: Aster Futures v1 REST read and guarded Lambda-handoff scaffold.
 
 The intended split is:
 

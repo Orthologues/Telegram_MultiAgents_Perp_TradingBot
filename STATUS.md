@@ -18,7 +18,7 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   authentic serial RAG examples are explicit priorities before further use.
 - README wording now clarifies that five-tier candidates cover every incoming
   signal, primarily lifecycle continuations.
-- Thirty-one commits are summarized in `HISTORY.md`; current HEAD is `c9f04a5`.
+- Thirty-two commits are summarized in `HISTORY.md`; current HEAD is `a9abb7e`.
 - `OwnerQwenAPI` includes shared review-only synonym and reduce-and-protect
   skills, while `MinistralFilterAPI` includes MCP take-profit protection; no
   agent has direct exchange access.
@@ -32,9 +32,9 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   network, and direction. Each cursor retains active Aster/Hyperliquid order and
   position IDs in a DynamoDB repository boundary until the position is fully
   closed.
-- Aster-USDT and Hyperliquid-USDC use separate testnet-first endpoint, signing,
-  symbol, and settlement contracts; paired P/L comparison uses only identical
-  signals executed on both testnets.
+- Aster-USDT uses v1 REST/HMAC while Hyperliquid-USDC retains API-wallet
+  signing; both remain testnet-first, and paired P/L comparison uses only
+  identical signals executed on both testnets.
 - Each owner QWEN agent emits five strategy candidates for every incoming
   signal. At lifecycle commencement, confidence selects the initial tier,
   recommended size, leverage, and provenance; continuations inherit that
@@ -54,7 +54,7 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   scaffold boundaries; synonym inference remains a placeholder until RAG is
   populated. RAG profile JSON now reserves ordered Telegram message IDs and
   URLs plus a private S3 archive URI, but no authentic examples are fabricated.
-- Last verification: `uv run pytest -q` passed all 83 tests under Python 3.11.
+- Last verification: `uv run pytest -q` passed all 87 tests under Python 3.11.
 
 ## Next Actions
 

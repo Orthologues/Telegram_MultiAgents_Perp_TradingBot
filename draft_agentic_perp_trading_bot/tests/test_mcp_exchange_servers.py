@@ -69,6 +69,15 @@ def test_aster_symbol_resolution_uses_exchange_info() -> None:
         asyncio.run(client.require_tradable_symbol("MISSINGUSDT"))
 
 
+def test_aster_mcp_uses_v1_hmac_contract() -> None:
+    endpoints = AsterConfig().endpoints
+
+    assert endpoints.metadata_path == "/fapi/v1/exchangeInfo"
+    assert endpoints.order_path == "/fapi/v1/order"
+    assert endpoints.signing_scheme == "hmac_sha256_api_key"
+    assert endpoints.api_key_header == "X-MBX-APIKEY"
+
+
 def test_hyperliquid_asset_indexes_are_resolved_from_network_metadata() -> None:
     client = HyperliquidInfoClient(HyperliquidConfig())
     client._meta = {"universe": [{"name": "BTC"}, {"name": "ETH"}]}

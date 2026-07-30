@@ -441,8 +441,8 @@ Its API contract is
 
 Keep Aster and Hyperliquid adapters behind the MCP gateway and default both to
 testnet. Use ECS WebSockets for low-latency market data and signed HTTPS REST for
-execution. Lambda retrieves the Aster EIP-712 signer or Hyperliquid API wallet
-and kill-switch settings from Secrets Manager. Secrets never enter logs,
+execution. Lambda retrieves the Aster v1 API key/HMAC secret or Hyperliquid API
+wallet and kill-switch settings from Secrets Manager. Secrets never enter logs,
 fixtures, RAG files, or commits.
 
 ## Verification

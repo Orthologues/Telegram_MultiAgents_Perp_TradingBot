@@ -104,8 +104,8 @@ remains behind the MCP gateway.
   conditional DynamoDB version writes so independent cursors can progress
   concurrently.
 - Keep exchange-specific behavior behind MCP; agents must not call exchanges.
-- Default both venues to testnet. Keep Aster EIP-712 signer and Hyperliquid API
-  wallet signing inside the Secrets Manager and Lambda boundary.
+- Default both venues to testnet. Keep Aster v1 API-key/HMAC credentials and
+  Hyperliquid API-wallet signing inside the Secrets Manager and Lambda boundary.
 - Preserve owner, channel, Telegram message ID, timestamps, parent IDs, media
   hashes, deduplication key, model ID, confidence, and strategy tier.
 

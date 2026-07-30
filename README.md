@@ -24,7 +24,7 @@ Ministral validates them; confidence selects and persists one position-lifecycle
 strategy, including recommended size and leverage, while deterministic risk
 enforces pair, price, leverage, and cumulative position-value limits.
 Paired testnet P/L summaries compare only identical signals executed on both
-Aster-USDT and Hyperliquid-USDC.
+Aster-USDT and Hyperliquid-USDC. Aster execution uses the v1 REST/HMAC contract.
 
 Manual serial RAG JSON profiles will preserve each example message's Telegram
 ID and URL together with its private AWS S3 archive URI; authentic examples are

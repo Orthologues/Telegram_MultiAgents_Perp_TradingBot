@@ -64,8 +64,8 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 - Stop-loss market inputs: MCP price, market cap, 24-hour volume, and KDJ,
   Bollinger, and ATR snapshots at 5m, 15m, 1h, and 4h
 - Venue comparison: paired testnet P/L for identical signal deduplication keys
-- Signed execution: AWS Lambda using Secrets Manager for the Aster EIP-712
-  signer and Hyperliquid API wallet
+- Signed execution: AWS Lambda using Secrets Manager for Aster v1 API-key/HMAC
+  credentials and the Hyperliquid API wallet
 
 The board's "pushes real-time updates" label maps to near-real-time polling in
 the scaffold. AG2 TelegramAgent does not expose a native push listener or
