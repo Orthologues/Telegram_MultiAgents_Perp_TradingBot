@@ -191,7 +191,7 @@ link accuracy, false-merge rate, and new-signal recall. Test fixtures should
 contain complete serial message sequences, not only isolated first-seen and
 repeated-message pairs.
 
-## Owner QWEN Agent
+## QWEN-Agent RAG-loading
 
 Load the owner-specific serial JSON RAG profile, provide recent signal and
 position context, and request a `QwenStrategyCandidateSet` containing all five
@@ -268,29 +268,33 @@ forward-test periods. Until that evaluation is complete, use the synthetic
 score only for analysis or conservative weighting and never as permission to
 execute an order.
 
-## Deterministic Omitted Stop-Loss
+## Omitted Stop-Loss Inference
 
 When an order omits its stop-loss, QWEN must leave `stop_loss` unset. The
 Aster/Hyperliquid MCP boundary supplies current price, market capitalization,
-24-hour quote volume, and KDJ, Bollinger bands, and Average True Range snapshots
-for each of `5m`, `15m`, `1h`, and `4h`. Ministral then applies the versioned
-deterministic policy in
+24-hour quote volume, trading-pair type, and EMA, MACD, KDJ, RSI, Bollinger,
+ATR, and realized-volatility snapshots for `5m`, `15m`, `1h`, and `4h`.
+Ministral applies the versioned deterministic policy in
 `agentic_perp_trading_bot.ministral_filter.stop_loss_policy`.
 
-Market capitalization and volume select a large-, mid-, or small-liquidity
-distance band. The policy averages all four timeframe scores from Bollinger
-bandwidth, price-normalized ATR, and KDJ dispersion, then adjusts the result
-within that band. The final distance must remain between `1.25%` and `7.5%`
-from entry 1 when only one entry exists, or from the average of entry 1 and
-entry 2 when both are present. BTC/ETH-like liquid pairs remain near the
-minimum, while small-cap alts remain near the maximum. The policy places the
-stop below the reference entry price for a long and above it for a short.
+The draft pair-type bands are `1.2%`-`3.5%` for TradFi, `1.5%`-`5%` for
+mainstream coins, and `2.5%`-`8%` for altcoins. Score timeframes at
+`10%`/`20%`/`30%`/`40%`, and score EMA, MACD, KDJ, RSI, Bollinger width, ATR,
+and realized volatility at `12%`/`12%`/`10%`/`10%`/`18%`/`23%`/`15%`.
+Adverse EMA/MACD direction receives the full normalized component; aligned
+direction receives half. Combine `35%` volume score with `65%` technical score,
+then interpolate inside the pair-type band.
 
-Record the MCP snapshot, liquidity tier, indicator score, distance, policy
-version, and derived price. Keep Ministral stop-loss reasoning within a
+The final distance remains globally bounded to `1.2%`-`8%` from entry 1, or
+from the average of entry 1 and entry 2. Place the stop below that reference
+for a long and above it for a short.
+
+Record the MCP snapshot, pair type, liquidity tier, component scores, distance,
+policy version, and derived price. Keep Ministral stop-loss reasoning within a
 one-second budget. Explicit source stop-losses are preserved, and omitted
 stop-loss derivation does not add another hard-rejection rule. Backtest all
-thresholds and indicator weights before production use.
+thresholds and weights before production use. Its API contract is
+`agentic_perp_trading_bot.skills_api.omitted_stop_loss_inference.OmittedStopLossInferenceAPI`.
 
 ## Pair Blacklisting
 
@@ -441,9 +445,10 @@ Its API contract is
 
 Keep Aster and Hyperliquid adapters behind the MCP gateway and default both to
 testnet. Use ECS WebSockets for low-latency market data and signed HTTPS REST for
-execution. Lambda retrieves the Aster v1 API key/HMAC secret or Hyperliquid API
-wallet and kill-switch settings from Secrets Manager. Secrets never enter logs,
-fixtures, RAG files, or commits.
+execution. The local augmented proxies preserve deterministic guards, while
+Lambda retrieves API-wallet and kill-switch secrets and delegates signing to
+the pinned official Aster V3 client or referenced Hyperliquid MCP/SDK. Secrets
+never enter logs, fixtures, RAG files, or commits.
 
 ## Verification
 
@@ -451,7 +456,7 @@ For every behavior change, add the smallest focused test first, then run:
 
 ```bash
 cd draft_agentic_perp_trading_bot
-uv sync --extra aws --extra telegram --extra dev
+uv sync --extra aws --extra telegram --extra exchange-upstreams --extra dev
 uv run pytest -q
 uv run ruff check .
 uv run python -m compileall -q src tests

@@ -17,12 +17,19 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/agentic_perp_trading_bot"]
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [project.optional-dependencies]
 aws = [
     "boto3>=1.34",
 ]
 telegram = [
     "ag2[bedrock,commsagent-telegram]>=0.13.2,<1",
+]
+exchange-upstreams = [
+    "aster-mcp @ git+https://github.com/asterdex/aster-mcp.git@71fa3cf02401573f7450668c265c8f4b11c78db0",
+    "mcp-hyperliquid @ git+https://github.com/Dakkshin/hyperliquid-mcp.git@812cbd155f0d2a714d2dbf3407d13096ce3a8c1d",
 ]
 dev = [
     "pytest>=8.0",

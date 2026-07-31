@@ -22,10 +22,10 @@ def test_exchange_profiles_default_to_separate_testnet_settlement_contracts() ->
     assert aster.network == ExchangeNetwork.TESTNET
     assert aster.settlement_asset == SettlementAsset.USDT
     assert "asterdex-testnet" in aster.endpoints.rest_url
-    assert aster.endpoints.metadata_path == "/fapi/v1/exchangeInfo"
-    assert aster.endpoints.order_path == "/fapi/v1/order"
-    assert aster.endpoints.signing_scheme == "hmac_sha256_api_key"
-    assert aster.endpoints.api_key_header == "X-MBX-APIKEY"
+    assert aster.endpoints.metadata_path == "/fapi/v3/exchangeInfo"
+    assert aster.endpoints.order_path == "/fapi/v3/order"
+    assert aster.endpoints.signing_scheme == "eip712_api_wallet_via_aster_mcp"
+    assert aster.endpoints.api_key_header is None
 
     assert hyperliquid.network == ExchangeNetwork.TESTNET
     assert hyperliquid.settlement_asset == SettlementAsset.USDC

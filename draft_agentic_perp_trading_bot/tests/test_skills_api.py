@@ -13,7 +13,9 @@ from agentic_perp_trading_bot.schemas import (
 )
 from agentic_perp_trading_bot.skills_api import (
     MinistralFilterAPI,
+    OmittedStopLossInferenceAPI,
     OwnerQwenAPI,
+    QwenAgentRagLoadingAPI,
     TelegramAgentAPI,
 )
 
@@ -23,15 +25,21 @@ def test_skills_api_exports_explicit_agent_contracts() -> None:
         TelegramAgentAPI.__name__,
         OwnerQwenAPI.__name__,
         MinistralFilterAPI.__name__,
+        QwenAgentRagLoadingAPI.__name__,
+        OmittedStopLossInferenceAPI.__name__,
     } == {
         "TelegramAgentAPI",
         "OwnerQwenAPI",
         "MinistralFilterAPI",
+        "QwenAgentRagLoadingAPI",
+        "OmittedStopLossInferenceAPI",
     }
     assert hasattr(OwnerQwenAPI, "infer_position_reduction")
     assert hasattr(OwnerQwenAPI, "infer_strategy_candidates")
+    assert hasattr(OwnerQwenAPI, "load_rag_profile")
     assert hasattr(MinistralFilterAPI, "protect_entry_after_take_profit")
     assert hasattr(MinistralFilterAPI, "record_execution_event")
+    assert hasattr(MinistralFilterAPI, "infer_omitted_stop_loss")
 
 
 def _message() -> TelegramMessageEnvelope:

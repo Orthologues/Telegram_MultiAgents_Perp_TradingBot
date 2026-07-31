@@ -28,6 +28,7 @@ from agentic_perp_trading_bot.schemas import (
     TradeAction,
     TelegramMessageEnvelope,
     TelegramPromptContext,
+    TradingPairType,
 )
 
 
@@ -59,16 +60,29 @@ def _market(
     middle: str = "100",
     lower: str = "90",
     average_true_range: str = "4",
+    pair_type: TradingPairType = TradingPairType.MAINSTREAM_COIN,
+    ema_fast: str = "100",
+    ema_slow: str = "100",
+    macd: str = "0",
+    macd_signal: str = "0",
+    rsi: str = "50",
+    realized_volatility: str = "0.02",
 ) -> MarketAnalysisSnapshot:
     indicators = {
         timeframe: TechnicalIndicatorSnapshot(
+            ema_fast=Decimal(ema_fast),
+            ema_slow=Decimal(ema_slow),
+            macd=Decimal(macd),
+            macd_signal=Decimal(macd_signal),
             kdj_k=Decimal("60"),
             kdj_d=Decimal("50"),
             kdj_j=Decimal("80"),
+            rsi=Decimal(rsi),
             bollinger_upper=Decimal(upper),
             bollinger_middle=Decimal(middle),
             bollinger_lower=Decimal(lower),
             average_true_range=Decimal(average_true_range),
+            realized_volatility_fraction=Decimal(realized_volatility),
         )
         for timeframe in IndicatorTimeframe
     }
@@ -76,6 +90,7 @@ def _market(
         exchange_id=ExchangeId.HYPERLIQUID,
         settlement_asset=SettlementAsset.USDC,
         symbol="ALTUSDT",
+        trading_pair_type=pair_type,
         current_price=Decimal("100"),
         market_cap_usd=Decimal(market_cap),
         quote_volume_24h_usd=Decimal(volume),
@@ -92,19 +107,32 @@ def test_large_liquid_pair_stays_near_minimum_stop_distance() -> None:
 
     assert decision is not None
     assert decision.liquidity_tier == MarketLiquidityTier.LARGE
-    assert Decimal("0.0125") <= decision.distance_fraction <= Decimal("0.025")
+    assert Decimal("0.015") <= decision.distance_fraction <= Decimal("0.05")
     assert decision.stop_loss < Decimal("100")
 
 
 def test_small_volatile_short_stays_near_maximum_stop_distance() -> None:
     decision = MinistralStopLossPolicy().derive(
         _hypothesis(direction="short"),
-        _market(market_cap="50000000", volume="1000000"),
+        _market(
+            market_cap="50000000",
+            volume="1000000",
+            pair_type=TradingPairType.ALTCOIN,
+            upper="120",
+            lower="80",
+            average_true_range="10",
+            ema_fast="110",
+            ema_slow="90",
+            macd="10",
+            macd_signal="0",
+            rsi="100",
+            realized_volatility="0.10",
+        ),
     )
 
     assert decision is not None
     assert decision.liquidity_tier == MarketLiquidityTier.SMALL
-    assert Decimal("0.06") <= decision.distance_fraction <= Decimal("0.075")
+    assert Decimal("0.06") <= decision.distance_fraction <= Decimal("0.08")
     assert decision.stop_loss > Decimal("100")
 
 
@@ -142,7 +170,7 @@ def test_single_entry_stop_loss_is_bounded_from_entry1() -> None:
     assert decision.stop_loss == entry1 * (
         Decimal("1") - decision.distance_fraction
     )
-    assert (entry1 - decision.stop_loss) / entry1 <= Decimal("0.075")
+    assert (entry1 - decision.stop_loss) / entry1 <= Decimal("0.08")
 
 
 def test_two_entries_stop_loss_is_bounded_from_average_entry_price() -> None:
@@ -159,7 +187,7 @@ def test_two_entries_stop_loss_is_bounded_from_average_entry_price() -> None:
         Decimal("1") - decision.distance_fraction
     )
     assert (reference_price - decision.stop_loss) / reference_price <= Decimal(
-        "0.075"
+        "0.08"
     )
 
 
@@ -183,7 +211,10 @@ def test_market_snapshot_requires_every_indicator_timeframe() -> None:
 
 
 @pytest.mark.parametrize("timeframe", list(IndicatorTimeframe))
-@pytest.mark.parametrize("indicator_family", ["kdj", "bollinger", "atr"])
+@pytest.mark.parametrize(
+    "indicator_family",
+    ["ema", "macd", "kdj", "rsi", "bollinger", "atr", "realized_volatility"],
+)
 def test_every_indicator_family_contributes_from_every_timeframe(
     timeframe: IndicatorTimeframe,
     indicator_family: str,
@@ -197,13 +228,23 @@ def test_every_indicator_family_contributes_from_every_timeframe(
     )
     elevated_data = baseline_market.model_dump()
     elevated_indicator = elevated_data["indicators"][timeframe]
-    if indicator_family == "kdj":
+    if indicator_family == "ema":
+        elevated_indicator["ema_fast"] = Decimal("90")
+        elevated_indicator["ema_slow"] = Decimal("110")
+    elif indicator_family == "macd":
+        elevated_indicator["macd"] = Decimal("-10")
+        elevated_indicator["macd_signal"] = Decimal("0")
+    elif indicator_family == "kdj":
         elevated_indicator["kdj_j"] = Decimal("150")
+    elif indicator_family == "rsi":
+        elevated_indicator["rsi"] = Decimal("100")
     elif indicator_family == "bollinger":
         elevated_indicator["bollinger_upper"] = Decimal("110")
         elevated_indicator["bollinger_lower"] = Decimal("90")
-    else:
+    elif indicator_family == "atr":
         elevated_indicator["average_true_range"] = Decimal("10")
+    else:
+        elevated_indicator["realized_volatility_fraction"] = Decimal("0.10")
 
     baseline = MinistralStopLossPolicy().derive(_hypothesis(), baseline_market)
     elevated = MinistralStopLossPolicy().derive(

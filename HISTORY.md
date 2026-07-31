@@ -177,7 +177,13 @@ contracts and added paired testnet P/L comparison for identical signals.
 Made MCP server tests load their standalone modules by repository path so
 `uv run pytest` passes without relying on the repository root being importable.
 
-### 2026-07-30 — pending: switched Aster execution to v1 REST/HMAC
+### 2026-07-30 — `fe3811c`: switched Aster execution to v1 REST/HMAC
 
 Replaced the Aster v3 EIP-712 contract with v1 REST paths, API-key/HMAC secret
 isolation, deterministic request signing, and focused tests.
+
+### 2026-07-31 — pending: restored upstream-backed Aster V3 execution
+
+Replaced local Aster V1 signing with pinned Aster V3 and Hyperliquid augmented
+proxy contracts, and expanded deterministic omitted stop-loss inference to the
+revised multi-indicator `1.2%`-`8%` policy.

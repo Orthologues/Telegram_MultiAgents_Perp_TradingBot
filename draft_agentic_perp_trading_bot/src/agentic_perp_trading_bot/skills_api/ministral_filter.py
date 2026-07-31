@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from agentic_perp_trading_bot.skills_api.omitted_stop_loss_inference import (
+    OmittedStopLossInferenceAPI,
+)
 from agentic_perp_trading_bot.schemas import (
     FilterDecision,
     MarketAnalysisSnapshot,
@@ -15,7 +18,7 @@ from agentic_perp_trading_bot.schemas import (
 )
 
 
-class MinistralFilterAPI(Protocol):
+class MinistralFilterAPI(OmittedStopLossInferenceAPI, Protocol):
     async def record_execution_event(
         self,
         event: PositionLifecycleEvent,

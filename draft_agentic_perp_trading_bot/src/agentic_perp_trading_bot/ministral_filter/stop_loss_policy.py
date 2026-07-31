@@ -12,26 +12,38 @@ from agentic_perp_trading_bot.schemas import (
     OmittedStopLossDecision,
     QwenSignalHypothesis,
     TechnicalIndicatorSnapshot,
+    TradingPairType,
 )
 
-MINIMUM_DISTANCE = Decimal("0.0125")
-MAXIMUM_DISTANCE = Decimal("0.075")
-POLICY_VERSION = "market-liquidity-multitimeframe-volatility-v2"
+MINIMUM_DISTANCE = Decimal("0.012")
+MAXIMUM_DISTANCE = Decimal("0.08")
+POLICY_VERSION = "pair-type-volume-multitimeframe-indicators-v3"
 
 _LARGE_CAP_MINIMUM = Decimal("10000000000")
 _LARGE_VOLUME_MINIMUM = Decimal("500000000")
 _MID_CAP_MINIMUM = Decimal("1000000000")
 _MID_VOLUME_MINIMUM = Decimal("50000000")
 
-_DISTANCE_BANDS = {
-    MarketLiquidityTier.LARGE: (MINIMUM_DISTANCE, Decimal("0.025")),
-    MarketLiquidityTier.MID: (Decimal("0.03"), Decimal("0.05")),
-    MarketLiquidityTier.SMALL: (Decimal("0.06"), MAXIMUM_DISTANCE),
+_PAIR_TYPE_DISTANCE_BANDS = {
+    TradingPairType.TRADFI: (MINIMUM_DISTANCE, Decimal("0.035")),
+    TradingPairType.MAINSTREAM_COIN: (Decimal("0.015"), Decimal("0.05")),
+    TradingPairType.ALTCOIN: (Decimal("0.025"), MAXIMUM_DISTANCE),
 }
-_BOLLINGER_WEIGHT = Decimal("0.50")
-_ATR_WEIGHT = Decimal("0.30")
-_KDJ_WEIGHT = Decimal("0.20")
-_REQUIRED_TIMEFRAMES = tuple(IndicatorTimeframe)
+_INDICATOR_WEIGHTS = {
+    "ema": Decimal("0.12"),
+    "macd": Decimal("0.12"),
+    "kdj": Decimal("0.10"),
+    "rsi": Decimal("0.10"),
+    "bollinger": Decimal("0.18"),
+    "atr": Decimal("0.23"),
+    "realized_volatility": Decimal("0.15"),
+}
+_TIMEFRAME_WEIGHTS = {
+    IndicatorTimeframe.FIVE_MINUTES: Decimal("0.10"),
+    IndicatorTimeframe.FIFTEEN_MINUTES: Decimal("0.20"),
+    IndicatorTimeframe.ONE_HOUR: Decimal("0.30"),
+    IndicatorTimeframe.FOUR_HOURS: Decimal("0.40"),
+}
 
 
 class MinistralStopLossPolicy:
@@ -57,9 +69,14 @@ class MinistralStopLossPolicy:
             raise ValueError("omitted stop-loss requires a long or short direction")
 
         liquidity_tier = self._liquidity_tier(market)
-        volatility_score = self._volatility_score(market)
-        lower, upper = _DISTANCE_BANDS[liquidity_tier]
-        distance = lower + (upper - lower) * volatility_score
+        volume_score = self._volume_score(market.quote_volume_24h_usd)
+        technical_score, components = self._technical_score(market, direction)
+        placement_score = (
+            Decimal("0.35") * volume_score
+            + Decimal("0.65") * technical_score
+        )
+        lower, upper = _PAIR_TYPE_DISTANCE_BANDS[market.trading_pair_type]
+        distance = lower + (upper - lower) * placement_score
         distance = min(max(distance, MINIMUM_DISTANCE), MAXIMUM_DISTANCE)
         reference_price = self._entry_reference_price(hypothesis)
 
@@ -72,15 +89,23 @@ class MinistralStopLossPolicy:
             stop_loss=stop_loss,
             distance_fraction=distance,
             liquidity_tier=liquidity_tier,
-            volatility_score=volatility_score,
+            trading_pair_type=market.trading_pair_type,
+            volume_score=volume_score,
+            technical_score=technical_score,
+            volatility_score=technical_score,
+            component_scores={
+                **components,
+                "volume": volume_score,
+                "placement": placement_score,
+            },
             market_snapshot=market,
             policy_version=POLICY_VERSION,
             evidence=[
                 "mcp_market_cap_usd",
                 "mcp_quote_volume_24h_usd",
-                "mcp_kdj_5m_15m_1h_4h",
-                "mcp_bollinger_bands_5m_15m_1h_4h",
-                "mcp_average_true_range_5m_15m_1h_4h",
+                "mcp_trading_pair_type",
+                "mcp_ema_macd_kdj_rsi_5m_15m_1h_4h",
+                "mcp_bollinger_atr_realized_volatility_5m_15m_1h_4h",
             ],
         )
 
@@ -107,23 +132,65 @@ class MinistralStopLossPolicy:
         return MarketLiquidityTier.SMALL
 
     @staticmethod
-    def _volatility_score(market: MarketAnalysisSnapshot) -> Decimal:
-        timeframe_scores = [
-            MinistralStopLossPolicy._timeframe_volatility_score(
-                market.indicators[timeframe],
-                market.current_price,
-            )
-            for timeframe in _REQUIRED_TIMEFRAMES
-        ]
-        return sum(timeframe_scores, Decimal("0")) / Decimal(
-            len(_REQUIRED_TIMEFRAMES)
+    def _volume_score(quote_volume_24h_usd: Decimal) -> Decimal:
+        thresholds = (
+            (Decimal("500000000"), Decimal("0")),
+            (Decimal("100000000"), Decimal("0.25")),
+            (Decimal("25000000"), Decimal("0.50")),
+            (Decimal("5000000"), Decimal("0.75")),
+            (Decimal("0"), Decimal("1")),
         )
+        for floor, score in thresholds:
+            if quote_volume_24h_usd >= floor:
+                return score
+        raise AssertionError("volume score thresholds must cover non-negative values")
 
     @staticmethod
-    def _timeframe_volatility_score(
+    def _technical_score(
+        market: MarketAnalysisSnapshot,
+        direction: str,
+    ) -> tuple[Decimal, dict[str, Decimal]]:
+        component_totals = {name: Decimal("0") for name in _INDICATOR_WEIGHTS}
+        for timeframe, timeframe_weight in _TIMEFRAME_WEIGHTS.items():
+            scores = MinistralStopLossPolicy._timeframe_indicator_scores(
+                market.indicators[timeframe],
+                market.current_price,
+                direction,
+            )
+            for name, score in scores.items():
+                component_totals[name] += timeframe_weight * score
+        technical_score = sum(
+            _INDICATOR_WEIGHTS[name] * component_totals[name]
+            for name in _INDICATOR_WEIGHTS
+        )
+        return _unit_interval(technical_score), component_totals
+
+    @staticmethod
+    def _timeframe_indicator_scores(
         indicators: TechnicalIndicatorSnapshot,
         current_price: Decimal,
-    ) -> Decimal:
+        direction: str,
+    ) -> dict[str, Decimal]:
+        ema_gap = abs(indicators.ema_fast - indicators.ema_slow) / current_price
+        ema_opposes = (
+            direction == "long" and indicators.ema_fast < indicators.ema_slow
+        ) or (
+            direction == "short" and indicators.ema_fast > indicators.ema_slow
+        )
+        ema_score = _unit_interval(ema_gap / Decimal("0.05"))
+        if not ema_opposes:
+            ema_score *= Decimal("0.5")
+
+        macd_gap = abs(indicators.macd - indicators.macd_signal) / current_price
+        macd_opposes = (
+            direction == "long" and indicators.macd < indicators.macd_signal
+        ) or (
+            direction == "short" and indicators.macd > indicators.macd_signal
+        )
+        macd_score = _unit_interval(macd_gap / Decimal("0.03"))
+        if not macd_opposes:
+            macd_score *= Decimal("0.5")
+
         bollinger_bandwidth = (
             indicators.bollinger_upper - indicators.bollinger_lower
         ) / indicators.bollinger_middle
@@ -137,11 +204,21 @@ class MinistralStopLossPolicy:
         kdj_values = (indicators.kdj_k, indicators.kdj_d, indicators.kdj_j)
         kdj_dispersion = (max(kdj_values) - min(kdj_values)) / Decimal("100")
         kdj_score = _unit_interval(kdj_dispersion)
-        return (
-            _BOLLINGER_WEIGHT * bollinger_score
-            + _ATR_WEIGHT * atr_score
-            + _KDJ_WEIGHT * kdj_score
+        rsi_score = _unit_interval(
+            abs(indicators.rsi - Decimal("50")) / Decimal("50")
         )
+        realized_volatility_score = _unit_interval(
+            indicators.realized_volatility_fraction / Decimal("0.10")
+        )
+        return {
+            "ema": ema_score,
+            "macd": macd_score,
+            "kdj": kdj_score,
+            "rsi": rsi_score,
+            "bollinger": bollinger_score,
+            "atr": atr_score,
+            "realized_volatility": realized_volatility_score,
+        }
 
 
 def _unit_interval(value: Decimal) -> Decimal:

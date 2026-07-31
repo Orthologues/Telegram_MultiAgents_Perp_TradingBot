@@ -17,8 +17,9 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     Real implementation responsibilities:
     - parse ApprovedExecutionRequest
-    - load Aster API-key/HMAC or Hyperliquid API-wallet secrets
-    - sign Aster v1 REST queries or Hyperliquid SDK exchange actions
+    - load Aster or Hyperliquid API-wallet secrets
+    - delegate Aster V3 signing to the official Aster MCP client
+    - delegate Hyperliquid signing and response parsing to the upstream MCP/SDK
     - enforce kill-switch config
     - write execution audit logs
     """

@@ -26,6 +26,12 @@ class AssetGroup(StrEnum):
     MIXED = "mixed"
 
 
+class TradingPairType(StrEnum):
+    TRADFI = "tradfi"
+    MAINSTREAM_COIN = "mainstream_coin"
+    ALTCOIN = "altcoin"
+
+
 class StrategyTier(StrEnum):
     ULTRA_CONSERVATIVE = "ultra_conservative"
     CONSERVATIVE = "conservative"
@@ -519,13 +525,19 @@ class QwenStrategyCandidateSet(BaseModel):
 class TechnicalIndicatorSnapshot(BaseModel):
     """MCP-supplied indicator values used by deterministic Ministral policy."""
 
+    ema_fast: Decimal = Field(gt=Decimal("0"))
+    ema_slow: Decimal = Field(gt=Decimal("0"))
+    macd: Decimal
+    macd_signal: Decimal
     kdj_k: Decimal
     kdj_d: Decimal
     kdj_j: Decimal
+    rsi: Decimal = Field(ge=Decimal("0"), le=Decimal("100"))
     bollinger_upper: Decimal = Field(gt=Decimal("0"))
     bollinger_middle: Decimal = Field(gt=Decimal("0"))
     bollinger_lower: Decimal = Field(gt=Decimal("0"))
     average_true_range: Decimal = Field(ge=Decimal("0"))
+    realized_volatility_fraction: Decimal = Field(ge=Decimal("0"))
 
     @model_validator(mode="after")
     def validate_bollinger_bands(self) -> Self:
@@ -547,6 +559,7 @@ class MarketAnalysisSnapshot(BaseModel):
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     settlement_asset: SettlementAsset
     symbol: str = Field(min_length=1)
+    trading_pair_type: TradingPairType
     current_price: Decimal = Field(gt=Decimal("0"))
     market_cap_usd: Decimal = Field(gt=Decimal("0"))
     quote_volume_24h_usd: Decimal = Field(ge=Decimal("0"))
@@ -581,11 +594,15 @@ class OmittedStopLossDecision(BaseModel):
 
     stop_loss: Decimal = Field(gt=Decimal("0"))
     distance_fraction: Decimal = Field(
-        ge=Decimal("0.0125"),
-        le=Decimal("0.075"),
+        ge=Decimal("0.012"),
+        le=Decimal("0.08"),
     )
     liquidity_tier: MarketLiquidityTier
+    trading_pair_type: TradingPairType
+    volume_score: Decimal = Field(ge=Decimal("0"), le=Decimal("1"))
+    technical_score: Decimal = Field(ge=Decimal("0"), le=Decimal("1"))
     volatility_score: Decimal = Field(ge=Decimal("0"), le=Decimal("1"))
+    component_scores: dict[str, Decimal] = Field(default_factory=dict)
     market_snapshot: MarketAnalysisSnapshot
     policy_version: str
     reasoning_budget_ms: int = Field(default=1000, ge=1, le=1000)

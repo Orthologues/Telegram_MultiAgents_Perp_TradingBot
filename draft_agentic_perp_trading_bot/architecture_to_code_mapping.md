@@ -61,11 +61,11 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 - Model inference: AWS Bedrock
 - Strategy candidates: all five tiers from ultra-conservative to ultra-radical
 - Exchange live state: ECS WebSocket workers
-- Stop-loss market inputs: MCP price, market cap, 24-hour volume, and KDJ,
-  Bollinger, and ATR snapshots at 5m, 15m, 1h, and 4h
+- Stop-loss market inputs: MCP pair type, price, volume, EMA, MACD, KDJ, RSI,
+  Bollinger, ATR, and volatility snapshots at 5m, 15m, 1h, and 4h
 - Venue comparison: paired testnet P/L for identical signal deduplication keys
-- Signed execution: AWS Lambda using Secrets Manager for Aster v1 API-key/HMAC
-  credentials and the Hyperliquid API wallet
+- Signed execution: AWS Lambda using Secrets Manager API wallets and pinned
+  Aster V3 EIP-712 or Hyperliquid MCP/SDK upstream interfaces
 
 The board's "pushes real-time updates" label maps to near-real-time polling in
 the scaffold. AG2 TelegramAgent does not expose a native push listener or

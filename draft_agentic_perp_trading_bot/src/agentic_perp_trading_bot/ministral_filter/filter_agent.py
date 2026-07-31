@@ -76,7 +76,7 @@ class MinistralFilterAgent:
             )
         return messages
 
-    def resolve_omitted_stop_loss(
+    def infer_omitted_stop_loss(
         self,
         hypothesis: QwenSignalHypothesis,
         market_snapshot: MarketAnalysisSnapshot | None,
@@ -112,7 +112,7 @@ class MinistralFilterAgent:
                     deduplication=deduplication,
                 )
 
-        omitted_stop_loss = self.resolve_omitted_stop_loss(
+        omitted_stop_loss = self.infer_omitted_stop_loss(
             hypothesis,
             market_snapshot,
         )

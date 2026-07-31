@@ -61,8 +61,8 @@ TelegramAgent retrieval
   containing the archived example.
 - Ministral validates schema/evidence, deduplicates equivalent hypotheses,
   handles authenticated MCP take-profit fill protection, and deterministically
-  derives omitted stop-losses from MCP liquidity and `5m`/`15m`/`1h`/`4h`
-  KDJ, Bollinger-width, and Average True Range (ATR) inputs within a one-second budget.
+  derives omitted stop-losses from pair type, volume, and `5m`/`15m`/`1h`/`4h`
+  EMA, MACD, KDJ, RSI, Bollinger, ATR, and volatility inputs within one second.
 - Confidence selects one of the five initial lifecycle strategies, including
   its recommended size and leverage. Parent-linked updates inherit that policy;
   only an explicit `strategy_tier_hint` whose target candidate passes Ministral
@@ -80,12 +80,14 @@ Typed contracts live in
 
 ```text
 TelegramAgentAPI.retrieve_messages(...) -> TelegramAgentRetrievalBatch
+QwenAgentRagLoadingAPI.load_rag_profile(...) -> OwnerRagProfile
 OwnerQwenAPI.infer_strategy_candidates(...) -> QwenStrategyCandidateSet
 OwnerQwenAPI.infer_signal(...) -> QwenSignalHypothesis
 OwnerQwenAPI.infer_synonym(...) -> TradingMessageSynonymDecision
 OwnerQwenAPI.infer_position_reduction(...) -> PositionReductionHypothesis
 MinistralFilterAPI.protect_entry_after_take_profit(...) -> TakeProfitProtectionDecision
 MinistralFilterAPI.record_execution_event(...) -> None
+OmittedStopLossInferenceAPI.infer_omitted_stop_loss(...) -> OmittedStopLossDecision
 MinistralFilterAPI.review(..., market_snapshot) -> FilterDecision
 ```
 
@@ -104,8 +106,8 @@ remains behind the MCP gateway.
   conditional DynamoDB version writes so independent cursors can progress
   concurrently.
 - Keep exchange-specific behavior behind MCP; agents must not call exchanges.
-- Default both venues to testnet. Keep Aster v1 API-key/HMAC credentials and
-  Hyperliquid API-wallet signing inside the Secrets Manager and Lambda boundary.
+- Default both venues to testnet. Keep both API wallets inside Secrets Manager
+  and Lambda; delegate signing to the pinned Aster and Hyperliquid upstreams.
 - Preserve owner, channel, Telegram message ID, timestamps, parent IDs, media
   hashes, deduplication key, model ID, confidence, and strategy tier.
 
@@ -126,3 +128,18 @@ uv run ruff check .
 uv run python -m compileall -q src tests
 git diff --check
 ```
+
+## Prompts for the most recent Agentic Update
+
+Due to the depreciation of the legacy `HMAC-SHA256`-based Aster V1-API (`https://www.asterdex.com/en/api-management`) and the introduction of Aster V3-Pro-API (`https://www.asterdex.com/en/api-wallet`), the codebase needs to be revamped substantially. The necessary major updates:
+
+- Refactor the target API of the Aster MCP under this repository from `V1-API` to `V3-API`, i.e., switching from `HMAC-SHA256` to `EIP-712` authentication.
+- Use the baseline official Aster MCP at `https://github.com/asterdex/aster-mcp` to restructure the Aster MCP at this repository as an interface-style augmented proxy MCP. Use the available `EIP-712`-authentication modules here, do not reinvent the wheels.
+- Use the baseline non-official Hyperliquid MCP at `https://github.com/Dakkshin/hyperliquid-mcp` to restructure the Aster MCP at this repository as an interface-style augmented proxy MCP. Avoid reinventing the wheels as well.
+- update the range of derived distance from entry 1, or from the average of entry 1 and entry 2 from `1.25%`-`7.5%` to `1.2%`-`8%` for the skill `Omitted Stop-Loss Inference` at `./SKILLS.md`. You should draft a deterministic recipe combining `5m, 15m, 1h, 4h` level EMA, MACD, KDJ, RSI and Bollinger Band, as well as the type (tradfi, mainstream coins, altcoins), trading volume and volatality of trading-pair to determine the inferred stop-loss deviation. I will inspect the draft calculation recipe myself and adjust it.
+
+Caveats:
+
+- I changed the title names of a few skills at `SKILLS.md`. Please DO NOT CHANGE my staged updates there. Rename the skills under `skills_api` accordingly instead, and refactor its comments wherever necessary as well.
+- Do not change the paragraphs under the subtitle `prompts for the most recent Agentic Update` under this file unless there is a basic grammatic error.
+- Introduce only minimalist and necessary changes to the `.md` files across the repository.

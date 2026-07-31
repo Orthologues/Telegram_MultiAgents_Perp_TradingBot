@@ -1,15 +1,13 @@
-"""AWS Secrets Manager and Lambda order execution boundaries."""
+"""AWS Secrets Manager and upstream-backed order execution boundaries."""
 
-from agentic_perp_trading_bot.aws_execution.aster_v1_signing import (
-    AsterV1Credentials,
-    AsterV1Signature,
-    aster_v1_auth_headers,
-    sign_aster_v1_parameters,
+from agentic_perp_trading_bot.aws_execution.upstream_clients import (
+    AsterV3Client,
+    AsterV3Credentials,
+    create_aster_v3_client,
 )
 
 __all__ = [
-    "AsterV1Credentials",
-    "AsterV1Signature",
-    "aster_v1_auth_headers",
-    "sign_aster_v1_parameters",
+    "AsterV3Client",
+    "AsterV3Credentials",
+    "create_aster_v3_client",
 ]

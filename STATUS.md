@@ -3,7 +3,7 @@
 Maintenance rule: **OVERWRITE** this file on every update. It is the single
 source of current state, not a development log. The log is `HISTORY.md`.
 
-Last updated: 2026-07-30
+Last updated: 2026-07-31
 
 ## Phase
 
@@ -18,7 +18,7 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   authentic serial RAG examples are explicit priorities before further use.
 - README wording now clarifies that five-tier candidates cover every incoming
   signal, primarily lifecycle continuations.
-- Thirty-two commits are summarized in `HISTORY.md`; current HEAD is `a9abb7e`.
+- Thirty-three commits are summarized in `HISTORY.md`; current HEAD is `fe3811c`.
 - `OwnerQwenAPI` includes shared review-only synonym and reduce-and-protect
   skills, while `MinistralFilterAPI` includes MCP take-profit protection; no
   agent has direct exchange access.
@@ -32,20 +32,19 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   network, and direction. Each cursor retains active Aster/Hyperliquid order and
   position IDs in a DynamoDB repository boundary until the position is fully
   closed.
-- Aster-USDT uses v1 REST/HMAC while Hyperliquid-USDC retains API-wallet
-  signing; both remain testnet-first, and paired P/L comparison uses only
-  identical signals executed on both testnets.
+- Testnet-first Aster and Hyperliquid augmented proxies preserve local guards
+  while delegating signed execution to pinned upstream MCP/SDK interfaces.
+  Paired P/L comparison uses only identical signals on both testnets.
 - Each owner QWEN agent emits five strategy candidates for every incoming
   signal. At lifecycle commencement, confidence selects the initial tier,
   recommended size, leverage, and provenance; continuations inherit that
   policy unless an explicit parent-linked update advances its revision.
   Deterministic risk separately enforces pair blacklisting, price-deviation
   thresholds, leverage, and cumulative owner/pair position-value limits.
-- The scaffold moves omitted stop-loss derivation from QWEN to a versioned
-  Ministral policy using MCP market cap, volume, and `5m`/`15m`/`1h`/`4h` KDJ,
-  Bollinger-width, and ATR inputs. The derived distance is bounded to
-  `1.25%`-`7.5%` from entry 1, or from the average of entry 1 and entry 2 when
-  both are present, within a one-second reasoning budget.
+- Omitted stop-loss inference now combines pair type, volume, and
+  `5m`/`15m`/`1h`/`4h` EMA, MACD, KDJ, RSI, Bollinger, ATR, and volatility
+  components, bounded to `1.2%`-`8%` from entry 1 or the first two-entry
+  average within a one-second budget.
 - Ministral also exposes typed MCP-event protection for TP1 entry protection
   and TP2-to-TP1 stop movement while TP3 remains pending, with idempotent
   decisions that never loosen an existing stop.
@@ -54,7 +53,8 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   scaffold boundaries; synonym inference remains a placeholder until RAG is
   populated. RAG profile JSON now reserves ordered Telegram message IDs and
   URLs plus a private S3 archive URI, but no authentic examples are fabricated.
-- Last verification: `uv run pytest -q` passed all 87 tests under Python 3.11.
+- Last verification: all 105 tests passed under Python 3.11; Ruff and
+  `compileall` also passed.
 
 ## Next Actions
 

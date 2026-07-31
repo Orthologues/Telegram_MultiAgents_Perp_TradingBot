@@ -24,16 +24,17 @@ Ministral validates them; confidence selects and persists one position-lifecycle
 strategy, including recommended size and leverage, while deterministic risk
 enforces pair, price, leverage, and cumulative position-value limits.
 Paired testnet P/L summaries compare only identical signals executed on both
-Aster-USDT and Hyperliquid-USDC. Aster execution uses the v1 REST/HMAC contract.
+Aster-USDT and Hyperliquid-USDC. Guarded local MCP proxies delegate signed
+execution to pinned upstream Aster V3 EIP-712 and Hyperliquid MCP/SDK clients.
 
 Manual serial RAG JSON profiles will preserve each example message's Telegram
 ID and URL together with its private AWS S3 archive URI; authentic examples are
 not yet populated.
 
 Omitted stop-losses are derived at the Ministral boundary from typed MCP
-liquidity plus KDJ, Bollinger-width, and Average True Range (ATR) inputs at
-`5m`, `15m`, `1h`, and `4h`, constrained to `1.25%`-`7.5%` from entry 1 or
-the average of entry 1 and entry 2. QWEN does not infer them.
+pair type, volume, EMA, MACD, KDJ, RSI, Bollinger, ATR, and volatility inputs
+at `5m`, `15m`, `1h`, and `4h`, constrained to `1.2%`-`8%` from entry 1 or the
+average of entry 1 and entry 2. QWEN does not infer them.
 
 ## Fastest Test
 
