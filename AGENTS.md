@@ -173,16 +173,17 @@ TelegramAgent/Telethon on Lightsail
 ```
 
 - Configure four owner-specific QWEN agents but instantiate only the selected
-  one for each message. Each QWEN run returns all five strategy candidates;
-  Ministral validates them. Do not add manager agents or delegation.
-- Use CrewAI `Flow` for routing and deterministic service calls, and a
-  sequential `Crew` only for QWEN and Ministral reasoning.
+  one for each message. Each QWEN run returns all five strategy candidates, informed by available RAG examples indexed by strategy tier and position-lifecycle stage; Ministral validates them. Do not add manager agents or delegation.
+- Use CrewAI `Flow` for application-level dispatch, not Telegram transport:
+  select the correct owner-specific QWEN workflow, distinguish a new signal
+  from a lifecycle continuation, load parent context and active cursors, and
+  invoke existing deterministic Python services. Keep the deterministic logic
+  outside CrewAI. Use a sequential `Crew` only for QWEN and Ministral
+  reasoning.
 - Pass ID-labelled parent messages, serial RAG examples, media hashes, S3
   references, and active cursor snapshots into the flow state. S3, DynamoDB,
   and ElastiCache remain canonical; CrewAI memory is not trading truth.
-- No agent may send Telegram messages, mutate cursors, sign orders, or call an
-  exchange. Only an approved deterministic step may publish an execution
-  intent.
+- QWEN agents only propose strategy candidates. The shared Ministral gatekeeping agent may  invoke deterministic policy services and review their results, but no agent may send Telegram messages, mutate cursors, sign orders, or call an exchange. Only an approved deterministic step may publish an execution intent.
 
 ### Target Layout
 
