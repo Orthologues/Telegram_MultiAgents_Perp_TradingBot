@@ -32,9 +32,12 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   network, and direction. Each cursor retains active Aster/Hyperliquid order and
   position IDs in a DynamoDB repository boundary until the position is fully
   closed.
-- Testnet-first Aster and Hyperliquid augmented proxies preserve local guards
-  while delegating signed execution to pinned upstream MCP/SDK interfaces.
-  Paired P/L comparison uses only identical signals on both testnets.
+- Testnet-first Aster and Hyperliquid augmented proxies use pinned upstream
+  dependencies and contracts. Aster has a dynamic official `aster-mcp` client
+  path; Hyperliquid currently uses direct `/info` reads and emits an upstream
+  handoff contract without invoking `mcp-hyperliquid` directly. Lambda order
+  submission remains unimplemented. Paired P/L comparison uses only identical
+  signals on both testnets.
 - Each owner QWEN agent emits five strategy candidates for every incoming
   signal. At lifecycle commencement, confidence selects the initial tier,
   recommended size, leverage, and provenance; continuations inherit that

@@ -456,7 +456,7 @@ For every behavior change, add the smallest focused test first, then run:
 
 ```bash
 cd draft_agentic_perp_trading_bot
-uv sync --extra aws --extra telegram --extra exchange-upstreams --extra dev
+uv sync --extra aws --extra telegram --extra exchange-upstreams --extra dev --extra crewai
 uv run pytest -q
 uv run ruff check .
 uv run python -m compileall -q src tests

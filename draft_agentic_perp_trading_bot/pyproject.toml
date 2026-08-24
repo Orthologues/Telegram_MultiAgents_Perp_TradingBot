@@ -6,7 +6,7 @@ requires-python = ">=3.11"
 dependencies = [
     "httpx>=0.28.1",
     "mcp[cli]>=1.28.0",
-    "pydantic>=2.13.4",
+    "pydantic>=2.11.9,<2.13",
     "websockets>=12.0",
 ]
 
@@ -34,6 +34,9 @@ exchange-upstreams = [
 dev = [
     "pytest>=8.0",
     "ruff>=0.5",
+]
+crewai = [
+    "crewai[tools]==1.15.17",
 ]
 
 [tool.ruff]

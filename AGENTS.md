@@ -143,3 +143,113 @@ Caveats:
 - I changed the title names of a few skills at `SKILLS.md`. Please DO NOT CHANGE my staged updates there. Rename the skills under `skills_api` accordingly instead, and refactor its comments wherever necessary as well.
 - Do not change the paragraphs under the subtitle `prompts for the most recent Agentic Update` under this file unless there is a basic grammatic error.
 - Introduce only minimalist and necessary changes to the `.md` files across the repository.
+
+## <code>Crew.ai</code> refactoring
+
+This is a full replacement of the current agent-orchestration scaffold with a
+CrewAI application, not a parallel adapter. Follow [Build agentic systems with
+CrewAI and Amazon Bedrock](https://aws.amazon.com/blogs/machine-learning/build-agentic-systems-with-crewai-and-amazon-bedrock/)
+and its [reference repository](https://github.com/aws-samples/sample-agentic-frameworks-on-aws/tree/main/crewai/aws-security-auditor-crew).
+CrewAI owns the agents, tasks, crews, flows, Bedrock LLM wiring (one trading
+channel per agent), structured outputs (Hyperliquid/Aster-readable trading
+execution JSON objects), and tracing (Phoenix for agent-level investigation;
+Grafana for cross-channel strategy summaries). Keep only the external boundaries that require explicit
+control: retrieval-only TelegramAgent/Telethon ingestion, canonical AWS state,
+deterministic trading policies, and Aster/Hyperliquid MCP plus Lambda signing.
+
+### Target Flow
+
+```text
+TelegramAgent/Telethon on Lightsail
+  -> normalize, hydrate, archive, deduplicate, and publish to AWS Simple Queue Service (SQS)
+  -> CrewAI TelegramSignalFlow
+     -> load chronological parent context and active DynamoDB cursors
+     -> select one owner QWEN definition
+     -> sequential Crew: selected QWEN -> shared Ministral
+     -> validate five strategy candidates and apply deterministic policies
+     -> persist the decision and publish an approved execution intent
+  -> guarded Aster/Hyperliquid MCP and Lambda boundary
+  -> PositionLifecycleFlow and PerformanceEvaluationFlow
+```
+
+- Configure four owner-specific QWEN agents but instantiate only the selected
+  one for each message. Each QWEN run returns all five strategy candidates;
+  Ministral validates them. Do not add manager agents or delegation.
+- Use CrewAI `Flow` for routing and deterministic service calls, and a
+  sequential `Crew` only for QWEN and Ministral reasoning.
+- Pass ID-labelled parent messages, serial RAG examples, media hashes, S3
+  references, and active cursor snapshots into the flow state. S3, DynamoDB,
+  and ElastiCache remain canonical; CrewAI memory is not trading truth.
+- No agent may send Telegram messages, mutate cursors, sign orders, or call an
+  exchange. Only an approved deterministic step may publish an execution
+  intent.
+
+### Target Layout
+
+```text
+src/agentic_perp_trading_bot/crewai_runtime/
+  bedrock.py       state.py          entrypoint.py
+  observability.py
+  crews/signal_evaluation/{crew.py,config/agents.yaml,config/tasks.yaml}
+  flows/{telegram_signal.py,position_lifecycle.py,performance_evaluation.py}
+  tools/{serial_rag.py,market_snapshot.py,cursor_context.py,decision_persistence.py}
+```
+
+Retain the existing schemas, ingestion, cursor, deterministic policy,
+performance, MCP, and AWS execution modules as domain services. Replace
+`orchestrator.py` with `TelegramSignalFlow`; retain a compatibility facade only
+until parity is proven, then remove obsolete agent and `skills_api` code.
+
+### Observability
+
+Use Phoenix for agent-level investigation and Grafana for cross-channel
+strategy summaries. Phoenix should expose each flow run, parent-message chain,
+RAG result and relevance score, model step, candidate set, deterministic
+decision, latency, and execution intent. A representative trace is:
+
+```text
+telegram_signal_flow: owner_1:1024
+├── load_parent_messages
+├── retrieve_owner_rag_examples
+│   ├── example owner_1:811 relevance=0.94
+│   ├── example owner_1:917 relevance=0.89
+│   └── example owner_1:1002 relevance=0.82
+├── owner_qwen_inference
+│   └── five strategy candidates
+├── ministral_review
+├── confidence_selection
+├── deterministic_stop_loss
+└── execution_intent
+```
+
+Grafana should aggregate channel, owner, asset, strategy tier, confidence,
+execution, and Aster/Hyperliquid performance metrics without exposing private
+Telegram content, credentials, or raw media.
+
+### Implementation Order
+
+1. Freeze the current tests, schemas, idempotency, parent ordering, concurrent
+   cursor behavior, and deterministic decisions as the migration contract.
+2. Pin CrewAI and tools, configure Bedrock model IDs, AWS region, SQS, RAG,
+   observability, and IAM-based credentials. Never pass access keys to agents.
+3. Add typed CrewAI state and `BaseTool` wrappers for reply-tree context, S3
+   serial RAG JSON, DynamoDB cursors, market data, and decision persistence.
+4. Build the Bedrock model factory, YAML-configured QWEN/Ministral Crew, and
+   `TelegramSignalFlow` with structured outputs and bounded retries.
+5. Add lifecycle and performance flows. A cursor closes only after its position
+   and active orders are fully closed; paired Aster/Hyperliquid evaluation uses
+   the intersection of positions sharing a signal key.
+6. Deploy the CrewAI worker with an IAM task role. Keep Telegram sessions on
+   Lightsail, secrets in AWS-managed boundaries, and live execution disabled by
+   default.
+7. Add parity, tool-permission, replay, RAG, Bedrock opt-in, and observability
+   tests. Remove compatibility code only after all tests pass.
+
+### Completion Gate
+
+One normalized Telegram message must replay through a traced CrewAI Flow, route
+to exactly one owner QWEN agent, produce and validate five strategies, preserve
+deterministic policy and cursor behavior, and stop before execution or use the
+guarded testnet boundary according to configuration. Human review of prompts,
+tool permissions, IAM, RAG examples, deterministic policies, and execution code
+remains mandatory.

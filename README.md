@@ -41,7 +41,7 @@ average of entry 1 and entry 2. QWEN does not infer them.
 From the repository root:
 
 ```bash
-cd draft_agentic_perp_trading_bot && uv sync --extra aws --extra dev && uv run pytest -q
+cd draft_agentic_perp_trading_bot && uv sync --extra aws --extra dev --extra crewai && uv run pytest -q
 ```
 
 ## Repository Map

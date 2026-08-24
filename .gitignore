@@ -1,4 +1,5 @@
 **/API_keys
+**/drafts_private
 **/.python-version
 .venv/
 __pycache__/
