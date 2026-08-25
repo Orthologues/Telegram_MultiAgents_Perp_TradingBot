@@ -196,7 +196,8 @@ channel-specific copies.
 ```text
 draft_agentic_perp_trading_bot/
   pyproject.toml
-  .env.aws
+  .env.example            # fake credentials or non-sensitive values
+  .env.prod               # contains genuine credentials and sensitive values, must be git-ignored
   src/crewai_bot/
     __init__.py
     main.py
@@ -279,7 +280,7 @@ draft_agentic_perp_trading_bot/
 
 ### Observability
 
-Use Phoenix for agent-level investigation and Grafana for cross-channel
+Use Arize Phoenix (<a>https://docs.crewai.com/v1.15.6/en/observability/arize-phoenix</a>) for agent-level investigation and Grafana for cross-channel
 strategy summaries. Phoenix should expose each flow run, parent-message chain,
 RAG result and relevance score, model step, candidate set, deterministic
 decision, latency, and execution intent. A representative trace is:

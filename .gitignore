@@ -10,4 +10,4 @@ __pycache__/
 **/.agents/
 **/.codex/
 **/.pytest_cache/
-**/.env.aws
+**/.env.prod
