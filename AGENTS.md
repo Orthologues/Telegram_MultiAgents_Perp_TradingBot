@@ -226,11 +226,12 @@ draft_agentic_perp_trading_bot/
         execution.py          # market snapshots and execution intents
         performance.py        # outcomes and venue-comparison records
       lifecycle/              # trade_cursor.py and cursor state transitions
+      performance/            # performance_engine/
+        metrics.py
+        venue_comparison.py
       policies/
         confidence/           # confidence_engine/
         validation/            # ministral_filter/
-    services/
-      performance/            # performance_engine/
     adapters/
       telegram/               # telegram_ingestion/
       exchanges/
@@ -271,9 +272,10 @@ draft_agentic_perp_trading_bot/
   tools are typed `BaseTool` classes in `tools/*_tool.py`; stateful routing is
   implemented in `flows/*_flow.py`.
 - This is a planned relocation of the non-CrewAI boundaries only; do not move
-  code until the plan is approved. CrewAI `tools/` call these typed services,
-  while `flows/` coordinate them. Keep the currently existing `skills_api/` as the public contract
-  layer and remove it only after equivalent CrewAI adapters have parity.
+  code until the plan is approved. CrewAI `tools/` call these typed domain
+  contracts and policies, while `flows/` coordinate them. Keep the currently
+  existing `skills_api/` as the public contract layer and remove it only after
+  equivalent CrewAI adapters have parity.
 
 ### Observability
 
