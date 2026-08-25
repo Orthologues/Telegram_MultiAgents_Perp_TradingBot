@@ -185,21 +185,95 @@ TelegramAgent/Telethon on Lightsail
   and ElastiCache remain canonical; CrewAI memory is not trading truth.
 - QWEN agents only propose strategy candidates. The shared Ministral gatekeeping agent may  invoke deterministic policy services and review their results, but no agent may send Telegram messages, mutate cursors, sign orders, or call an exchange. Only an approved deterministic step may publish an execution intent.
 
-### Target Layout
+### Canonical CrewAI Layout
+
+Follow the AWS sample's generated project shape. `crew.py`, `main.py`, and the
+package-level `config/agents.yaml` and `config/tasks.yaml` are the canonical
+CrewAI files. Keep the top-level `crew.py` as the canonical composition facade;
+put genuinely separate Crew definitions under `crews/`, not owner- or
+channel-specific copies.
 
 ```text
-src/agentic_perp_trading_bot/crewai_runtime/
-  bedrock.py       state.py          entrypoint.py
-  observability.py
-  crews/signal_evaluation/{crew.py,config/agents.yaml,config/tasks.yaml}
-  flows/{telegram_signal.py,position_lifecycle.py,performance_evaluation.py}
-  tools/{serial_rag.py,market_snapshot.py,cursor_context.py,decision_persistence.py}
+draft_agentic_perp_trading_bot/
+  pyproject.toml
+  .env.aws
+  src/crewai_bot/
+    __init__.py
+    main.py
+    crew.py
+    crews/
+      __init__.py
+      signal_evaluation_crew.py
+      rag_evaluation_crew.py
+    config/
+      agents.yaml
+      tasks.yaml
+    tools/
+      market_snapshot_tool.py
+      serial_rag_tool.py
+      confidence_policy_tool.py
+      stop_loss_policy_tool.py
+    flows/
+      __init__.py
+      telegram_signal_flow.py
+      position_lifecycle_flow.py
+      performance_evaluation_flow.py
+    domain/
+      contracts/
+        schemas.py            # stable typed contract and re-export surface
+        telegram.py           # message, provenance, and RAG models
+        trading.py            # signals, strategies, positions, and cursors
+        execution.py          # market snapshots and execution intents
+        performance.py        # outcomes and venue-comparison records
+      lifecycle/              # trade_cursor.py and cursor state transitions
+      policies/
+        confidence/           # confidence_engine/
+        validation/            # ministral_filter/
+    services/
+      performance/            # performance_engine/
+    adapters/
+      telegram/               # telegram_ingestion/
+      exchanges/
+        mcp/                   # mcp_gateway/
+      aws/
+        execution/             # aws_execution/
 ```
 
-Retain the existing schemas, ingestion, cursor, deterministic policy,
-performance, MCP, and AWS execution modules as domain services. Replace
-`orchestrator.py` with `TelegramSignalFlow`; retain a compatibility facade only
-until parity is proven, then remove obsolete agent and `skills_api` code.
+### Domain Contract Boundary
+
+- `domain/contracts/` contains persistence-agnostic Pydantic schemas, enums, and
+  cross-field validators shared by CrewAI flows, tools, and deterministic
+  services. `domain/contracts/schemas.py` is the stable import surface; the
+  neighboring modules hold bounded type definitions rather than I/O or
+  orchestration logic.
+- Telegram provenance, parent-message context, serial RAG references, trading
+  signals, lifecycle cursors, market snapshots, execution intents, and
+  performance records belong here. AWS clients, MCP calls, prompts, agents,
+  and CrewAI task logic do not.
+
+- `crew.py` is the canonical `@CrewBase` composition facade. It defines or
+  exports the primary signal-evaluation Crew, its `@agent`, `@task`, and `@crew`
+  methods, and Bedrock `LLM` construction. It instantiates only the selected
+  owner QWEN agent and has no manager agent or delegation.
+- `crews/*_crew.py` contains only genuinely separate multi-agent Crews, such as
+  signal evaluation or RAG evaluation; do not create one for each owner or
+  channel. Add `rag_evaluation_crew.py` only when that evaluation needs agent
+  collaboration rather than deterministic replay.
+- `main.py` is the application entrypoint and exposes the standard CrewAI
+  commands needed for `run`, replay, training, or evaluation. It delegates
+  message execution to the Flow rather than duplicating Crew logic.
+- `__init__.py` makes each directory an explicit Python package and stabilizes
+  imports, packaging, and test discovery. It is recommended for this scaffold
+  and the CrewAI-generated layout, although modern Python namespace packages
+  can technically operate without it; `main.py` is an entrypoint, not a
+  replacement for the package marker.
+- `config/agents.yaml` and `config/tasks.yaml` contain role/task configuration;
+  tools are typed `BaseTool` classes in `tools/*_tool.py`; stateful routing is
+  implemented in `flows/*_flow.py`.
+- This is a planned relocation of the non-CrewAI boundaries only; do not move
+  code until the plan is approved. CrewAI `tools/` call these typed services,
+  while `flows/` coordinate them. Keep the currently existing `skills_api/` as the public contract
+  layer and remove it only after equivalent CrewAI adapters have parity.
 
 ### Observability
 
