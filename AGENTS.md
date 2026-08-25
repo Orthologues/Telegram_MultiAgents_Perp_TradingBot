@@ -239,6 +239,7 @@ draft_agentic_perp_trading_bot/
         mcp/                   # mcp_gateway/
       aws/
         execution/             # aws_execution/
+    agent_interfaces/         # replacement of `skills_api/`
 ```
 
 ### Domain Contract Boundary
@@ -275,14 +276,13 @@ draft_agentic_perp_trading_bot/
 - This is a planned relocation of the non-CrewAI boundaries only; do not move
   code until the plan is approved. CrewAI `tools/` call these typed domain
   contracts and policies, while `flows/` coordinate them. Keep the currently
-  existing `skills_api/` as the public contract layer and remove it only after
-  equivalent CrewAI adapters have parity.
+  existing `skills_api/` as the public contract layer and rename it to `agent_interfaces/` while adapting it to CrewAI flows.
 
 ### Observability
 
 Use Arize Phoenix (<a>https://docs.crewai.com/v1.15.6/en/observability/arize-phoenix</a>) for agent-level investigation and Grafana for cross-channel
 strategy summaries. Phoenix should expose each flow run, parent-message chain,
-RAG result and relevance score, model step, candidate set, deterministic
+RAG result and relevance score, LLM inference step, candidate set, deterministic
 decision, latency, and execution intent. A representative trace is:
 
 ```text
