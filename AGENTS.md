@@ -150,30 +150,35 @@ This is a full replacement of the current agent-orchestration scaffold with a
 CrewAI application, not a parallel adapter. Follow [Build agentic systems with
 CrewAI and Amazon Bedrock](https://aws.amazon.com/blogs/machine-learning/build-agentic-systems-with-crewai-and-amazon-bedrock/)
 and its [reference repository](https://github.com/aws-samples/sample-agentic-frameworks-on-aws/tree/main/crewai/aws-security-auditor-crew).
-CrewAI owns the agents, tasks, crews, flows, Bedrock LLM wiring (one trading
-channel per agent), structured outputs (Hyperliquid/Aster-readable trading
-execution JSON objects), and tracing (Phoenix for agent-level investigation;
-Grafana for cross-channel strategy summaries). Keep only the external boundaries that require explicit
-control: retrieval-only TelegramAgent/Telethon ingestion, canonical AWS state,
-deterministic trading policies, and Aster/Hyperliquid MCP plus Lambda signing.
+CrewAI owns agent, task, Crew, Flow, Bedrock LLM, structured-output, and tracing
+orchestration. It does not own Telegram transport, canonical AWS state,
+deterministic trading policy, or exchange execution. Keep those responsibilities
+behind retrieval-only TelegramAgent/Telethon ingestion, S3/DynamoDB/ElastiCache,
+deterministic Python services, and the Aster/Hyperliquid MCP plus Lambda signing
+boundary. Use Phoenix for agent-level investigation and Grafana for
+cross-channel strategy summaries.
 
 ### Target Flow
 
 ```text
 TelegramAgent/Telethon on Lightsail
-  -> normalize, hydrate, archive, deduplicate, and publish to AWS Simple Queue Service (SQS)
+  -> normalize, hydrate, archive, deduplicate, and publish to SQS
   -> CrewAI TelegramSignalFlow
      -> load chronological parent context and active DynamoDB cursors
      -> select one owner QWEN definition
      -> sequential Crew: selected QWEN -> shared Ministral
-     -> validate five strategy candidates and apply deterministic policies
+     -> validate five strategy candidates
+     -> apply deterministic policies outside the Crew
      -> persist the decision and publish an approved execution intent
   -> guarded Aster/Hyperliquid MCP and Lambda boundary
   -> PositionLifecycleFlow and PerformanceEvaluationFlow
 ```
 
 - Configure four owner-specific QWEN agents but instantiate only the selected
-  one for each message. Each QWEN run returns all five strategy candidates, informed by available RAG examples indexed by strategy tier and position-lifecycle stage; Ministral validates them. Do not add manager agents or delegation.
+  one for each message. Channels route to owners and do not create additional
+  agents. Each QWEN run returns all five strategy candidates, informed by RAG
+  examples indexed by strategy tier and lifecycle stage; Ministral reviews
+  their evidence and structure. Do not add manager agents or delegation.
 - Use CrewAI `Flow` for application-level dispatch, not Telegram transport:
   select the correct owner-specific QWEN workflow, distinguish a new signal
   from a lifecycle continuation, load parent context and active cursors, and
@@ -183,7 +188,14 @@ TelegramAgent/Telethon on Lightsail
 - Pass ID-labelled parent messages, serial RAG examples, media hashes, S3
   references, and active cursor snapshots into the flow state. S3, DynamoDB,
   and ElastiCache remain canonical; CrewAI memory is not trading truth.
-- QWEN agents only propose strategy candidates. The shared Ministral gatekeeping agent may  invoke deterministic policy services and review their results, but no agent may send Telegram messages, mutate cursors, sign orders, or call an exchange. Only an approved deterministic step may publish an execution intent.
+- QWEN agents only propose strategy candidates. The shared Ministral agent
+  reviews candidate evidence and structure; deterministic execution gates run
+  afterward as Flow-controlled Python services. No agent may send Telegram
+  messages, mutate cursors, sign orders, or submit exchange orders. Only an
+  approved deterministic Flow step may publish an execution intent.
+- Attach only read-only context and analysis tools to agents. Cursor mutation,
+  decision persistence, and exchange submission remain Flow-only operations and
+  must not appear in an agent tool allowlist.
 
 ### Canonical CrewAI Layout
 
@@ -196,26 +208,30 @@ channel-specific copies.
 ```text
 draft_agentic_perp_trading_bot/
   pyproject.toml
-  .env.example            # fake credentials or non-sensitive values
-  .env.prod               # contains genuine credentials and sensitive values, must be git-ignored
-  src/crewai_bot/
+  .env.example                 # placeholders and non-sensitive defaults only
+  .env.prod                    # git-ignored runtime configuration; no secrets
+  src/crewai_app/
     __init__.py
     main.py
     crew.py
     crews/
       __init__.py
       signal_evaluation_crew.py
-      rag_evaluation_crew.py
+      rag_evaluation_crew.py    # optional; only for agent-based RAG evaluation
     config/
       agents.yaml
       tasks.yaml
     tools/
       market_snapshot_tool.py
       serial_rag_tool.py
+      parent_context_tool.py
+      cursor_context_tool.py
       confidence_policy_tool.py
       stop_loss_policy_tool.py
+      decision_persistence_tool.py
     flows/
       __init__.py
+      states.py
       telegram_signal_flow.py
       position_lifecycle_flow.py
       performance_evaluation_flow.py
@@ -226,20 +242,26 @@ draft_agentic_perp_trading_bot/
         trading.py            # signals, strategies, positions, and cursors
         execution.py          # market snapshots and execution intents
         performance.py        # outcomes and venue-comparison records
-      lifecycle/              # trade_cursor.py and cursor state transitions
-      performance/            # performance_engine/
+      lifecycle/
+        cursor.py             # trade_cursor.py and cursor state transitions
+      performance/
         metrics.py
         venue_comparison.py
       policies/
-        confidence/           # confidence_engine/
-        validation/            # ministral_filter/
+        confidence.py         # confidence_engine/
+        stop_loss.py          # deterministic omitted-stop-loss policy
+        execution_gate.py     # blacklist, price, depth, and slippage gates
     adapters/
-      telegram/               # telegram_ingestion/
+      telegram/               # TelegramAgent/Telethon ingestion
       exchanges/
-        mcp/                   # mcp_gateway/
+        mcp/                  # Aster/Hyperliquid MCP gateway
       aws/
-        execution/             # aws_execution/
-    agent_interfaces/         # replacement of `skills_api/`
+        persistence/          # S3, DynamoDB, and ElastiCache adapters
+        execution/            # Lambda execution boundary
+    agent_interfaces/
+      telegram.py
+      qwen.py
+      ministral.py
 ```
 
 ### Domain Contract Boundary
@@ -253,11 +275,11 @@ draft_agentic_perp_trading_bot/
   signals, lifecycle cursors, market snapshots, execution intents, and
   performance records belong here. AWS clients, MCP calls, prompts, agents,
   and CrewAI task logic do not.
-
 - `crew.py` is the canonical `@CrewBase` composition facade. It defines or
   exports the primary signal-evaluation Crew, its `@agent`, `@task`, and `@crew`
-  methods, and Bedrock `LLM` construction. It instantiates only the selected
-  owner QWEN agent and has no manager agent or delegation.
+  methods, and Bedrock `LLM` construction. For each message, it instantiates
+  only the selected owner QWEN agent plus the shared Ministral agent; it has no
+  manager agent or delegation.
 - `crews/*_crew.py` contains only genuinely separate multi-agent Crews, such as
   signal evaluation or RAG evaluation; do not create one for each owner or
   channel. Add `rag_evaluation_crew.py` only when that evaluation needs agent
@@ -271,22 +293,25 @@ draft_agentic_perp_trading_bot/
   can technically operate without it; `main.py` is an entrypoint, not a
   replacement for the package marker.
 - `config/agents.yaml` and `config/tasks.yaml` contain role/task configuration;
-  tools are typed `BaseTool` classes in `tools/*_tool.py`; stateful routing is
-  implemented in `flows/*_flow.py`.
+  tools are typed `BaseTool` subclasses in `tools/*_tool.py`; typed Flow state
+  lives in `flows/states.py`; stateful routing is implemented in
+  `flows/*_flow.py`.
 - This is a planned relocation of the non-CrewAI boundaries only; do not move
-  code until the plan is approved. CrewAI `tools/` call these typed domain
-  contracts and policies, while `flows/` coordinate them. Keep the currently
-  existing `skills_api/` as the public contract layer and rename it to `agent_interfaces/` while adapting it to CrewAI flows.
+  code until the plan is approved. Flows coordinate agent interfaces, domain
+  policies, tools, and adapters. Retain `skills_api/` until its public contracts
+  have equivalent coverage under `agent_interfaces/`, then remove it.
 
 ### Observability
 
-Use Arize Phoenix (<a>https://docs.crewai.com/v1.15.6/en/observability/arize-phoenix</a>) for agent-level investigation and Grafana for cross-channel
-strategy summaries. Phoenix should expose each flow run, parent-message chain,
-RAG result and relevance score, LLM inference step, candidate set, deterministic
-decision, latency, and execution intent. A representative trace is:
+Use [Arize Phoenix](https://docs.crewai.com/v1.15.17/en/observability/arize-phoenix)
+for agent-level investigation and Grafana for cross-channel strategy summaries.
+Phoenix should expose each Flow run, parent-message chain, RAG result and
+relevance score, LLM inference, structured-output validation, candidate set,
+Ministral review, deterministic decision, latency, and execution intent. A
+representative trace is:
 
 ```text
-telegram_signal_flow: owner_1:1024
+telegram_signal_flow: owner_1:1037
 ├── load_parent_messages
 ├── retrieve_owner_rag_examples
 │   ├── example owner_1:811 relevance=0.94
@@ -294,9 +319,12 @@ telegram_signal_flow: owner_1:1024
 │   └── example owner_1:1002 relevance=0.82
 ├── owner_qwen_inference
 │   └── five strategy candidates
+├── validate_structured_output
 ├── ministral_review
 ├── confidence_selection
-├── deterministic_stop_loss
+├── load_market_snapshot
+├── apply_deterministic_policies
+├── persist_decision
 └── execution_intent
 ```
 
@@ -306,28 +334,60 @@ Telegram content, credentials, or raw media.
 
 ### Implementation Order
 
-1. Freeze the current tests, schemas, idempotency, parent ordering, concurrent
-   cursor behavior, and deterministic decisions as the migration contract.
-2. Pin CrewAI and tools, configure Bedrock model IDs, AWS region, SQS, RAG,
-   observability, and IAM-based credentials. Never pass access keys to agents.
-3. Add typed CrewAI state and `BaseTool` wrappers for reply-tree context, S3
-   serial RAG JSON, DynamoDB cursors, market data, and decision persistence.
-4. Build the Bedrock model factory, YAML-configured QWEN/Ministral Crew, and
-   `TelegramSignalFlow` with structured outputs and bounded retries.
-5. Add lifecycle and performance flows. A cursor closes only after its position
-   and active orders are fully closed; paired Aster/Hyperliquid evaluation uses
-   the intersection of positions sharing a signal key.
-6. Deploy the CrewAI worker with an IAM task role. Keep Telegram sessions on
-   Lightsail, secrets in AWS-managed boundaries, and live execution disabled by
-   default.
-7. Add parity, tool-permission, replay, RAG, Bedrock opt-in, and observability
-   tests. Remove compatibility code only after all tests pass.
+1. Establish a migration reference: inventory the current scaffold, dependencies,
+   tests, schemas, documentation, and known non-runnable gaps. Run available
+   static checks and test collection, record failures, and convert intended
+   invariants into explicit test criteria. Do not treat the current
+   implementation as behaviorally authoritative.
+2. Move only superseded orchestration files to the git-ignored `legacy/`. Keep
+   shared contracts, adapters, and test imports available until their CrewAI
+   replacements satisfy the documented contracts.
+3. Pin the CrewAI app scaffold and its tools, then configure Bedrock model IDs,
+   AWS region, SQS, RAG, observability, and IAM-based credentials. Never pass
+   access keys to agents.
+4. Add typed CrewAI Flow states and custom tools derived from `BaseTool` for
+   reply-tree context, S3 serial RAG JSON, DynamoDB cursors, market data, and
+   decision persistence.
+5. Implement IAM-authenticated Bedrock `LLM` construction for the owner-specific
+   QWEN definitions and the shared Ministral definition. Build the
+   YAML-configured sequential Crew and `TelegramSignalFlow` with
+   Pydantic-validated outputs. Permit configured retries only for transient
+   Bedrock failures and structured-output repair.
+6. Add lifecycle and performance flows. A cursor closes only after its position
+   and active orders are fully closed. After an order-placement network failure,
+   reconcile its unique client order ID with the venue before deciding whether
+   to resubmit; never blindly retry an order placement or persistence mutation.
+   Evaluate all five strategy tiers by owner, channel, asset group, and lifecycle
+   stage. Mark non-executed tiers as counterfactual replay results. Separately
+   compare Aster and Hyperliquid using matched closed positions with the same
+   signal deduplication key and strategy tier executed on both venues.
+7. Deploy the CrewAI worker with a least-privilege IAM task role. Keep Telegram
+   sessions on Lightsail and credentials within AWS Secrets Manager and
+   KMS-protected boundaries. Keep mainnet execution disabled throughout the
+   guarded testnet phase. After all testnet criteria pass and execution-sensitive
+   code receives human review, an authorized operator may explicitly enable
+   mainnet execution.
+8. Add deterministic smoke, contract, and integration tests covering schema
+   validation, chronological parent context, deduplication, cursor transitions,
+   tool permissions, serial-RAG retrieval, Bedrock opt-in, observability events,
+   and execution idempotency. Verify replay outputs against human-approved
+   fixtures. Remove compatibility code only after these checks pass and
+   execution-sensitive changes receive human review.
 
 ### Completion Gate
 
-One normalized Telegram message must replay through a traced CrewAI Flow, route
-to exactly one owner QWEN agent, produce and validate five strategies, preserve
-deterministic policy and cursor behavior, and stop before execution or use the
-guarded testnet boundary according to configuration. Human review of prompts,
-tool permissions, IAM, RAG examples, deterministic policies, and execution code
-remains mandatory.
+One normalized Telegram message must traverse a traced CrewAI Flow, route to
+exactly one owner-specific QWEN agent, produce five strategy candidates, and
+receive review from the shared Ministral agent. Before any execution intent is
+emitted, deterministic services must preserve cursor invariants and reject an
+instant order when the MCP market snapshot indicates excessive deviation from
+the source message's reference price, insufficient order-book depth, or
+excessive expected slippage.
+
+During validation, the Flow may submit orders only through the guarded testnet
+boundary when testnet mode is explicitly enabled and all pre-execution checks
+pass. Mainnet execution remains disabled until the testnet phase is complete,
+all testnet acceptance criteria are satisfied, execution-sensitive changes
+receive human review, and an authorized operator explicitly enables mainnet
+mode. Human review of prompts, tool permissions, IAM, RAG examples,
+deterministic policies, and execution code remains mandatory.

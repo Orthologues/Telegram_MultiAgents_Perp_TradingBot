@@ -11,3 +11,4 @@ __pycache__/
 **/.codex/
 **/.pytest_cache/
 **/.env.prod
+**/legacy/
