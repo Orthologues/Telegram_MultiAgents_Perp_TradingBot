@@ -3,7 +3,7 @@
 Maintenance rule: **OVERWRITE** this file on every update. It is the single
 source of current state, not a development log. The log is `HISTORY.md`.
 
-Last updated: 2026-07-31
+Last updated: 2026-08-27
 
 ## Phase
 
@@ -14,11 +14,13 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
 
 - The repository is a human-harnessed, non-executing scaffold; it is not live
   trading software.
+- The full CrewAI replacement is currently a documented target architecture;
+  the existing source layout has not yet been migrated.
 - Manual codebase review by the repository owner and manual addition of
   authentic serial RAG examples are explicit priorities before further use.
 - README wording now clarifies that five-tier candidates cover every incoming
   signal, primarily lifecycle continuations.
-- Thirty-three commits are summarized in `HISTORY.md`; current HEAD is `fe3811c`.
+- Forty-one commits are summarized in `HISTORY.md`; current HEAD is `d6143c0`.
 - `OwnerQwenAPI` includes shared review-only synonym and reduce-and-protect
   skills, while `MinistralFilterAPI` includes MCP take-profit protection; no
   agent has direct exchange access.

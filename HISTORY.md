@@ -187,3 +187,44 @@ isolation, deterministic request signing, and focused tests.
 Replaced local Aster V1 signing with pinned Aster V3 and Hyperliquid augmented
 proxy contracts, and expanded deterministic omitted stop-loss inference to the
 revised multi-indicator `1.2%`-`8%` policy.
+
+### 2026-07-31 — `77b840e`: refactored exchange proxies and stop-loss inference
+
+Replaced local Aster V1 signing with pinned upstream Aster V3 and Hyperliquid
+proxy contracts, expanded omitted stop-loss inference, and updated the related
+tests and documentation.
+
+### 2026-08-25 — `c05f386`: planned the CrewAI-Bedrock orchestration migration
+
+Prepared the full CrewAI replacement plan, pinned the exchange MCP upstreams,
+updated trading skills and MCP status, and retained human-review gates.
+
+### 2026-08-25 — `4e73484`: clarified CrewAI agent boundaries and Flow dispatch
+
+Clarified owner-specific QWEN selection, shared Ministral review, and the
+separation between CrewAI orchestration and deterministic services.
+
+### 2026-08-25 — `61be966`: defined the canonical CrewAI scaffold
+
+Specified the AWS-aligned CrewAI package layout, typed domain contracts, crews,
+flows, tools, adapters, and agent interfaces.
+
+### 2026-08-25 — `c6f6604`: corrected CrewAI domain boundaries
+
+Refined the target placement of contracts, lifecycle state, performance logic,
+policies, and adapters in the planned application layout.
+
+### 2026-08-25 — `4206ac9`: corrected CrewAI environment and observability references
+
+Aligned the planned environment configuration and Phoenix/Grafana observability
+roles with the CrewAI application architecture.
+
+### 2026-08-25 — `fa22db4`: clarified CrewAI interfaces and inference boundaries
+
+Clarified typed Flow state, agent interfaces, structured outputs, and the
+boundary between model inference and deterministic execution policy.
+
+### 2026-08-27 — `d6143c0`: refined the CrewAI app migration architecture
+
+Consolidated the migration target, implementation order, completion gate, and
+human-review requirements in `AGENTS.md`.
