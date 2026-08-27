@@ -1,7 +1,7 @@
 [project]
 name = "agentic-perp-trading-bot-draft"
 version = "0.1.0"
-description = "Draft scaffold for an AG2 TelegramAgent-driven multi-agent perpetual futures trading bot."
+description = "Preliminary CrewAI app for an AG2 TelegramAgent-driven perpetual futures bot."
 requires-python = ">=3.11"
 dependencies = [
     "httpx>=0.28.1",
@@ -15,7 +15,10 @@ requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/agentic_perp_trading_bot"]
+packages = ["src/agentic_perp_trading_bot", "src/crewai_app"]
+
+[project.scripts]
+crewai-trading-app = "crewai_app.main:run"
 
 [tool.hatch.metadata]
 allow-direct-references = true

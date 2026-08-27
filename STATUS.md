@@ -14,13 +14,14 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
 
 - The repository is a human-harnessed, non-executing scaffold; it is not live
   trading software.
-- The full CrewAI replacement is currently a documented target architecture;
-  the existing source layout has not yet been migrated.
+- A preliminary `crewai_app` now provides the canonical YAML-configured Crew,
+  typed Flows, tools, domain boundaries, and adapters. The original package
+  remains as a deterministic compatibility layer during migration.
 - Manual codebase review by the repository owner and manual addition of
   authentic serial RAG examples are explicit priorities before further use.
 - README wording now clarifies that five-tier candidates cover every incoming
   signal, primarily lifecycle continuations.
-- Forty-one commits are summarized in `HISTORY.md`; current HEAD is `d6143c0`.
+- Forty-two commits are summarized in `HISTORY.md`; committed HEAD is `ebb33c4`.
 - `OwnerQwenAPI` includes shared review-only synonym and reduce-and-protect
   skills, while `MinistralFilterAPI` includes MCP take-profit protection; no
   agent has direct exchange access.
@@ -46,6 +47,9 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   policy unless an explicit parent-linked update advances its revision.
   Deterministic risk separately enforces pair blacklisting, price-deviation
   thresholds, leverage, and cumulative owner/pair position-value limits.
+- `TelegramSignalFlow` routes exactly one owner QWEN definition to shared
+  Ministral review, then applies deterministic price, depth, and slippage gates
+  before Flow-only persistence and optional testnet intent publication.
 - Omitted stop-loss inference now combines pair type, volume, and
   `5m`/`15m`/`1h`/`4h` EMA, MACD, KDJ, RSI, Bollinger, ATR, and volatility
   components, bounded to `1.2%`-`8%` from entry 1 or the first two-entry
@@ -58,7 +62,7 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   scaffold boundaries; synonym inference remains a placeholder until RAG is
   populated. RAG profile JSON now reserves ordered Telegram message IDs and
   URLs plus a private S3 archive URI, but no authentic examples are fabricated.
-- Last verification: all 105 tests passed under Python 3.11; Ruff and
+- Last verification: all 111 tests passed under Python 3.11; Ruff and
   `compileall` also passed.
 
 ## Next Actions
@@ -92,6 +96,8 @@ Telegram IDs/URLs, and S3 archive references.
 
 ## Further Priorities
 
+- Replace preliminary compatibility re-exports with reviewed native
+  `crewai_app` implementations and production AWS adapters.
 - Replace in-memory test storage with production S3, message-receipt, and
   versioned trade-cursor DynamoDB adapters.
 - Implement model-specific Bedrock QWEN and Ministral multimodal adapters.

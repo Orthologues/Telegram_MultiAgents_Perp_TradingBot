@@ -1,0 +1,21 @@
+qwen_strategy_task:
+  description: >
+    Analyze owner {owner_id}'s normalized Telegram message and chronological
+    context. Context JSON: {telegram_prompt_context_json}
+    Active cursor JSON: {active_trade_cursors_json}
+    Serial-RAG JSON: {serial_rag_examples_json}
+    Return one candidate for every strategy tier. Preserve the source
+    deduplication key, leave omitted stop-losses unset, and emit no order.
+  expected_output: >
+    A QwenStrategyCandidateSet containing exactly ultra_conservative,
+    conservative, intermediate, radical, and ultra_radical candidates.
+
+ministral_review_task:
+  description: >
+    Review all five QWEN strategy candidates against the same Telegram context
+    and provenance. Validate structure and evidence, reject unresolved
+    ambiguity or semantic duplicates, and return one review for every tier.
+    Do not apply confidence, stop-loss, liquidity, or execution policy.
+  expected_output: >
+    A MinistralStrategyReviewSet containing exactly one typed review for each
+    of the five strategy tiers.

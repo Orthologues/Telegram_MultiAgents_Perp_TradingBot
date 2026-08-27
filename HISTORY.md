@@ -228,3 +228,13 @@ boundary between model inference and deterministic execution policy.
 
 Consolidated the migration target, implementation order, completion gate, and
 human-review requirements in `AGENTS.md`.
+
+### 2026-08-27 — `ebb33c4`: synchronized migration status and history
+
+Recorded the CrewAI planning commits and marked the source migration as pending.
+
+### 2026-08-27 — pending: added the preliminary CrewAI application
+
+Added the canonical CrewAI package, owner-selected sequential Crew, typed
+Telegram/lifecycle/performance Flows, explicit tool permissions, deterministic
+depth and slippage gates, compatibility adapters, and offline tests.

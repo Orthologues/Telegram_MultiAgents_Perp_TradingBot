@@ -12,6 +12,8 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 
 ## Runtime Layer Mapping
 
+- CrewAI orchestration, typed Flow state, and owner-selected sequential Crew:
+  `crewai_app`
 - TelegramAgent retrieval and ingestion: `agentic_perp_trading_bot.telegram_ingestion`
 - Per-channel polling and message receipts: `agentic_perp_trading_bot.telegram_ingestion.agent_worker`
 - S3/DynamoDB ingestion persistence and Bedrock handoff: `agentic_perp_trading_bot.telegram_ingestion.pipeline`
@@ -19,7 +21,8 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 - ElastiCache-compatible owner reply trees: `agentic_perp_trading_bot.telegram_ingestion.reply_tree`
 - Concurrent parent-linked trade cursors: `agentic_perp_trading_bot.trade_cursor`
 - Telegram multimodal input deduplication: `agentic_perp_trading_bot.telegram_ingestion.deduplication`
-- Agent-owned skill contracts: `agentic_perp_trading_bot.skills_api`
+- Agent interfaces: `crewai_app.agent_interfaces`, with
+  `agentic_perp_trading_bot.skills_api` retained for migration compatibility
 - Owner QWEN agents, five-tier candidates, and shared interpretation skills:
   `agentic_perp_trading_bot.qwen_agents.owner_agent`
 - Owner serial RAG JSON profiles with Telegram/S3 provenance:
@@ -58,7 +61,7 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
   confidence-selected lifecycle strategy
 - Execution and P/L history: append-only DynamoDB position-lifecycle events
 - Normalized message handoff: Bedrock publisher after metadata persistence
-- Model inference: AWS Bedrock
+- Model inference: IAM-authenticated AWS Bedrock through CrewAI
 - Strategy candidates: all five tiers from ultra-conservative to ultra-radical
 - Exchange live state: ECS WebSocket workers
 - Stop-loss market inputs: MCP pair type, price, volume, EMA, MACD, KDJ, RSI,
