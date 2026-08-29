@@ -13,31 +13,46 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 ## Runtime Layer Mapping
 
 - CrewAI orchestration, typed Flow state, and owner-selected sequential Crew:
-  `crewai_app`
-- TelegramAgent retrieval and ingestion: `agentic_perp_trading_bot.telegram_ingestion`
-- Per-channel polling and message receipts: `agentic_perp_trading_bot.telegram_ingestion.agent_worker`
-- S3/DynamoDB ingestion persistence and Bedrock handoff: `agentic_perp_trading_bot.telegram_ingestion.pipeline`
-- Storage contracts: `agentic_perp_trading_bot.telegram_ingestion.storage`
-- ElastiCache-compatible owner reply trees: `agentic_perp_trading_bot.telegram_ingestion.reply_tree`
-- Concurrent parent-linked trade cursors: `agentic_perp_trading_bot.trade_cursor`
-- Telegram multimodal input deduplication: `agentic_perp_trading_bot.telegram_ingestion.deduplication`
-- Agent interfaces: `crewai_app.agent_interfaces`, with
-  `agentic_perp_trading_bot.skills_api` retained for migration compatibility
-- Owner QWEN agents, five-tier candidates, and shared interpretation skills:
-  `agentic_perp_trading_bot.qwen_agents.owner_agent`
+  `draft_agentic_perp_trading_bot/src/crewai_app/`
+- Planned post-CrewAI LangGraph implementation:
+  `draft_agentic_perp_trading_bot/src/langgraph_app/`
+- TelegramAgent retrieval and ingestion compatibility layer:
+  `draft_agentic_perp_trading_bot/src/frameworkless_app/telegram_ingestion/`
+- Per-channel polling and message receipts:
+  `draft_agentic_perp_trading_bot/src/frameworkless_app/telegram_ingestion/agent_worker.py`
+- S3/DynamoDB ingestion persistence and Bedrock handoff:
+  `draft_agentic_perp_trading_bot/src/frameworkless_app/telegram_ingestion/pipeline.py`
+- Storage contracts:
+  `draft_agentic_perp_trading_bot/src/frameworkless_app/telegram_ingestion/storage.py`
+- ElastiCache-compatible owner reply trees:
+  `draft_agentic_perp_trading_bot/src/frameworkless_app/telegram_ingestion/reply_tree.py`
+- Concurrent parent-linked trade cursors:
+  `draft_agentic_perp_trading_bot/src/frameworkless_app/trade_cursor.py`
+- Telegram multimodal input deduplication:
+  `draft_agentic_perp_trading_bot/src/frameworkless_app/telegram_ingestion/deduplication.py`
+- CrewAI agent interfaces:
+  `draft_agentic_perp_trading_bot/src/crewai_app/agent_interfaces/`
+- Compatibility skill APIs:
+  `draft_agentic_perp_trading_bot/src/frameworkless_app/skills_api/`
+- Owner QWEN agents and shared interpretation skills:
+  `draft_agentic_perp_trading_bot/src/frameworkless_app/qwen_agents/owner_agent.py`
 - Owner serial RAG JSON profiles with Telegram/S3 provenance:
   `draft_agentic_perp_trading_bot/rag_profiles/`
 - Ministral validation, signal deduplication, and MCP fill protection:
-  `agentic_perp_trading_bot.ministral_filter`
-- Deterministic omitted stop-loss policy: `agentic_perp_trading_bot.ministral_filter.stop_loss_policy`
+  `draft_agentic_perp_trading_bot/src/frameworkless_app/ministral_filter/`
+- Deterministic omitted stop-loss policy:
+  `draft_agentic_perp_trading_bot/src/crewai_app/domain/policies/stop_loss.py`
 - DynamoDB execution history and position weighting:
-  `agentic_perp_trading_bot.performance_engine`
+  `draft_agentic_perp_trading_bot/src/frameworkless_app/performance_engine/`
 - Confidence and five-tier strategy selection:
-  `agentic_perp_trading_bot.confidence_engine`
+  `draft_agentic_perp_trading_bot/src/crewai_app/domain/policies/confidence.py`
 - Deterministic blacklist, price, leverage, and cumulative-notional limits:
-  `agentic_perp_trading_bot.risk_engine`
-- Aster/Hyperliquid MCP gateway: `agentic_perp_trading_bot.mcp_gateway`
-- AWS Secrets Manager and Lambda execution: `agentic_perp_trading_bot.aws_execution`
+  `draft_agentic_perp_trading_bot/src/crewai_app/domain/policies/execution_gate.py`
+- Aster/Hyperliquid MCP gateway:
+  `draft_agentic_perp_trading_bot/src/crewai_app/adapters/exchanges/mcp/`
+  and `draft_agentic_perp_trading_bot/src/frameworkless_app/mcp_gateway/`
+- AWS Secrets Manager and Lambda execution:
+  `draft_agentic_perp_trading_bot/src/crewai_app/adapters/aws/`
 
 ## Deduplication Split
 

@@ -3,8 +3,10 @@
 This repository contains a non-executing Python scaffold for converting four
 owner-specific Chinese Telegram trading channels into confidence-ranked,
 weighted, and backtestable perpetual-futures strategy requests.
-Preliminary orchestration now lives in `crewai_app`; the original package is
-retained as a deterministic compatibility layer during migration.
+Preliminary orchestration now lives in
+`draft_agentic_perp_trading_bot/src/crewai_app`; the original package is
+retained as a deterministic compatibility layer in
+`draft_agentic_perp_trading_bot/src/frameworkless_app`.
 
 The primary challenge is the hyper-unstructured and often vague language of
 Chinese text in Telegram trading channels, including implicit entries,
@@ -54,14 +56,14 @@ cd draft_agentic_perp_trading_bot && uv sync --extra aws --extra dev --extra cre
   Crew, typed Flows, tools, domain boundaries, and adapters.
 - `AGENTS.md`: architecture contract and repository rules.
 - `SKILLS.md`: concise implementation workflows.
-- `draft_agentic_perp_trading_bot/src/agentic_perp_trading_bot/skills_api/`:
+- `draft_agentic_perp_trading_bot/src/frameworkless_app/skills_api/`:
   typed skill APIs for TelegramAgent, QWEN order-translation agents, and the
   Ministral validation agent.
-- `draft_agentic_perp_trading_bot/src/agentic_perp_trading_bot/qwen_agents/owner_agent.py`:
+- `draft_agentic_perp_trading_bot/src/frameworkless_app/qwen_agents/owner_agent.py`:
   owner QWEN API and shared review-only synonym and position-management skills.
-- `draft_agentic_perp_trading_bot/src/agentic_perp_trading_bot/trade_cursor.py`:
+- `draft_agentic_perp_trading_bot/src/frameworkless_app/trade_cursor.py`:
   parent-linked concurrent trade-cursor lifecycle and DynamoDB boundary.
-- `draft_agentic_perp_trading_bot/src/agentic_perp_trading_bot/risk_engine/`:
+- `draft_agentic_perp_trading_bot/src/frameworkless_app/risk_engine/`:
   deterministic execution constraints.
 - `preliminary_flowchart_Figma.png`: local architecture snapshot.
 

@@ -3,6 +3,16 @@
 This file is a compact index of repeatable repository workflows. It complements
 `AGENTS.md`; it is not a second architecture specification.
 
+## Package Boundaries
+
+`crewai_app` is the canonical CrewAI application. `frameworkless_app` is the
+deterministic compatibility layer retained during migration. Use `crewai_app`
+for new Flows, tools, policies, and agent interfaces; use
+`frameworkless_app` only for compatibility implementations and APIs. The old
+`agentic_perp_trading_bot` package name is retired. A post-CrewAI LangGraph
+implementation is planned separately at
+`draft_agentic_perp_trading_bot/src/langgraph_app/`.
+
 ## Flowchart to Scaffold
 
 Use the Figma board as the design source and
@@ -13,11 +23,12 @@ Example:
 
 ```text
 new Figma node: "TelegramAgent"
-  -> telegram_ingestion/agent_worker.py
-  -> telegram_ingestion/normalizer.py
-  -> telegram_ingestion/storage.py and pipeline.py
-  -> schemas.py for traceable fields
-  -> tests/test_telegram_agent_ingestion.py for behavior
+  -> crewai_app/flows/telegram_signal_flow.py
+  -> crewai_app/adapters/telegram/
+  -> crewai_app/tools/parent_context_tool.py
+  -> crewai_app/domain/contracts/telegram.py
+  -> frameworkless_app/telegram_ingestion/ for compatibility behavior
+  -> tests/test_crewai_app.py
 ```
 
 When a boundary moves, update the mapping document and README together. Do not
@@ -275,7 +286,7 @@ Aster/Hyperliquid MCP boundary supplies current price, market capitalization,
 24-hour quote volume, trading-pair type, and EMA, MACD, KDJ, RSI, Bollinger,
 ATR, and realized-volatility snapshots for `5m`, `15m`, `1h`, and `4h`.
 Ministral applies the versioned deterministic policy in
-`agentic_perp_trading_bot.ministral_filter.stop_loss_policy`.
+`crewai_app.domain.policies.stop_loss`.
 
 The draft pair-type bands are `1.2%`-`3.5%` for TradFi, `1.5%`-`5%` for
 mainstream coins, and `2.5%`-`8%` for altcoins. Score timeframes at
@@ -294,7 +305,7 @@ policy version, and derived price. Keep Ministral stop-loss reasoning within a
 one-second budget. Explicit source stop-losses are preserved, and omitted
 stop-loss derivation does not add another hard-rejection rule. Backtest all
 thresholds and weights before production use. Its API contract is
-`agentic_perp_trading_bot.skills_api.omitted_stop_loss_inference.OmittedStopLossInferenceAPI`.
+`crewai_app.agent_interfaces.ministral.MinistralFilterAPI.infer_omitted_stop_loss`.
 
 ## Pair Blacklisting
 
@@ -383,7 +394,7 @@ After the reduction is confirmed, cancel and replace only the still-unfilled
 TP1, TP2, and TP3 reduce-only limit orders so their quantities match the
 remaining position. Preserve filled take-profit orders and execution history.
 Its API contract is
-`agentic_perp_trading_bot.skills_api.owner_qwen.OwnerQwenAPI.infer_position_reduction`.
+`crewai_app.agent_interfaces.qwen.OwnerQwenAPI.infer_position_reduction`.
 
 ## Take-Profit Fill Entry Protection (Ministral)
 
@@ -400,7 +411,7 @@ current stop-loss. Never loosen a stop that is already more profitable.
 Deduplicate repeated fill events by their stable event ID and return a typed
 adjustment decision for MCP execution; Ministral must not call an exchange
 directly. Its API contract is
-`agentic_perp_trading_bot.skills_api.ministral_filter.MinistralFilterAPI.protect_entry_after_take_profit`.
+`crewai_app.agent_interfaces.ministral.MinistralFilterAPI.protect_entry_after_take_profit`.
 
 ## Weight and Confidence
 
@@ -427,7 +438,7 @@ per signal and venue, normalize net P/L by entry notional, and report wins,
 losses, gross profit, gross loss, net P/L, mean P/L, and profit-to-loss ratio.
 Exclude unmatched signals and all mainnet outcomes so differences in signal
 selection do not contaminate the Aster-USDT versus Hyperliquid-USDC comparison.
-Use `performance_engine.compare_testnet_venue_performance`.
+Use `crewai_app.domain.performance.venue_comparison.compare_testnet_venue_performance`.
 
 ## Trading Message Synonym Inference
 
@@ -439,7 +450,7 @@ synonym and return the matched class, strategy identifier, evidence, and
 confidence. Pass this structured result to Ministral for validation. This skill
 produces no execution command and must not call Aster or Hyperliquid APIs.
 Its API contract is
-`agentic_perp_trading_bot.skills_api.owner_qwen.OwnerQwenAPI.infer_synonym`.
+`crewai_app.agent_interfaces.qwen.OwnerQwenAPI.infer_synonym`.
 
 ## Exchange and AWS Boundary
 

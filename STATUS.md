@@ -3,7 +3,7 @@
 Maintenance rule: **OVERWRITE** this file on every update. It is the single
 source of current state, not a development log. The log is `HISTORY.md`.
 
-Last updated: 2026-08-27
+Last updated: 2026-08-29
 
 ## Phase
 
@@ -17,11 +17,14 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
 - A preliminary `crewai_app` now provides the canonical YAML-configured Crew,
   typed Flows, tools, domain boundaries, and adapters. The original package
   remains as a deterministic compatibility layer during migration.
+- After the fast CrewAI implementation, a LangGraph implementation of this app
+  is planned at `draft_agentic_perp_trading_bot/src/langgraph_app/`.
 - Manual codebase review by the repository owner and manual addition of
   authentic serial RAG examples are explicit priorities before further use.
 - README wording now clarifies that five-tier candidates cover every incoming
   signal, primarily lifecycle continuations.
-- Forty-two commits are summarized in `HISTORY.md`; committed HEAD is `ebb33c4`.
+- The committed history is summarized in `HISTORY.md`; committed HEAD is
+  `7dfa72b`.
 - `OwnerQwenAPI` includes shared review-only synonym and reduce-and-protect
   skills, while `MinistralFilterAPI` includes MCP take-profit protection; no
   agent has direct exchange access.
@@ -98,6 +101,9 @@ Telegram IDs/URLs, and S3 archive references.
 
 - Replace preliminary compatibility re-exports with reviewed native
   `crewai_app` implementations and production AWS adapters.
+- Implement the planned LangGraph app at
+  `draft_agentic_perp_trading_bot/src/langgraph_app/` after the fast CrewAI
+  implementation.
 - Replace in-memory test storage with production S3, message-receipt, and
   versioned trade-cursor DynamoDB adapters.
 - Implement model-specific Bedrock QWEN and Ministral multimodal adapters.

@@ -233,8 +233,19 @@ human-review requirements in `AGENTS.md`.
 
 Recorded the CrewAI planning commits and marked the source migration as pending.
 
-### 2026-08-27 — pending: added the preliminary CrewAI application
+### 2026-08-27 — `48837a7`: added the preliminary CrewAI application
 
 Added the canonical CrewAI package, owner-selected sequential Crew, typed
 Telegram/lifecycle/performance Flows, explicit tool permissions, deterministic
 depth and slippage gates, compatibility adapters, and offline tests.
+
+### 2026-08-29 — `7dfa72b`: renamed the deterministic scaffold
+
+Renamed the compatibility package to `frameworkless_app` and retained shared
+VS Code settings while ignoring other workspace-specific files.
+
+### 2026-08-29 — pending: updated scaffold status and documentation
+
+Recorded the planned LangGraph implementation at
+`draft_agentic_perp_trading_bot/src/langgraph_app/`, synchronized README paths
+with the frameworkless rename, and updated the current scaffold status.
