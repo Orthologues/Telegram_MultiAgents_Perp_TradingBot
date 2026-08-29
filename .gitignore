@@ -12,3 +12,5 @@ __pycache__/
 **/.pytest_cache/
 **/.env.prod
 **/legacy/
+.vscode/*
+!.vscode/settings.json
