@@ -11,7 +11,9 @@ from crewai_app.adapters.aws.persistence.decision_repository import (
 )
 from crewai_app.crew import CrewModelSettings, TradingSignalCrew
 from crewai_app.domain.contracts.schemas import (
+    ACCEPTABLE_ALTERNATIVE_OWNER_MODEL_IDS,
     AssetGroup,
+    BedrockModelId,
     CanonicalTradeIntent,
     ClosedTradeOutcome,
     ExchangeId,
@@ -63,8 +65,62 @@ NOW = datetime(2026, 8, 27, 12, 0, tzinfo=timezone.utc)
 def _model_settings() -> CrewModelSettings:
     return CrewModelSettings(
         aws_region_name="us-east-1",
-        owner_qwen_model_ids={owner_id: "qwen.test-model" for owner_id in OwnerId},
-        ministral_model_id="mistral.test-model",
+        owner_qwen_model_ids={
+            owner_id: BedrockModelId.QWEN3_VL_235B_A22B for owner_id in OwnerId
+        },
+        ministral_model_id=BedrockModelId.MINISTRAL_3_8B_INSTRUCT,
+    )
+
+
+def test_model_settings_default_to_selected_bedrock_ids() -> None:
+    settings = CrewModelSettings(aws_region_name="us-east-1")
+
+    assert settings.owner_qwen_model_ids == {
+        owner_id: BedrockModelId.QWEN3_VL_235B_A22B for owner_id in OwnerId
+    }
+    assert settings.ministral_model_id == BedrockModelId.MINISTRAL_3_8B_INSTRUCT
+
+
+def test_model_settings_allow_alternate_bedrock_ids() -> None:
+    settings = CrewModelSettings(
+        aws_region_name="us-east-1",
+        owner_qwen_model_ids={
+            owner_id: BedrockModelId.DEEPSEEK_V3_2 for owner_id in OwnerId
+        },
+        ministral_model_id="mistral.alternate",
+    )
+
+    assert (
+        settings.owner_qwen_model_ids[OwnerId.OWNER_A_SHU_QIN]
+        == BedrockModelId.DEEPSEEK_V3_2
+    )
+    assert settings.ministral_model_id == "mistral.alternate"
+
+
+def test_model_settings_reject_unapproved_owner_model_ids() -> None:
+    with pytest.raises(ValueError, match="approved multimodal alternative"):
+        CrewModelSettings(
+            aws_region_name="us-east-1",
+            owner_qwen_model_ids={owner_id: "qwen.unapproved" for owner_id in OwnerId},
+        )
+
+
+def test_alternative_owner_model_set_excludes_qwen_and_ministral() -> None:
+    assert ACCEPTABLE_ALTERNATIVE_OWNER_MODEL_IDS == frozenset(
+        {
+            BedrockModelId.DEEPSEEK_V3_2,
+            BedrockModelId.GLM_4_7,
+            BedrockModelId.GLM_4_7_FLASH,
+            BedrockModelId.GLM_5,
+            BedrockModelId.LLAMA_4_MAVERICK_17B_INSTRUCT,
+            BedrockModelId.LLAMA_4_SCOUT_17B_INSTRUCT,
+        }
+    )
+    assert BedrockModelId.QWEN3_VL_235B_A22B not in (
+        ACCEPTABLE_ALTERNATIVE_OWNER_MODEL_IDS
+    )
+    assert BedrockModelId.MINISTRAL_3_8B_INSTRUCT not in (
+        ACCEPTABLE_ALTERNATIVE_OWNER_MODEL_IDS
     )
 
 

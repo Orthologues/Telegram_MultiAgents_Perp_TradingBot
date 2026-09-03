@@ -3,6 +3,7 @@
 # ruff: noqa: F401
 
 from crewai_app.domain.contracts.execution import (
+    ACCEPTABLE_ALTERNATIVE_OWNER_MODEL_IDS,
     ApprovedExecutionRequest,
     BedrockModelId,
     DeterministicRiskDecision,

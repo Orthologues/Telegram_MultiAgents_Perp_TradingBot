@@ -10,7 +10,12 @@ from crewai.project import CrewBase, agent, crew, task
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field, field_validator
 
-from crewai_app.domain.contracts.schemas import OwnerId, QwenStrategyCandidateSet
+from crewai_app.domain.contracts.schemas import (
+    ACCEPTABLE_ALTERNATIVE_OWNER_MODEL_IDS,
+    BedrockModelId,
+    OwnerId,
+    QwenStrategyCandidateSet,
+)
 from crewai_app.flows.states import MinistralStrategyReviewSet
 
 _OWNER_AGENT_CONFIG = {
@@ -32,8 +37,15 @@ class CrewModelSettings(BaseModel):
     """IAM-authenticated Bedrock configuration without static credentials."""
 
     aws_region_name: str = Field(min_length=1)
-    owner_qwen_model_ids: dict[OwnerId, str]
-    ministral_model_id: str = Field(min_length=1)
+    owner_qwen_model_ids: dict[OwnerId, str] = Field(
+        default_factory=lambda: {
+            owner_id: BedrockModelId.QWEN3_VL_235B_A22B for owner_id in OwnerId
+        }
+    )
+    ministral_model_id: str = Field(
+        default=BedrockModelId.MINISTRAL_3_8B_INSTRUCT,
+        min_length=1,
+    )
     timeout_seconds: int = Field(default=60, ge=1, le=300)
     structured_output_retries: int = Field(default=1, ge=0, le=3)
 
@@ -47,6 +59,17 @@ class CrewModelSettings(BaseModel):
             raise ValueError("one Bedrock QWEN model ID is required for each owner")
         if any(not model_id.strip() for model_id in model_ids.values()):
             raise ValueError("Bedrock QWEN model IDs must not be blank")
+        allowed_model_ids = {
+            BedrockModelId.QWEN3_VL_235B_A22B.value,
+        } | {model_id.value for model_id in ACCEPTABLE_ALTERNATIVE_OWNER_MODEL_IDS}
+        invalid_model_ids = sorted(
+            {model_id for model_id in model_ids.values() if model_id not in allowed_model_ids}
+        )
+        if invalid_model_ids:
+            raise ValueError(
+                "owner model IDs must be the Qwen default or an approved multimodal "
+                f"alternative: {', '.join(invalid_model_ids)}"
+            )
         return model_ids
 
     @classmethod
