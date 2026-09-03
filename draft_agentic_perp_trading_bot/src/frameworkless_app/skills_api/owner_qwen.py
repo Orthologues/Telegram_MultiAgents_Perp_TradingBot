@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from agentic_perp_trading_bot.skills_api.qwen_agent_rag_loading import (
+from frameworkless_app.skills_api.qwen_agent_rag_loading import (
     QwenAgentRagLoadingAPI,
 )
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.schemas import (
     PositionReductionHypothesis,
     QwenSignalHypothesis,
     TelegramMessageEnvelope,

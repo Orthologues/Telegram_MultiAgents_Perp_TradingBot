@@ -3,30 +3,30 @@ from datetime import datetime, timezone
 
 import pytest
 
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.schemas import (
     AssetGroup,
     IngestionTransport,
     OwnerId,
     TelegramAgentChannelConfig,
     TelegramAgentRetrievalBatch,
 )
-from agentic_perp_trading_bot.telegram_ingestion.agent_worker import (
+from frameworkless_app.telegram_ingestion.agent_worker import (
     CallableTelegramAgentRetriever,
     TelegramAgentPoller,
 )
-from agentic_perp_trading_bot.telegram_ingestion.normalizer import (
+from frameworkless_app.telegram_ingestion.normalizer import (
     attach_archived_media,
     normalize_telegram_agent_message,
 )
-from agentic_perp_trading_bot.telegram_ingestion.pipeline import (
+from frameworkless_app.telegram_ingestion.pipeline import (
     BedrockInputPublisher,
     TelegramIngestionPipeline,
 )
-from agentic_perp_trading_bot.telegram_ingestion.reply_tree import (
+from frameworkless_app.telegram_ingestion.reply_tree import (
     ElastiCacheReplyTreeStore,
     InMemoryReplyTreeIndexRegistry,
 )
-from agentic_perp_trading_bot.telegram_ingestion.storage import (
+from frameworkless_app.telegram_ingestion.storage import (
     InMemoryMessageMetadataRepository,
     InMemoryRawMediaArchive,
     InMemoryTelegramMessageReceiptStore,

@@ -5,22 +5,22 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from typing import Protocol
 
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.schemas import (
     TelegramAgentChannelConfig,
     TelegramIngestionRecord,
     TelegramMessageEnvelope,
     TelegramPromptContext,
     TradeThreadCursor,
 )
-from agentic_perp_trading_bot.telegram_ingestion.agent_worker import TelegramAgentPoller
-from agentic_perp_trading_bot.telegram_ingestion.deduplication import (
+from frameworkless_app.telegram_ingestion.agent_worker import TelegramAgentPoller
+from frameworkless_app.telegram_ingestion.deduplication import (
     InMemoryTelegramDeduplicator,
 )
-from agentic_perp_trading_bot.telegram_ingestion.reply_tree import (
+from frameworkless_app.telegram_ingestion.reply_tree import (
     InMemoryReplyTreeStore,
     ReplyTreeStore,
 )
-from agentic_perp_trading_bot.telegram_ingestion.storage import (
+from frameworkless_app.telegram_ingestion.storage import (
     DynamoDBMessageMetadataRepository,
     S3RawMediaArchive,
 )

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.schemas import (
     OwnerRagProfile,
     QwenStrategyCandidateSet,
     TelegramMessageEnvelope,

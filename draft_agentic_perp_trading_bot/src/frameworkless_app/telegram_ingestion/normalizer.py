@@ -7,13 +7,13 @@ from collections.abc import Iterable
 from datetime import datetime, timezone
 from typing import Any
 
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.schemas import (
     AssetGroup,
     OwnerId,
     TelegramAgentRetrievedMessage,
     TelegramMessageEnvelope,
 )
-from agentic_perp_trading_bot.telegram_ingestion.deduplication import build_input_dedup_key
+from frameworkless_app.telegram_ingestion.deduplication import build_input_dedup_key
 
 
 OWNER_CHANNEL_MAP: dict[str, tuple[OwnerId, AssetGroup]] = {

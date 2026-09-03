@@ -1,10 +1,10 @@
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from agentic_perp_trading_bot.performance_engine import (
+from frameworkless_app.performance_engine import (
     compare_testnet_venue_performance,
 )
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.schemas import (
     ClosedTradeOutcome,
     ExchangeId,
     ExchangeNetwork,

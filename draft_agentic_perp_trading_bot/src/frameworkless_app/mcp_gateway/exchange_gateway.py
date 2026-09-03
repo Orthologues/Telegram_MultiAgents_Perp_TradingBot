@@ -10,11 +10,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from agentic_perp_trading_bot.mcp_gateway.venue_contracts import (
+from frameworkless_app.mcp_gateway.venue_contracts import (
     ExchangeEndpointProfile,
     get_exchange_profile,
 )
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.schemas import (
     ApprovedExecutionRequest,
     ExchangeId,
     ExchangeNetwork,

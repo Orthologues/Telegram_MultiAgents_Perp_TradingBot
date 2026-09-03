@@ -9,8 +9,8 @@ from typing import Protocol
 
 from crewai.flow.flow import Flow, listen, start
 
-from agentic_perp_trading_bot.orchestrator import process_message
-from agentic_perp_trading_bot.telegram_ingestion.deduplication import (
+from frameworkless_app.orchestrator import process_message
+from frameworkless_app.telegram_ingestion.deduplication import (
     InMemoryTelegramDeduplicator,
 )
 from crewai_app.crews.signal_evaluation_crew import SignalEvaluator

@@ -3,9 +3,9 @@ from decimal import Decimal
 
 import pytest
 
-from agentic_perp_trading_bot.confidence_engine.policy import evaluate_confidence
-from agentic_perp_trading_bot.risk_engine.policy import evaluate_deterministic_risk
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.confidence_engine.policy import evaluate_confidence
+from frameworkless_app.risk_engine.policy import evaluate_deterministic_risk
+from frameworkless_app.schemas import (
     AssetGroup,
     ExchangeId,
     OwnerId,

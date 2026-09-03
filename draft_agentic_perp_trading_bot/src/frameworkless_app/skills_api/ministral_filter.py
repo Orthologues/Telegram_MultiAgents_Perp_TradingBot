@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from agentic_perp_trading_bot.skills_api.omitted_stop_loss_inference import (
+from frameworkless_app.skills_api.omitted_stop_loss_inference import (
     OmittedStopLossInferenceAPI,
 )
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.schemas import (
     FilterDecision,
     MarketAnalysisSnapshot,
     PositionLifecycleEvent,

@@ -15,7 +15,7 @@ requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/agentic_perp_trading_bot", "src/crewai_app"]
+packages = ["src/frameworkless_app", "src/crewai_app"]
 
 [project.scripts]
 crewai-trading-app = "crewai_app.main:run"

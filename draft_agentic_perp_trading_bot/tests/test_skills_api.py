@@ -3,15 +3,15 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 
-from agentic_perp_trading_bot.qwen_agents.owner_agent import OwnerQwenAgent
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.qwen_agents.owner_agent import OwnerQwenAgent
+from frameworkless_app.schemas import (
     AssetGroup,
     OwnerId,
     StrategyTier,
     TelegramMessageEnvelope,
     TelegramPromptContext,
 )
-from agentic_perp_trading_bot.skills_api import (
+from frameworkless_app.skills_api import (
     MinistralFilterAPI,
     OmittedStopLossInferenceAPI,
     OwnerQwenAPI,

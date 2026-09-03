@@ -3,22 +3,22 @@ from types import SimpleNamespace
 
 import pytest
 
-from agentic_perp_trading_bot.aws_execution import (
+from frameworkless_app.aws_execution import (
     AsterV3Credentials,
     create_aster_v3_client,
 )
-from agentic_perp_trading_bot.aws_execution import upstream_clients
-from agentic_perp_trading_bot.aws_execution.secrets import (
+from frameworkless_app.aws_execution import upstream_clients
+from frameworkless_app.aws_execution.secrets import (
     SecretName,
     exchange_signing_secret,
 )
-from agentic_perp_trading_bot.mcp_gateway.upstream_contracts import (
+from frameworkless_app.mcp_gateway.upstream_contracts import (
     ASTER_V3_TARGET,
     HYPERLIQUID_MCP_TARGET,
     aster_v3_order_invocation,
     hyperliquid_mcp_order_invocation,
 )
-from agentic_perp_trading_bot.schemas import ExchangeId
+from frameworkless_app.schemas import ExchangeId
 
 
 def test_aster_v3_client_delegates_to_official_upstream(monkeypatch) -> None:

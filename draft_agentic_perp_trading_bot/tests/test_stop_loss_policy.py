@@ -4,14 +4,14 @@ from decimal import Decimal
 
 import pytest
 
-from agentic_perp_trading_bot.ministral_filter.filter_agent import (
+from frameworkless_app.ministral_filter.filter_agent import (
     MinistralFilterAgent,
 )
-from agentic_perp_trading_bot.ministral_filter.stop_loss_policy import (
+from frameworkless_app.ministral_filter.stop_loss_policy import (
     MinistralStopLossPolicy,
 )
-from agentic_perp_trading_bot.orchestrator import process_message
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.orchestrator import process_message
+from frameworkless_app.schemas import (
     AssetGroup,
     CanonicalTradeIntent,
     ExchangeId,

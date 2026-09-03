@@ -1,14 +1,14 @@
 """Public API contracts for agent-owned skills."""
 
-from agentic_perp_trading_bot.skills_api.ministral_filter import MinistralFilterAPI
-from agentic_perp_trading_bot.skills_api.omitted_stop_loss_inference import (
+from frameworkless_app.skills_api.ministral_filter import MinistralFilterAPI
+from frameworkless_app.skills_api.omitted_stop_loss_inference import (
     OmittedStopLossInferenceAPI,
 )
-from agentic_perp_trading_bot.skills_api.owner_qwen import OwnerQwenAPI
-from agentic_perp_trading_bot.skills_api.qwen_agent_rag_loading import (
+from frameworkless_app.skills_api.owner_qwen import OwnerQwenAPI
+from frameworkless_app.skills_api.qwen_agent_rag_loading import (
     QwenAgentRagLoadingAPI,
 )
-from agentic_perp_trading_bot.skills_api.telegram_agent import TelegramAgentAPI
+from frameworkless_app.skills_api.telegram_agent import TelegramAgentAPI
 
 __all__ = [
     "MinistralFilterAPI",

@@ -2,8 +2,8 @@ import asyncio
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from agentic_perp_trading_bot.orchestrator import process_message
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.orchestrator import process_message
+from frameworkless_app.schemas import (
     AssetGroup,
     CanonicalTradeIntent,
     ExchangeId,

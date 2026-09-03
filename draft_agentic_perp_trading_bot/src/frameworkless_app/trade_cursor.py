@@ -6,7 +6,7 @@ import hashlib
 from asyncio import Lock
 from typing import Protocol
 
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.schemas import (
     CanonicalTradeIntent,
     ExchangeTradeState,
     IntentType,

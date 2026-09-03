@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from agentic_perp_trading_bot.schemas import ExchangeId
+from frameworkless_app.schemas import ExchangeId
 
 
 class SecretName(StrEnum):

@@ -1,6 +1,6 @@
 """AWS Secrets Manager and upstream-backed order execution boundaries."""
 
-from agentic_perp_trading_bot.aws_execution.upstream_clients import (
+from frameworkless_app.aws_execution.upstream_clients import (
     AsterV3Client,
     AsterV3Credentials,
     create_aster_v3_client,

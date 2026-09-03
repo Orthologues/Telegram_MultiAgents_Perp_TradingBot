@@ -5,13 +5,13 @@ from decimal import Decimal
 import pytest
 from pydantic import ValidationError
 
-from agentic_perp_trading_bot.ministral_filter.filter_agent import (
+from frameworkless_app.ministral_filter.filter_agent import (
     MinistralFilterAgent,
 )
-from agentic_perp_trading_bot.ministral_filter.take_profit_protection import (
+from frameworkless_app.ministral_filter.take_profit_protection import (
     TakeProfitProtectionPolicy,
 )
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.schemas import (
     ExchangeId,
     PositionDirection,
     SettlementAsset,

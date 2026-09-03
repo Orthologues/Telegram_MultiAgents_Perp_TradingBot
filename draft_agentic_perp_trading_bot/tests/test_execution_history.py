@@ -2,14 +2,14 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
-from agentic_perp_trading_bot.ministral_filter.filter_agent import (
+from frameworkless_app.ministral_filter.filter_agent import (
     MinistralFilterAgent,
 )
-from agentic_perp_trading_bot.performance_engine.history import (
+from frameworkless_app.performance_engine.history import (
     InMemoryExecutionHistoryRepository,
 )
-from agentic_perp_trading_bot.risk_engine.policy import PairBlacklistPolicy
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.risk_engine.policy import PairBlacklistPolicy
+from frameworkless_app.schemas import (
     ClosedTradeOutcome,
     ExchangeId,
     OwnerId,

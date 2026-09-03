@@ -1,6 +1,6 @@
 """Compatibility-backed concurrent trade-cursor boundary."""
 
-from agentic_perp_trading_bot.trade_cursor import (
+from frameworkless_app.trade_cursor import (
     AmbiguousTradeCursorError,
     ConcurrentTradeCursorManager,
     DynamoDBTradeCursorRepository,

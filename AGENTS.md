@@ -76,7 +76,7 @@ TelegramAgent retrieval
 ## Agent API Interfaces
 
 Typed contracts live in
-`draft_agentic_perp_trading_bot/src/agentic_perp_trading_bot/skills_api/`:
+`draft_agentic_perp_trading_bot/src/frameworkless_app/skills_api/`:
 
 ```text
 TelegramAgentAPI.retrieve_messages(...) -> TelegramAgentRetrievalBatch

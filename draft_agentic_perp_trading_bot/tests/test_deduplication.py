@@ -1,13 +1,13 @@
 from decimal import Decimal
 
-from agentic_perp_trading_bot.ministral_filter.signal_deduplication import (
+from frameworkless_app.ministral_filter.signal_deduplication import (
     InMemorySignalDeduplicator,
 )
-from agentic_perp_trading_bot.schemas import IntentType, QwenSignalHypothesis, StrategyTier
-from agentic_perp_trading_bot.telegram_ingestion.deduplication import (
+from frameworkless_app.schemas import IntentType, QwenSignalHypothesis, StrategyTier
+from frameworkless_app.telegram_ingestion.deduplication import (
     InMemoryTelegramDeduplicator,
 )
-from agentic_perp_trading_bot.telegram_ingestion.normalizer import (
+from frameworkless_app.telegram_ingestion.normalizer import (
     normalize_telegram_agent_message,
 )
 

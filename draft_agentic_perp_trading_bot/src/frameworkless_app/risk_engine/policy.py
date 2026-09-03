@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.schemas import (
     AssetGroup,
     ClosedTradeOutcome,
     DeterministicRiskDecision,

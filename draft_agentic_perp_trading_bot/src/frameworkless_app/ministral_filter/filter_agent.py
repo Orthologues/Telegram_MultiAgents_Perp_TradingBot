@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-from agentic_perp_trading_bot.ministral_filter.signal_deduplication import (
+from frameworkless_app.ministral_filter.signal_deduplication import (
     InMemorySignalDeduplicator,
 )
-from agentic_perp_trading_bot.ministral_filter.stop_loss_policy import (
+from frameworkless_app.ministral_filter.stop_loss_policy import (
     MinistralStopLossPolicy,
 )
-from agentic_perp_trading_bot.ministral_filter.take_profit_protection import (
+from frameworkless_app.ministral_filter.take_profit_protection import (
     TakeProfitProtectionPolicy,
 )
-from agentic_perp_trading_bot.performance_engine.history import (
+from frameworkless_app.performance_engine.history import (
     DynamoDBExecutionHistoryRepository,
 )
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.schemas import (
     FilterDecision,
     MarketAnalysisSnapshot,
     OmittedStopLossDecision,

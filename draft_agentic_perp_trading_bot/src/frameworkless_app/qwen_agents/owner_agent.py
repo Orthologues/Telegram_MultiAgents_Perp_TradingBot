@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.schemas import (
     IntentType,
     OwnerRagProfile,
     PositionReductionHypothesis,

@@ -1,12 +1,12 @@
 from pydantic import ValidationError
 import pytest
 
-from agentic_perp_trading_bot.mcp_gateway import (
+from frameworkless_app.mcp_gateway import (
     AsterGateway,
     HyperliquidGateway,
     get_exchange_profile,
 )
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.schemas import (
     ExchangeId,
     ExchangeNetwork,
     ExchangeTradeState,

@@ -12,17 +12,17 @@ from collections.abc import Awaitable, Callable, Mapping
 from datetime import datetime, timezone
 from typing import Any, Protocol, Self
 
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.schemas import (
     TelegramAgentChannelConfig,
     TelegramAgentPollBatch,
     TelegramAgentRetrievalBatch,
     TelegramMessageEnvelope,
 )
-from agentic_perp_trading_bot.skills_api import TelegramAgentAPI
-from agentic_perp_trading_bot.telegram_ingestion.normalizer import (
+from frameworkless_app.skills_api import TelegramAgentAPI
+from frameworkless_app.telegram_ingestion.normalizer import (
     normalize_telegram_agent_message,
 )
-from agentic_perp_trading_bot.telegram_ingestion.storage import TelegramMessageReceiptStore
+from frameworkless_app.telegram_ingestion.storage import TelegramMessageReceiptStore
 
 
 class TelegramRetrieveCallable(Protocol):

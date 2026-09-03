@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Protocol
 
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.schemas import (
     OwnerId,
     TelegramMessageEnvelope,
     TelegramPromptContext,

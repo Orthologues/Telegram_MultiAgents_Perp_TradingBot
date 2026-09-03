@@ -1,6 +1,6 @@
 """Compatibility-backed omitted stop-loss policy."""
 
-from agentic_perp_trading_bot.ministral_filter.stop_loss_policy import (
+from frameworkless_app.ministral_filter.stop_loss_policy import (
     MinistralStopLossPolicy,
 )
 

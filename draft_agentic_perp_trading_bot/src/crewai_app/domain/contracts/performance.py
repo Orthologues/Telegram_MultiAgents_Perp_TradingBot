@@ -1,6 +1,6 @@
 """Outcome and venue-comparison contracts."""
 
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.schemas import (
     ClosedTradeOutcome,
     PerformanceMetricsSnapshot,
     TestnetVenuePerformanceComparison,

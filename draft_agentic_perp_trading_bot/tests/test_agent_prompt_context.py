@@ -1,6 +1,6 @@
-from agentic_perp_trading_bot.ministral_filter.filter_agent import MinistralFilterAgent
-from agentic_perp_trading_bot.qwen_agents.owner_agent import OwnerQwenAgent
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.ministral_filter.filter_agent import MinistralFilterAgent
+from frameworkless_app.qwen_agents.owner_agent import OwnerQwenAgent
+from frameworkless_app.schemas import (
     AssetGroup,
     IntentType,
     OwnerId,
@@ -9,7 +9,7 @@ from agentic_perp_trading_bot.schemas import (
     TelegramPromptContext,
     TelegramPromptMessage,
 )
-from agentic_perp_trading_bot.telegram_ingestion.normalizer import (
+from frameworkless_app.telegram_ingestion.normalizer import (
     normalize_telegram_agent_message,
 )
 

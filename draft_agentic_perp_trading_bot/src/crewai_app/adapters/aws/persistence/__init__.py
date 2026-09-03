@@ -1,15 +1,15 @@
 """S3, DynamoDB, and ElastiCache compatibility surfaces."""
 
-from agentic_perp_trading_bot.performance_engine.history import (
+from frameworkless_app.performance_engine.history import (
     DynamoDBExecutionHistoryRepository,
     InMemoryExecutionHistoryRepository,
 )
-from agentic_perp_trading_bot.telegram_ingestion.reply_tree import (
+from frameworkless_app.telegram_ingestion.reply_tree import (
     ElastiCacheReplyTreeStore,
     InMemoryReplyTreeStore,
     ReplyTreeStore,
 )
-from agentic_perp_trading_bot.telegram_ingestion.storage import (
+from frameworkless_app.telegram_ingestion.storage import (
     DynamoDBMessageMetadataRepository,
     InMemoryMessageMetadataRepository,
     InMemoryRawMediaArchive,
@@ -17,7 +17,7 @@ from agentic_perp_trading_bot.telegram_ingestion.storage import (
     S3RawMediaArchive,
     TelegramMessageReceiptStore,
 )
-from agentic_perp_trading_bot.trade_cursor import (
+from frameworkless_app.trade_cursor import (
     DynamoDBTradeCursorRepository,
     InMemoryTradeCursorRepository,
 )

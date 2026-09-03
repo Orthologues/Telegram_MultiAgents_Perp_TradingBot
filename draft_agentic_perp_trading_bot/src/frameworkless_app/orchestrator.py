@@ -5,10 +5,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 from decimal import Decimal
 
-from agentic_perp_trading_bot.confidence_engine.policy import evaluate_confidence
-from agentic_perp_trading_bot.performance_engine.weight_engine import compute_position_size
-from agentic_perp_trading_bot.risk_engine.policy import evaluate_deterministic_risk
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.confidence_engine.policy import evaluate_confidence
+from frameworkless_app.performance_engine.weight_engine import compute_position_size
+from frameworkless_app.risk_engine.policy import evaluate_deterministic_risk
+from frameworkless_app.schemas import (
     ApprovedExecutionRequest,
     CanonicalTradeIntent,
     ConfidenceDecision,
@@ -30,9 +30,9 @@ from agentic_perp_trading_bot.schemas import (
     TradeAction,
     TradeThreadCursor,
 )
-from agentic_perp_trading_bot.skills_api import MinistralFilterAPI, OwnerQwenAPI
-from agentic_perp_trading_bot.telegram_ingestion.deduplication import InMemoryTelegramDeduplicator
-from agentic_perp_trading_bot.trade_cursor import ConcurrentTradeCursorManager
+from frameworkless_app.skills_api import MinistralFilterAPI, OwnerQwenAPI
+from frameworkless_app.telegram_ingestion.deduplication import InMemoryTelegramDeduplicator
+from frameworkless_app.trade_cursor import ConcurrentTradeCursorManager
 
 
 async def process_message(

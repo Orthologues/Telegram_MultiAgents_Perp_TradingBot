@@ -6,7 +6,7 @@ store so TelegramAgent workers deduplicate across processes and restarts.
 
 from __future__ import annotations
 
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.schemas import (
     DeduplicationDecision,
     DeduplicationScope,
     TelegramMessageEnvelope,

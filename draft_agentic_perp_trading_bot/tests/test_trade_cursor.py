@@ -4,8 +4,8 @@ from decimal import Decimal
 
 import pytest
 
-from agentic_perp_trading_bot.orchestrator import process_message
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.orchestrator import process_message
+from frameworkless_app.schemas import (
     AssetGroup,
     CanonicalTradeIntent,
     ExchangeId,
@@ -24,7 +24,7 @@ from agentic_perp_trading_bot.schemas import (
     TradeCursorStatus,
     settlement_asset_for_exchange,
 )
-from agentic_perp_trading_bot.trade_cursor import (
+from frameworkless_app.trade_cursor import (
     ConcurrentTradeCursorManager,
     InMemoryTradeCursorRepository,
     TradeCursorConflictError,

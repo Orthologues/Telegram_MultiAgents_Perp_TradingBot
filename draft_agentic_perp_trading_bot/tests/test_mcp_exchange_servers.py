@@ -7,7 +7,7 @@ import sys
 import pytest
 from pydantic import ValidationError
 
-from agentic_perp_trading_bot.schemas import ExchangeNetwork
+from frameworkless_app.schemas import ExchangeNetwork
 
 
 def _load_server_module(module_name: str, relative_path: str):

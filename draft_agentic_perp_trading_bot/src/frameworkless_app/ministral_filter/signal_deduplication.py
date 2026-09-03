@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 from decimal import Decimal
 
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.schemas import (
     DeduplicationDecision,
     DeduplicationScope,
     QwenSignalHypothesis,

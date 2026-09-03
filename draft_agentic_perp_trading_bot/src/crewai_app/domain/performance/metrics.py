@@ -2,7 +2,7 @@
 
 from decimal import Decimal
 
-from agentic_perp_trading_bot.performance_engine.weight_engine import compute_position_size
+from frameworkless_app.performance_engine.weight_engine import compute_position_size
 from crewai_app.domain.contracts.schemas import StrategyTier
 from crewai_app.flows.states import StrategyOutcome, StrategyTierPerformanceSummary
 

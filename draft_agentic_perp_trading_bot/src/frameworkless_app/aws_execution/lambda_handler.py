@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from agentic_perp_trading_bot.schemas import (
+from frameworkless_app.schemas import (
     ApprovedExecutionRequest,
     ExchangeNetwork,
 )
