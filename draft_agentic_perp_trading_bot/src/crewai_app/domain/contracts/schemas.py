@@ -4,6 +4,7 @@
 
 from crewai_app.domain.contracts.execution import (
     ApprovedExecutionRequest,
+    BedrockModelId,
     DeterministicRiskDecision,
     ExchangeId,
     ExchangeNetwork,

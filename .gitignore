@@ -1,7 +1,7 @@
 **/API_keys
 **/drafts_private
 **/.python-version
-.venv/
+**/.ruff_cache/
 __pycache__/
 *.pyc
 .env

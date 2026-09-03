@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 
-from crewai import Agent, Crew, LLM, Process, Task
+from crewai import LLM, Agent, Crew, Process, Task
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.project import CrewBase, agent, crew, task
 from crewai.tools import BaseTool
@@ -12,7 +12,6 @@ from pydantic import BaseModel, Field, field_validator
 
 from crewai_app.domain.contracts.schemas import OwnerId, QwenStrategyCandidateSet
 from crewai_app.flows.states import MinistralStrategyReviewSet
-
 
 _OWNER_AGENT_CONFIG = {
     OwnerId.OWNER_A_SHU_QIN: "owner_a_qwen",

@@ -1,5 +1,10 @@
 {
+  "python.defaultInterpreterPath": "${workspaceFolder}/draft_agentic_perp_trading_bot/.venv/bin/python",
   "python.analysis.extraPaths": [
     "${workspaceFolder}/draft_agentic_perp_trading_bot/src"
-  ]
+  ],
+  "ruff.interpreter": [
+    "${workspaceFolder}/draft_agentic_perp_trading_bot/.venv/bin/python"
+  ],
+  "ruff.configuration": "${workspaceFolder}/draft_agentic_perp_trading_bot/pyproject.toml"
 }
