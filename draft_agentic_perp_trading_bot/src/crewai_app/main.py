@@ -1,4 +1,22 @@
-"""Standard CrewAI application entrypoints for the preliminary migration."""
+"""Standard CrewAI application entrypoints for the preliminary migration.
+
+Legacy migration boundary: this app still imports implementations from
+``src/frameworkless_app`` through the following bridges:
+
+* ``schemas`` -> domain contracts;
+* ``telegram_ingestion`` and ``orchestrator`` -> Telegram adapters and flows;
+* ``trade_cursor`` -> lifecycle and persistence adapters;
+* ``confidence_engine``, ``ministral_filter``, and ``risk_engine`` -> domain policies;
+* ``performance_engine`` -> performance services and persistence;
+* ``mcp_gateway`` and ``aws_execution`` -> exchange and AWS adapters;
+* ``skills_api`` -> CrewAI agent interfaces.
+
+Migration instruction: do not add new legacy imports. Move each implementation
+to its corresponding ``crewai_app`` module, preserve its tested behavior, and
+update all callers before removing the legacy package. The migration is complete
+when ``src/crewai_app`` has no ``frameworkless_app`` imports and the full test
+suite passes.
+"""
 
 from __future__ import annotations
 
@@ -48,6 +66,7 @@ def run() -> None:
         json.loads(Path(input_path).read_text(encoding="utf-8"))
     )
     settings = CrewModelSettings.from_environment()
+    #CHECKPOINT_HUMANREVIEW
     flow = TelegramSignalFlow(
         parent_context_loader=_StaticParentContextLoader(payload.prompt_context),
         cursor_context_loader=_StaticCursorContextLoader(
