@@ -16,21 +16,20 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   trading software.
 - A preliminary `crewai_app` now provides the canonical YAML-configured Crew,
   typed Flows, tools, domain boundaries, adapters, deterministic risk engine,
-  and agent skill APIs. The original package remains as a compatibility layer
-  for boundaries not yet relocated.
+  and agent skill APIs. The original package `draft_agentic_perp_trading_bot/src/frameworkless_app` remains as a compatibility layer for boundaries not yet relocated.
 - The deterministic risk engine is canonical under
   `crewai_app/domain/policies/execution_gate.py`; the legacy risk package now
   provides compatibility exports only. Skill APIs are canonical under
   `crewai_app/skills_api/`, with legacy re-exports retained for compatibility.
 - After the fast CrewAI implementation, a LangGraph implementation of this app
   is planned at `draft_agentic_perp_trading_bot/src/langgraph_app/`.
-- Manual codebase review by the repository owner and manual addition of
-  authentic serial RAG examples are explicit priorities before further use.
+- Human review of `draft_agentic_perp_trading_bot/src/crewai_app/main.py` is
+  complete; review of the remaining codebase and manual addition of authentic
+  serial RAG examples remain explicit priorities before further use.
 - README wording now clarifies that five-tier candidates cover every incoming
   signal, primarily lifecycle continuations.
 - The committed history is summarized in `HISTORY.md`; committed HEAD is
-  `5270361`. The current risk-engine and skill-API migration edits are not yet
-  committed.
+  `15d376d`.
 - `OwnerQwenAPI` includes shared review-only synonym and reduce-and-protect
   skills, while `MinistralFilterAPI` includes MCP take-profit protection; no
   agent has direct exchange access.
