@@ -7,7 +7,7 @@ from decimal import Decimal
 
 from frameworkless_app.confidence_engine.policy import evaluate_confidence
 from frameworkless_app.performance_engine.weight_engine import compute_position_size
-from frameworkless_app.risk_engine.policy import evaluate_deterministic_risk
+from crewai_app.domain.policies.execution_gate import evaluate_deterministic_risk
 from frameworkless_app.schemas import (
     ApprovedExecutionRequest,
     CanonicalTradeIntent,
@@ -30,7 +30,7 @@ from frameworkless_app.schemas import (
     TradeAction,
     TradeThreadCursor,
 )
-from frameworkless_app.skills_api import MinistralFilterAPI, OwnerQwenAPI
+from crewai_app.skills_api import MinistralFilterAPI, OwnerQwenAPI
 from frameworkless_app.telegram_ingestion.deduplication import InMemoryTelegramDeduplicator
 from frameworkless_app.trade_cursor import ConcurrentTradeCursorManager
 

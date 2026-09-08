@@ -8,7 +8,7 @@ from frameworkless_app.ministral_filter.filter_agent import (
 from frameworkless_app.performance_engine.history import (
     InMemoryExecutionHistoryRepository,
 )
-from frameworkless_app.risk_engine.policy import PairBlacklistPolicy
+from crewai_app.domain.policies.execution_gate import PairBlacklistPolicy
 from frameworkless_app.schemas import (
     ClosedTradeOutcome,
     ExchangeId,

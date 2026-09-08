@@ -56,6 +56,7 @@ from crewai_app.flows.telegram_signal_flow import (
     CompatibilityDeterministicDecisionService,
     TelegramSignalFlow,
 )
+from crewai_app.main import _StaticMarketSnapshotLoader
 from crewai_app.tools import ConfidencePolicyTool, ParentContextTool
 
 
@@ -255,6 +256,46 @@ def _market_snapshot(exchange_id: ExchangeId) -> ExecutionLiquiditySnapshot:
         expected_slippage_fraction=Decimal("0.0005"),
         maximum_expected_slippage_fraction=Decimal("0.001"),
     )
+
+
+@pytest.mark.parametrize(
+    ("symbol", "snapshot_symbol", "current_price", "passes"),
+    [
+        ("BTCUSDT", "1MBTCUSDT", "100.1", True),
+        ("BTCUSDT", "1KBTCUSDT", "100.101", False),
+        ("ETHUSDT", "1000ETHUSDT", "100.2", True),
+        ("ETHUSDT", "ETHUSDT", "100.201", False),
+        ("ALTUSDT", "ALTUSDT", "100.5", True),
+        ("ALTUSDT", "ALTUSDT", "100.501", False),
+    ],
+)
+def test_static_market_loader_matches_contract_families_and_price_bounds(
+    symbol: str,
+    snapshot_symbol: str,
+    current_price: str,
+    passes: bool,
+) -> None:
+    base_snapshot = _market_snapshot(ExchangeId.ASTER)
+    snapshot = base_snapshot.model_copy(
+        update={
+            "market": base_snapshot.market.model_copy(
+                update={
+                    "symbol": snapshot_symbol,
+                    "current_price": Decimal(current_price),
+                }
+            )
+        }
+    )
+    loader = _StaticMarketSnapshotLoader({ExchangeId.ASTER: snapshot})
+
+    if passes:
+        loaded = asyncio.run(
+            loader.load(ExchangeId.ASTER, symbol, Decimal("100"))
+        )
+        assert loaded == snapshot
+    else:
+        with pytest.raises(ValueError, match="too far from reference"):
+            asyncio.run(loader.load(ExchangeId.ASTER, symbol, Decimal("100")))
 
 
 def test_canonical_crew_selects_one_owner_qwen_and_shared_ministral() -> None:

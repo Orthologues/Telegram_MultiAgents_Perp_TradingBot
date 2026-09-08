@@ -3,7 +3,7 @@
 Maintenance rule: **OVERWRITE** this file on every update. It is the single
 source of current state, not a development log. The log is `HISTORY.md`.
 
-Last updated: 2026-08-29
+Last updated: 2026-09-08
 
 ## Phase
 
@@ -15,8 +15,13 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
 - The repository is a human-harnessed, non-executing scaffold; it is not live
   trading software.
 - A preliminary `crewai_app` now provides the canonical YAML-configured Crew,
-  typed Flows, tools, domain boundaries, and adapters. The original package
-  remains as a deterministic compatibility layer during migration.
+  typed Flows, tools, domain boundaries, adapters, deterministic risk engine,
+  and agent skill APIs. The original package remains as a compatibility layer
+  for boundaries not yet relocated.
+- The deterministic risk engine is canonical under
+  `crewai_app/domain/policies/execution_gate.py`; the legacy risk package now
+  provides compatibility exports only. Skill APIs are canonical under
+  `crewai_app/skills_api/`, with legacy re-exports retained for compatibility.
 - After the fast CrewAI implementation, a LangGraph implementation of this app
   is planned at `draft_agentic_perp_trading_bot/src/langgraph_app/`.
 - Manual codebase review by the repository owner and manual addition of
@@ -24,7 +29,8 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
 - README wording now clarifies that five-tier candidates cover every incoming
   signal, primarily lifecycle continuations.
 - The committed history is summarized in `HISTORY.md`; committed HEAD is
-  `7dfa72b`.
+  `5270361`. The current risk-engine and skill-API migration edits are not yet
+  committed.
 - `OwnerQwenAPI` includes shared review-only synonym and reduce-and-protect
   skills, while `MinistralFilterAPI` includes MCP take-profit protection; no
   agent has direct exchange access.
@@ -65,8 +71,10 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
   scaffold boundaries; synonym inference remains a placeholder until RAG is
   populated. RAG profile JSON now reserves ordered Telegram message IDs and
   URLs plus a private S3 archive URI, but no authentic examples are fabricated.
-- Last verification: all 111 tests passed under Python 3.11; Ruff and
-  `compileall` also passed.
+- Last verification: 20 focused migration tests passed under Python 3.11;
+  Ruff and `compileall` also passed. The full suite remains incomplete because
+  existing CrewAI integration tests require writable storage and can stall in
+  Flow execution.
 
 ## Next Actions
 
@@ -99,8 +107,8 @@ Telegram IDs/URLs, and S3 archive references.
 
 ## Further Priorities
 
-- Replace preliminary compatibility re-exports with reviewed native
-  `crewai_app` implementations and production AWS adapters.
+- Replace the remaining preliminary compatibility re-exports with reviewed
+  native `crewai_app` implementations and production AWS adapters.
 - Implement the planned LangGraph app at
   `draft_agentic_perp_trading_bot/src/langgraph_app/` after the fast CrewAI
   implementation.

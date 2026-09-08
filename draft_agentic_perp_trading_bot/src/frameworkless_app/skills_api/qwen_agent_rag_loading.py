@@ -1,22 +1,5 @@
-"""Typed API for the QWEN-Agent RAG-loading skill."""
+"""Compatibility export for the CrewAI QWEN RAG-loading skill API."""
 
-from __future__ import annotations
+from crewai_app.skills_api.qwen_agent_rag_loading import QwenAgentRagLoadingAPI
 
-from typing import Protocol
-
-from frameworkless_app.schemas import (
-    OwnerRagProfile,
-    QwenStrategyCandidateSet,
-    TelegramMessageEnvelope,
-    TelegramPromptContext,
-)
-
-
-class QwenAgentRagLoadingAPI(Protocol):
-    def load_rag_profile(self) -> OwnerRagProfile: ...
-
-    async def infer_strategy_candidates(
-        self,
-        message: TelegramMessageEnvelope,
-        prompt_context: TelegramPromptContext | None = None,
-    ) -> QwenStrategyCandidateSet: ...
+__all__ = ["QwenAgentRagLoadingAPI"]

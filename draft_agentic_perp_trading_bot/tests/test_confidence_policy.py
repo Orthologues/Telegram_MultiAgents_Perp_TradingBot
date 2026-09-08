@@ -4,7 +4,7 @@ from decimal import Decimal
 import pytest
 
 from frameworkless_app.confidence_engine.policy import evaluate_confidence
-from frameworkless_app.risk_engine.policy import evaluate_deterministic_risk
+from crewai_app.domain.policies.execution_gate import evaluate_deterministic_risk
 from frameworkless_app.schemas import (
     AssetGroup,
     ExchangeId,
@@ -115,16 +115,16 @@ def test_leverage_and_cumulative_notional_are_bounded_per_pair() -> None:
         (
             "BTCUSDT",
             AssetGroup.BTC_ETH,
-            Decimal("100.125"),
-            Decimal("100.126"),
-            Decimal("0.00125"),
+            Decimal("100.1"),
+            Decimal("100.101"),
+            Decimal("0.001"),
         ),
         (
             "ETHUSDT",
             AssetGroup.BTC_ETH,
-            Decimal("100.25"),
-            Decimal("100.251"),
-            Decimal("0.0025"),
+            Decimal("100.2"),
+            Decimal("100.201"),
+            Decimal("0.002"),
         ),
         (
             "ALTUSDT",

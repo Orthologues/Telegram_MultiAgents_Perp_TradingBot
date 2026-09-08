@@ -11,7 +11,7 @@ from frameworkless_app.schemas import (
     TelegramMessageEnvelope,
     TelegramPromptContext,
 )
-from frameworkless_app.skills_api import (
+from crewai_app.skills_api import (
     MinistralFilterAPI,
     OmittedStopLossInferenceAPI,
     OwnerQwenAPI,

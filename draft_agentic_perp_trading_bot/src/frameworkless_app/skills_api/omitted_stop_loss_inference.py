@@ -1,19 +1,7 @@
-"""Typed API for the Omitted Stop-Loss Inference skill."""
+"""Compatibility export for the CrewAI omitted-stop-loss skill API."""
 
-from __future__ import annotations
-
-from typing import Protocol
-
-from frameworkless_app.schemas import (
-    MarketAnalysisSnapshot,
-    OmittedStopLossDecision,
-    QwenSignalHypothesis,
+from crewai_app.skills_api.omitted_stop_loss_inference import (
+    OmittedStopLossInferenceAPI,
 )
 
-
-class OmittedStopLossInferenceAPI(Protocol):
-    def infer_omitted_stop_loss(
-        self,
-        hypothesis: QwenSignalHypothesis,
-        market_snapshot: MarketAnalysisSnapshot | None,
-    ) -> OmittedStopLossDecision | None: ...
+__all__ = ["OmittedStopLossInferenceAPI"]

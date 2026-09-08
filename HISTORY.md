@@ -249,3 +249,12 @@ VS Code settings while ignoring other workspace-specific files.
 Recorded the planned LangGraph implementation at
 `draft_agentic_perp_trading_bot/src/langgraph_app/`, synchronized README paths
 with the frameworkless rename, and updated the current scaffold status.
+
+### 2026-09-08 — pending: relocated risk engine and CrewAI skill APIs
+
+Moved deterministic execution-gate implementation into
+`crewai_app/domain/policies/execution_gate.py`, retained legacy risk imports as
+compatibility exports, and added the flow-only market-snapshot validation tool.
+Moved canonical agent skill APIs to `crewai_app/skills_api/` and updated internal
+imports; focused migration checks pass, while further human review remains
+required before use.

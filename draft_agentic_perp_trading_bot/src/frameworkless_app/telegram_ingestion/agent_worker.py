@@ -18,7 +18,7 @@ from frameworkless_app.schemas import (
     TelegramAgentRetrievalBatch,
     TelegramMessageEnvelope,
 )
-from frameworkless_app.skills_api import TelegramAgentAPI
+from crewai_app.skills_api import TelegramAgentAPI
 from frameworkless_app.telegram_ingestion.normalizer import (
     normalize_telegram_agent_message,
 )

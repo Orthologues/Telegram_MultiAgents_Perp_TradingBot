@@ -1,15 +1,15 @@
 """Standard CrewAI application entrypoints for the preliminary migration.
 
-Legacy migration boundary: this app still imports implementations from
-``src/frameworkless_app`` through the following bridges:
+Migration status: the deterministic risk engine and skill APIs are now
+canonical under ``src/crewai_app``. Remaining compatibility imports are:
 
 * ``schemas`` -> domain contracts;
 * ``telegram_ingestion`` and ``orchestrator`` -> Telegram adapters and flows;
 * ``trade_cursor`` -> lifecycle and persistence adapters;
-* ``confidence_engine``, ``ministral_filter``, and ``risk_engine`` -> domain policies;
+* ``confidence_engine`` and ``ministral_filter`` -> domain policies;
 * ``performance_engine`` -> performance services and persistence;
 * ``mcp_gateway`` and ``aws_execution`` -> exchange and AWS adapters;
-* ``skills_api`` -> CrewAI agent interfaces.
+* legacy schemas and stateful adapters -> CrewAI contracts and boundaries.
 
 Migration instruction: do not add new legacy imports. Move each implementation
 to its corresponding ``crewai_app`` module, preserve its tested behavior, and
@@ -40,6 +40,9 @@ from crewai_app.domain.contracts.schemas import (
     TelegramPromptContext,
     TradeThreadCursor,
 )
+from crewai_app.domain.policies.execution_gate import (
+    validate_market_snapshot,
+)
 from crewai_app.flows.states import ExecutionLiquiditySnapshot, ExecutionMode
 from crewai_app.flows.telegram_signal_flow import (
     CompatibilityDeterministicDecisionService,
@@ -59,14 +62,15 @@ class PreliminaryRunInput(BaseModel):
 
 def run() -> None:
     """Run one preloaded message through the preliminary Flow with IAM Bedrock."""
-    input_path = os.getenv("CREWAI_SIGNAL_INPUT_PATH", "").strip()
+    input_path = os.getenv("CREWAI_LOCAL_RUN_INPUT_PATH", "").strip()
     if not input_path:
-        raise RuntimeError("CREWAI_SIGNAL_INPUT_PATH is required for preliminary local runs")
+        raise RuntimeError(
+            "CREWAI_LOCAL_RUN_INPUT_PATH is required for preliminary local runs"
+        )
     payload = PreliminaryRunInput.model_validate(
         json.loads(Path(input_path).read_text(encoding="utf-8"))
     )
     settings = CrewModelSettings.from_environment()
-    #CHECKPOINT_HUMANREVIEW
     flow = TelegramSignalFlow(
         parent_context_loader=_StaticParentContextLoader(payload.prompt_context),
         cursor_context_loader=_StaticCursorContextLoader(
@@ -78,11 +82,26 @@ def run() -> None:
         deterministic_decision_service=CompatibilityDeterministicDecisionService(),
         decision_repository=InMemoryDecisionRepository(),
         execution_mode=ExecutionMode(),
-        tracing=os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true",
+        tracing=os.getenv("CREWAI_TRACING_ENABLED", "false").strip().lower() == "true",
     )
     asyncio.run(
         flow.kickoff_async(inputs={"message": payload.message.model_dump(mode="json")})
     )
+    # Example expected output (abridged; the command prints the complete typed state):
+    # {
+    #   "selected_owner_id": "owner_a_shu_qin",
+    #   "candidate_set": {"candidates": "one entry for each of five tiers"},
+    #   "ministral_review_set": {"reviews": "one entry for each of five tiers"},
+    #   "decision_persisted": true,
+    #   "execution_intent_emitted": false,
+    #   "trace_steps": [
+    #     "load_parent_messages", "load_active_trade_cursors",
+    #     "retrieve_owner_rag_examples", "owner_qwen_inference",
+    #     "validate_structured_output", "ministral_review",
+    #     "load_market_snapshot", "confidence_selection",
+    #     "apply_deterministic_policies", "persist_decision"
+    #   ]
+    # }
     print(flow.state.model_dump_json(indent=2))
 
 
@@ -136,8 +155,11 @@ class _StaticMarketSnapshotLoader:
         reference_price: Decimal,
     ) -> ExecutionLiquiditySnapshot:
         snapshot = self.snapshots[exchange_id]
-        if snapshot.market.symbol.upper() != symbol.upper():
-            raise ValueError("preloaded market snapshot symbol does not match request")
-        if snapshot.reference_price != reference_price:
-            raise ValueError("preloaded market reference price does not match request")
+        validate_market_snapshot(
+            snapshot_symbol=snapshot.market.symbol,
+            requested_symbol=symbol,
+            snapshot_reference_price=snapshot.reference_price,
+            reference_price=reference_price,
+            current_price=snapshot.market.current_price,
+        )
         return snapshot

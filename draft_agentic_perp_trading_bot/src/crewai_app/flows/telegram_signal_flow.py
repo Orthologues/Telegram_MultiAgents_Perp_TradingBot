@@ -84,7 +84,7 @@ class ExecutionIntentPublisher(Protocol):
 
 
 class CompatibilityDeterministicDecisionService:
-    """Reuse legacy deterministic behavior until its modules are relocated."""
+    """Bridge remaining legacy orchestration around migrated policy boundaries."""
 
     def __init__(
         self,
