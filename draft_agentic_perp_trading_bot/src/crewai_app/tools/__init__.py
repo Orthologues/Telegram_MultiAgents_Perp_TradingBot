@@ -1,4 +1,9 @@
-"""Typed CrewAI tools with explicit agent-access boundaries."""
+"""Typed CrewAI tools with explicit agent-access boundaries.
+
+There is no one-to-one ``frameworkless_app`` package predecessor for these
+CrewAI tools. Policy-backed tools delegate to the migrated CrewAI boundaries;
+their legacy policy sources remain under ``src/frameworkless_app``.
+"""
 
 from crewai_app.tools.confidence_policy_tool import ConfidencePolicyTool
 from crewai_app.tools.cursor_context_tool import CursorContextTool

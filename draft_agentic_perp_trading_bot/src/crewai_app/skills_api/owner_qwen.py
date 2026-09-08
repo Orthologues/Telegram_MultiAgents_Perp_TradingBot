@@ -1,4 +1,9 @@
-"""Owner-specific QWEN skill API."""
+"""Owner-specific QWEN skill API.
+
+Predecessor: ``src/frameworkless_app/skills_api/owner_qwen.py``. The inherited
+RAG-loading API replaces ``src/frameworkless_app/skills_api/qwen_agent_rag_loading.py``;
+all imported domain contracts still trace to ``src/frameworkless_app/schemas.py``.
+"""
 
 from __future__ import annotations
 

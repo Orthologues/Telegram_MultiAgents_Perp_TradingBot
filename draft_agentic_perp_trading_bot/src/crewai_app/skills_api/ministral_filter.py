@@ -1,4 +1,10 @@
-"""Ministral validation skill API."""
+"""Ministral validation skill API.
+
+Predecessor: ``src/frameworkless_app/skills_api/ministral_filter.py``. The
+inherited omitted-stop-loss API came from
+``src/frameworkless_app/skills_api/omitted_stop_loss_inference.py``; imported
+domain contracts remain backed by ``src/frameworkless_app/schemas.py``.
+"""
 
 from __future__ import annotations
 

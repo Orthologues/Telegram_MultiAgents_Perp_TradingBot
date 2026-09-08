@@ -3,13 +3,16 @@
 Migration status: the deterministic risk engine and skill APIs are now
 canonical under ``src/crewai_app``. Remaining compatibility imports are:
 
-* ``schemas`` -> domain contracts;
-* ``telegram_ingestion`` and ``orchestrator`` -> Telegram adapters and flows;
-* ``trade_cursor`` -> lifecycle and persistence adapters;
-* ``confidence_engine`` and ``ministral_filter`` -> domain policies;
-* ``performance_engine`` -> performance services and persistence;
-* ``mcp_gateway`` and ``aws_execution`` -> exchange and AWS adapters;
-* legacy schemas and stateful adapters -> CrewAI contracts and boundaries.
+* domain contracts -> ``src/frameworkless_app/schemas.py``;
+* Telegram orchestration and deduplication ->
+  ``src/frameworkless_app/orchestrator.py`` and
+  ``src/frameworkless_app/telegram_ingestion/deduplication.py``;
+* lifecycle and persistence -> ``src/frameworkless_app/trade_cursor.py`` and
+  ``src/frameworkless_app/performance_engine``;
+* remaining policies -> ``src/frameworkless_app/confidence_engine`` and
+  ``src/frameworkless_app/ministral_filter``;
+* exchange and AWS adapters -> ``src/frameworkless_app/mcp_gateway`` and
+  ``src/frameworkless_app/aws_execution``.
 
 Migration instruction: do not add new legacy imports. Move each implementation
 to its corresponding ``crewai_app`` module, preserve its tested behavior, and

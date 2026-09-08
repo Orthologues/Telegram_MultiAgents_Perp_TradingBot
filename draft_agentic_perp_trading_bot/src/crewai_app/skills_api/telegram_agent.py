@@ -1,4 +1,9 @@
-"""Retrieval-only TelegramAgent skill API."""
+"""Retrieval-only TelegramAgent skill API.
+
+Predecessor: ``src/frameworkless_app/skills_api/telegram_agent.py``. The
+retrieval-batch contract still originates in ``src/frameworkless_app/schemas.py``
+through the CrewAI contract facade.
+"""
 
 from __future__ import annotations
 

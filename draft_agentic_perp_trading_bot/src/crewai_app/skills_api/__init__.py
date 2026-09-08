@@ -1,4 +1,9 @@
-"""Public API contracts for CrewAI agent-owned skills."""
+"""Public API contracts for CrewAI agent-owned skills.
+
+These APIs replace the corresponding contracts under
+``src/frameworkless_app/skills_api``. Their domain and execution types still
+resolve through the legacy definitions in ``src/frameworkless_app/schemas.py``.
+"""
 
 from crewai_app.skills_api.ministral_filter import MinistralFilterAPI
 from crewai_app.skills_api.omitted_stop_loss_inference import (

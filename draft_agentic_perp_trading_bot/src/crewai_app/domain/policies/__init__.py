@@ -1,4 +1,11 @@
-"""Deterministic policy boundaries invoked by CrewAI Flows."""
+"""Deterministic policy boundaries invoked by CrewAI Flows.
+
+This facade consolidates predecessors from
+``src/frameworkless_app/confidence_engine/policy.py``,
+``src/frameworkless_app/risk_engine/policy.py``, and
+``src/frameworkless_app/ministral_filter/stop_loss_policy.py``. Contract types
+continue to pass through ``src/frameworkless_app/schemas.py``.
+"""
 
 from crewai_app.domain.policies.confidence import evaluate_confidence
 from crewai_app.domain.policies.execution_gate import (

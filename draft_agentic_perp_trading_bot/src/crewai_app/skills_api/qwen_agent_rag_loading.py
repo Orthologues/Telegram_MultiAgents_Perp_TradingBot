@@ -1,4 +1,9 @@
-"""Typed API for the QWEN-Agent RAG-loading skill."""
+"""Typed API for the QWEN-Agent RAG-loading skill.
+
+Predecessor: ``src/frameworkless_app/skills_api/qwen_agent_rag_loading.py``.
+Its imported RAG and Telegram contracts remain backed by
+``src/frameworkless_app/schemas.py`` through the CrewAI contract facade.
+"""
 
 from __future__ import annotations
 

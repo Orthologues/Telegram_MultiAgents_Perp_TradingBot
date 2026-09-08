@@ -1,4 +1,12 @@
-"""Deterministic execution gates owned by the CrewAI application."""
+"""Deterministic execution gates owned by the CrewAI application.
+
+The predecessor of this module was
+``src/frameworkless_app/risk_engine/policy.py``. The legacy shared contracts
+remain in ``src/frameworkless_app/schemas.py`` and are exposed through the
+CrewAI contract facade; this module contains the migrated execution-gate
+policy. Remaining imports from ``frameworkless_app`` are compatibility bridges
+for boundaries not yet relocated.
+"""
 
 from __future__ import annotations
 
@@ -20,7 +28,7 @@ BTC_MAXIMUM_INSTANT_PRICE_DEVIATION = Decimal("0.001")
 ETH_MAXIMUM_INSTANT_PRICE_DEVIATION = Decimal("0.002")
 GENERIC_ALT_MAXIMUM_INSTANT_PRICE_DEVIATION = Decimal("0.005")
 
-_KNOWN_QUOTE_ASSETS = ("USDT", "USDC", "BUSD", "USD")
+_KNOWN_QUOTE_ASSETS = ("USDT", "USDC", "USD1")
 _SUPPORTED_SYMBOL_PREFIXES = ("1000", "1M", "1K")
 
 

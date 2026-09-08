@@ -1,4 +1,12 @@
-"""CrewAI Flow for one normalized Telegram trading message."""
+"""CrewAI Flow for one normalized Telegram trading message.
+
+This Flow is the CrewAI successor to
+``src/frameworkless_app/orchestrator.py``. Its remaining direct dependencies
+include ``src/frameworkless_app/telegram_ingestion/deduplication.py``;
+contract, cursor, and stop-loss imports trace to
+``src/frameworkless_app/schemas.py``, ``src/frameworkless_app/trade_cursor.py``,
+and ``src/frameworkless_app/ministral_filter/stop_loss_policy.py``.
+"""
 
 from __future__ import annotations
 
