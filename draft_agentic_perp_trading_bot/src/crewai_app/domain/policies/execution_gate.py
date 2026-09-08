@@ -1,11 +1,8 @@
 """Deterministic execution gates owned by the CrewAI application.
 
-The predecessor of this module was
-``src/frameworkless_app/risk_engine/policy.py``. The legacy shared contracts
-remain in ``src/frameworkless_app/schemas.py`` and are exposed through the
-CrewAI contract facade; this module contains the migrated execution-gate
-policy. Remaining imports from ``frameworkless_app`` are compatibility bridges
-for boundaries not yet relocated.
+File mappings:
+``domain/policies/execution_gate.py`` <- ``frameworkless_app/risk_engine/policy.py``;
+``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from __future__ import annotations

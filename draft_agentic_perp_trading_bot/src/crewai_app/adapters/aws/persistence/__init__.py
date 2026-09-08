@@ -1,15 +1,23 @@
-"""S3, DynamoDB, and ElastiCache compatibility surfaces."""
+"""S3, DynamoDB, and ElastiCache persistence boundaries.
 
-from frameworkless_app.performance_engine.history import (
+File mappings:
+``adapters/aws/persistence/history.py`` <-
+``frameworkless_app/performance_engine/history.py``;
+``adapters/telegram/{reply_tree,storage}.py`` <-
+``frameworkless_app/telegram_ingestion/{reply_tree,storage}.py``;
+``domain/lifecycle/cursor.py`` <- ``frameworkless_app/trade_cursor.py``.
+"""
+
+from crewai_app.adapters.aws.persistence.history import (
     DynamoDBExecutionHistoryRepository,
     InMemoryExecutionHistoryRepository,
 )
-from frameworkless_app.telegram_ingestion.reply_tree import (
+from crewai_app.adapters.telegram.reply_tree import (
     ElastiCacheReplyTreeStore,
     InMemoryReplyTreeStore,
     ReplyTreeStore,
 )
-from frameworkless_app.telegram_ingestion.storage import (
+from crewai_app.adapters.telegram.storage import (
     DynamoDBMessageMetadataRepository,
     InMemoryMessageMetadataRepository,
     InMemoryRawMediaArchive,
@@ -17,7 +25,7 @@ from frameworkless_app.telegram_ingestion.storage import (
     S3RawMediaArchive,
     TelegramMessageReceiptStore,
 )
-from frameworkless_app.trade_cursor import (
+from crewai_app.domain.lifecycle.cursor import (
     DynamoDBTradeCursorRepository,
     InMemoryTradeCursorRepository,
 )

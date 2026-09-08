@@ -1,8 +1,13 @@
-"""Market-snapshot, model, and guarded-execution contracts."""
+"""Market-snapshot, model, and guarded-execution contracts.
+
+File mappings:
+``domain/contracts/execution.py`` <- ``frameworkless_app/schemas.py``;
+``domain/contracts/definitions.py`` <- ``frameworkless_app/schemas.py``.
+"""
 
 from enum import StrEnum
 
-from frameworkless_app.schemas import (
+from crewai_app.domain.contracts.definitions import (
     ApprovedExecutionRequest,
     DeterministicRiskDecision,
     ExchangeId,

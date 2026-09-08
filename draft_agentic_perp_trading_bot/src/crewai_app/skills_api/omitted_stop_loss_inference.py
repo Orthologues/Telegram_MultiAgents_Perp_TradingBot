@@ -1,8 +1,9 @@
 """Typed API for the omitted stop-loss inference skill.
 
-Predecessor: ``src/frameworkless_app/skills_api/omitted_stop_loss_inference.py``.
-Its imported market and hypothesis contracts still originate in
-``src/frameworkless_app/schemas.py`` through the CrewAI contract facade.
+File mappings:
+``skills_api/omitted_stop_loss_inference.py`` <-
+``frameworkless_app/skills_api/omitted_stop_loss_inference.py``;
+``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from __future__ import annotations

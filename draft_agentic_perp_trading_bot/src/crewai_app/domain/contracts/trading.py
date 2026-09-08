@@ -1,6 +1,11 @@
-"""Trading-signal, strategy, position, and cursor contracts."""
+"""Trading-signal, strategy, position, and cursor contracts.
 
-from frameworkless_app.schemas import (
+File mappings:
+``domain/contracts/trading.py`` <- ``frameworkless_app/schemas.py``;
+``domain/contracts/definitions.py`` <- ``frameworkless_app/schemas.py``.
+"""
+
+from crewai_app.domain.contracts.definitions import (
     CanonicalTradeIntent,
     ConfidenceDecision,
     ExchangeTradeState,

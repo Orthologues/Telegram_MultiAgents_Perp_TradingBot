@@ -1,8 +1,8 @@
 """Typed CrewAI tools with explicit agent-access boundaries.
 
-There is no one-to-one ``frameworkless_app`` package predecessor for these
-CrewAI tools. Policy-backed tools delegate to the migrated CrewAI boundaries;
-their legacy policy sources remain under ``src/frameworkless_app``.
+File mappings:
+``tools/market_snapshot_validation_tool.py`` <- ``crewai_app/main.py``;
+``domain/policies/execution_gate.py`` <- ``frameworkless_app/risk_engine/policy.py``.
 """
 
 from crewai_app.tools.confidence_policy_tool import ConfidencePolicyTool

@@ -1,6 +1,11 @@
-"""Telegram provenance and serial-RAG contract compatibility surface."""
+"""Telegram provenance and serial-RAG contracts.
 
-from frameworkless_app.schemas import (
+File mappings:
+``domain/contracts/telegram.py`` <- ``frameworkless_app/schemas.py``;
+``domain/contracts/definitions.py`` <- ``frameworkless_app/schemas.py``.
+"""
+
+from crewai_app.domain.contracts.definitions import (
     AssetGroup,
     DeduplicationDecision,
     DeduplicationScope,

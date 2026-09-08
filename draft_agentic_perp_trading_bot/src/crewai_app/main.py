@@ -1,24 +1,17 @@
-"""Standard CrewAI application entrypoints for the preliminary migration.
+"""CrewAI application entrypoint with explicit migration provenance.
 
-Migration status: the deterministic risk engine and skill APIs are now
-canonical under ``src/crewai_app``. Remaining compatibility imports are:
-
-* domain contracts -> ``src/frameworkless_app/schemas.py``;
-* Telegram orchestration and deduplication ->
-  ``src/frameworkless_app/orchestrator.py`` and
-  ``src/frameworkless_app/telegram_ingestion/deduplication.py``;
-* lifecycle and persistence -> ``src/frameworkless_app/trade_cursor.py`` and
-  ``src/frameworkless_app/performance_engine``;
-* remaining policies -> ``src/frameworkless_app/confidence_engine`` and
-  ``src/frameworkless_app/ministral_filter``;
-* exchange and AWS adapters -> ``src/frameworkless_app/mcp_gateway`` and
-  ``src/frameworkless_app/aws_execution``.
-
-Migration instruction: do not add new legacy imports. Move each implementation
-to its corresponding ``crewai_app`` module, preserve its tested behavior, and
-update all callers before removing the legacy package. The migration is complete
-when ``src/crewai_app`` has no ``frameworkless_app`` imports and the full test
-suite passes.
+File mappings:
+``main.py`` <- ``frameworkless_app/orchestrator.py``;
+``flows/telegram_signal_flow.py`` <- ``frameworkless_app/orchestrator.py``;
+``domain/contracts/{definitions.py,schemas.py}`` <- ``frameworkless_app/schemas.py``;
+``domain/policies/execution_gate.py`` <- ``frameworkless_app/risk_engine/policy.py``;
+``adapters/telegram/{agent_worker,deduplication,normalizer,pipeline,reply_tree,storage}.py``
+<- ``frameworkless_app/telegram_ingestion/{agent_worker,deduplication,normalizer,pipeline,reply_tree,storage}.py``;
+``adapters/exchanges/mcp/{exchange_gateway,upstream_contracts,venue_contracts}.py``
+<- ``frameworkless_app/mcp_gateway/{exchange_gateway,upstream_contracts,venue_contracts}.py``;
+``adapters/aws/execution/{lambda_handler,secrets,upstream_clients}.py``
+<- ``frameworkless_app/aws_execution/{lambda_handler,secrets,upstream_clients}.py``.
+Legacy files remain intact for comparison.
 """
 
 from __future__ import annotations

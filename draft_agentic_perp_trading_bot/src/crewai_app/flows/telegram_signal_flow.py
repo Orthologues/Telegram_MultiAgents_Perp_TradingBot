@@ -1,11 +1,13 @@
 """CrewAI Flow for one normalized Telegram trading message.
 
-This Flow is the CrewAI successor to
-``src/frameworkless_app/orchestrator.py``. Its remaining direct dependencies
-include ``src/frameworkless_app/telegram_ingestion/deduplication.py``;
-contract, cursor, and stop-loss imports trace to
-``src/frameworkless_app/schemas.py``, ``src/frameworkless_app/trade_cursor.py``,
-and ``src/frameworkless_app/ministral_filter/stop_loss_policy.py``.
+File mappings:
+``flows/telegram_signal_flow.py`` <- ``frameworkless_app/orchestrator.py``;
+``adapters/telegram/deduplication.py`` <-
+``frameworkless_app/telegram_ingestion/deduplication.py``;
+``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``;
+``domain/lifecycle/cursor.py`` <- ``frameworkless_app/trade_cursor.py``;
+``domain/policies/stop_loss.py`` <-
+``frameworkless_app/ministral_filter/stop_loss_policy.py``.
 """
 
 from __future__ import annotations
@@ -17,8 +19,8 @@ from typing import Protocol
 
 from crewai.flow.flow import Flow, listen, start
 
-from frameworkless_app.orchestrator import process_message
-from frameworkless_app.telegram_ingestion.deduplication import (
+from crewai_app.flows.orchestration import process_message
+from crewai_app.adapters.telegram.deduplication import (
     InMemoryTelegramDeduplicator,
 )
 from crewai_app.crews.signal_evaluation_crew import SignalEvaluator

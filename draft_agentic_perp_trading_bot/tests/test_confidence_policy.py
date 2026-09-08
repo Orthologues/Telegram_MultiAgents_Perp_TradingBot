@@ -3,9 +3,9 @@ from decimal import Decimal
 
 import pytest
 
-from frameworkless_app.confidence_engine.policy import evaluate_confidence
+from crewai_app.domain.policies.confidence import evaluate_confidence
 from crewai_app.domain.policies.execution_gate import evaluate_deterministic_risk
-from frameworkless_app.schemas import (
+from crewai_app.domain.contracts.schemas import (
     AssetGroup,
     ExchangeId,
     OwnerId,

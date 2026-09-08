@@ -1,9 +1,11 @@
 """Owner-specific QWEN reasoning interfaces.
 
-Predecessors: ``src/frameworkless_app/skills_api/owner_qwen.py`` and
-``src/frameworkless_app/skills_api/qwen_agent_rag_loading.py``. The imported
-contract types still originate in ``src/frameworkless_app/schemas.py`` through
-the CrewAI contract facade.
+File mappings:
+``agent_interfaces/qwen.py`` <- ``frameworkless_app/skills_api/owner_qwen.py``;
+``skills_api/owner_qwen.py`` <- ``frameworkless_app/skills_api/owner_qwen.py``;
+``skills_api/qwen_agent_rag_loading.py`` <-
+``frameworkless_app/skills_api/qwen_agent_rag_loading.py``;
+``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from crewai_app.skills_api.owner_qwen import OwnerQwenAPI

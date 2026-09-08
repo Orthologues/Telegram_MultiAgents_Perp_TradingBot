@@ -1,0 +1,68 @@
+"""DynamoDB execution-history boundary for replayable performance features.
+
+File mappings:
+``adapters/aws/persistence/history.py`` <-
+``frameworkless_app/performance_engine/history.py``;
+``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Iterable
+from typing import Protocol
+
+from crewai_app.domain.contracts.schemas import (
+    ExchangeId,
+    ExchangeNetwork,
+    PositionLifecycleEvent,
+)
+
+
+class DynamoDBExecutionHistoryRepository(Protocol):
+    async def append(self, event: PositionLifecycleEvent) -> None: ...
+
+    async def list_by_position(
+        self,
+        *,
+        exchange_id: ExchangeId,
+        network: ExchangeNetwork,
+        position_id: str,
+    ) -> list[PositionLifecycleEvent]: ...
+
+
+class InMemoryExecutionHistoryRepository:
+    """Test adapter preserving the append-only lifecycle contract."""
+
+    def __init__(self, events: Iterable[PositionLifecycleEvent] = ()) -> None:
+        self.events = list(events)
+        self._event_ids = {event.event_id for event in self.events}
+
+    async def append(self, event: PositionLifecycleEvent) -> None:
+        if event.event_id in self._event_ids:
+            return
+        self._event_ids.add(event.event_id)
+        self.events.append(event)
+
+    async def list_by_position(
+        self,
+        *,
+        exchange_id: ExchangeId,
+        network: ExchangeNetwork,
+        position_id: str,
+    ) -> list[PositionLifecycleEvent]:
+        return sorted(
+            (
+                event
+                for event in self.events
+                if event.exchange_id == exchange_id
+                and event.network == network
+                and event.position_id == position_id
+            ),
+            key=lambda event: event.occurred_at,
+        )
+
+
+__all__ = [
+    "DynamoDBExecutionHistoryRepository",
+    "InMemoryExecutionHistoryRepository",
+]

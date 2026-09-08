@@ -1,10 +1,16 @@
-"""Compatibility-backed sizing and five-tier performance metrics."""
+"""Five-tier performance metrics and canonical sizing export.
+
+File mappings:
+``domain/performance/position_sizing.py`` <-
+``frameworkless_app/performance_engine/weight_engine.py``;
+``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+"""
 
 from decimal import Decimal
 
-from frameworkless_app.performance_engine.weight_engine import compute_position_size
 from crewai_app.domain.contracts.schemas import StrategyTier
 from crewai_app.flows.states import StrategyOutcome, StrategyTierPerformanceSummary
+from crewai_app.domain.performance.position_sizing import compute_position_size
 
 
 def summarize_strategy_tiers(

@@ -1,15 +1,21 @@
-"""Compatibility surface for retrieval-only Telegram ingestion."""
+"""Canonical retrieval-only Telegram ingestion adapters.
 
-from frameworkless_app.telegram_ingestion.agent_worker import (
+File mappings:
+``adapters/telegram/{__init__,agent_worker,deduplication,normalizer,pipeline,reply_tree,storage}.py``
+<- ``frameworkless_app/telegram_ingestion/{__init__,agent_worker,deduplication,normalizer,pipeline,reply_tree,storage}.py``;
+``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+"""
+
+from crewai_app.adapters.telegram.agent_worker import (
     CallableTelegramAgentRetriever,
     TelegramAgentPoller,
 )
-from frameworkless_app.telegram_ingestion.normalizer import (
+from crewai_app.adapters.telegram.normalizer import (
     attach_archived_media,
     normalize_telegram_agent_message,
 )
-from frameworkless_app.telegram_ingestion.pipeline import TelegramIngestionPipeline
-from frameworkless_app.telegram_ingestion.reply_tree import (
+from crewai_app.adapters.telegram.pipeline import TelegramIngestionPipeline
+from crewai_app.adapters.telegram.reply_tree import (
     ElastiCacheReplyTreeStore,
     InMemoryReplyTreeStore,
     ReplyTreeStore,

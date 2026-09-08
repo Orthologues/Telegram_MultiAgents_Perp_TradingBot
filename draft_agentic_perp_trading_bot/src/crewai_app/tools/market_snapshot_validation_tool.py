@@ -1,9 +1,8 @@
 """Flow-only CrewAI wrapper for deterministic market-snapshot validation.
 
-This tool extracts the validation boundary from the CrewAI entrypoint and
-delegates to the migrated policy whose predecessor was
-``src/frameworkless_app/risk_engine/policy.py``. Its contract is now owned by
-``crewai_app.domain.policies.execution_gate``.
+File mappings:
+``tools/market_snapshot_validation_tool.py`` <- ``crewai_app/main.py``;
+``domain/policies/execution_gate.py`` <- ``frameworkless_app/risk_engine/policy.py``.
 """
 
 from decimal import Decimal

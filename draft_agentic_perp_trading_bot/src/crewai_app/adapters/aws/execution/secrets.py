@@ -1,0 +1,35 @@
+"""AWS Secrets Manager key names and retrieval boundary.
+
+File mappings:
+``adapters/aws/execution/secrets.py`` <- ``frameworkless_app/aws_execution/secrets.py``;
+``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+"""
+
+from __future__ import annotations
+
+from enum import StrEnum
+
+from crewai_app.domain.contracts.schemas import ExchangeId
+
+
+class SecretName(StrEnum):
+    ASTER_API_WALLET = "agentic-perp-trading-bot/aster/api-wallet"
+    HYPERLIQUID_API_WALLET = "agentic-perp-trading-bot/hyperliquid/api-wallet"
+    TELEGRAM_API_CREDENTIALS = "agentic-perp-trading-bot/telegram/api-credentials"
+    TELEGRAM_USER_SESSION = "agentic-perp-trading-bot/telegram/user-session"
+    MCP_AUTH_TOKEN = "agentic-perp-trading-bot/mcp/auth-token"
+    KILL_SWITCH_CONFIG = "agentic-perp-trading-bot/risk/kill-switch-config"
+
+
+def get_secret_payload(secret_name: SecretName) -> dict:
+    """Retrieve and JSON-decode a secret in the real AWS implementation."""
+    raise NotImplementedError(f"Secrets Manager retrieval not implemented: {secret_name}")
+
+
+def exchange_signing_secret(exchange_id: ExchangeId) -> SecretName:
+    if exchange_id == ExchangeId.ASTER:
+        return SecretName.ASTER_API_WALLET
+    return SecretName.HYPERLIQUID_API_WALLET
+
+
+__all__ = ["SecretName", "exchange_signing_secret", "get_secret_payload"]

@@ -1,4 +1,10 @@
-"""Stable re-export surface for all preliminary CrewAI domain contracts."""
+"""Stable re-export surface for the migrated CrewAI domain contracts.
+
+File mappings:
+``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``;
+``domain/contracts/{execution,performance,telegram,trading}.py`` <-
+``frameworkless_app/schemas.py``.
+"""
 
 # ruff: noqa: F401
 
