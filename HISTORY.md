@@ -260,3 +260,20 @@ imports; focused migration checks pass. The entry point
 `draft_agentic_perp_trading_bot/src/crewai_app/main.py` has been reviewed and
 the migration issues there have been addressed; the remaining code files still
 require human review before use.
+
+### 2026-09-08 — `dc7f1c6`: recorded CrewAI migration review status
+
+Updated the CrewAI migration status and history records while keeping review
+of the remaining codebase explicitly pending.
+
+### 2026-09-08 — `d66f474`: aligned migration boundaries and provenance
+
+Added explicit file-to-file provenance to migrated CrewAI interfaces, policies,
+Flows, skills, and tools.
+
+### 2026-09-09 — `1379b09`: migrated frameworkless modules into CrewAI
+
+Relocated contracts, lifecycle, policies, performance, Telegram, MCP, AWS, and
+orchestration modules into `crewai_app`, while preserving `frameworkless_app`
+for comparison and review. Applied the same explicit file-to-file provenance
+method established by `d66f474`.

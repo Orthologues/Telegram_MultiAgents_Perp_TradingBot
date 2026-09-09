@@ -3,7 +3,7 @@
 Maintenance rule: **OVERWRITE** this file on every update. It is the single
 source of current state, not a development log. The log is `HISTORY.md`.
 
-Last updated: 2026-09-08
+Last updated: 2026-09-09
 
 ## Phase
 
@@ -29,7 +29,7 @@ Agentic perpetual-futures trading-bot scaffold. Priority implementation is
 - README wording now clarifies that five-tier candidates cover every incoming
   signal, primarily lifecycle continuations.
 - The committed history is summarized in `HISTORY.md`; committed HEAD is
-  `15d376d`.
+  `1379b09`.
 - `OwnerQwenAPI` includes shared review-only synonym and reduce-and-protect
   skills, while `MinistralFilterAPI` includes MCP take-profit protection; no
   agent has direct exchange access.
