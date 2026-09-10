@@ -37,9 +37,9 @@ Telethon image hydration and authentic serial RAG examples.
 - Manual human review of the remaining codebase, prompts, tool permissions,
   IAM, deterministic policies, execution paths, and authentic serial RAG data
   remains mandatory. `main.py` received a prior focused review.
-- The current worktree contains an uncommitted Astra-directed migration
-  refactor, including the latest skills/interface review; no commit ID is
-  assigned to it yet.
+- `AGENTS.md` now retains only the outstanding CrewAI production-integration,
+  observability, deployment, reliability, and acceptance-gate requirements;
+  historical prompts and completed scaffold guidance were removed.
 
 ## Verification
 

@@ -278,7 +278,7 @@ orchestration modules into `crewai_app`, while preserving `frameworkless_app`
 for comparison and review. Applied the same explicit file-to-file provenance
 method established by `d66f474`.
 
-### 2026-09-10 — pending: consolidated Astra migration and skills review
+### 2026-09-10 — `ae9193f`: consolidated Astra migration and skills review
 
 Established canonical CrewAI contracts and responsibility interfaces, separated
 message observation from successful delivery, preserved shared QWEN/Ministral
@@ -294,3 +294,10 @@ verification. Made `skills_api` compatibility-only, added canonical QWEN
 message-relation, synonym, and position-reduction interfaces, and added a
 chronological typed relation contract. Updated the architecture map and active
 CrewAI boundary notes; no commit ID is assigned yet.
+
+### 2026-09-10 — pending: trimmed completed CrewAI guidance
+
+Removed the historical Agentic Update prompts and completed CrewAI scaffold,
+layout, domain-boundary, and local implementation instructions from `AGENTS.md`.
+Retained only the outstanding production integration, observability, deployment,
+reliability, and completion-gate requirements, and synchronized `STATUS.md`.
