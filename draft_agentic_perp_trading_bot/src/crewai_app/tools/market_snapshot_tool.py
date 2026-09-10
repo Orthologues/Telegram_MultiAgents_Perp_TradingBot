@@ -7,7 +7,7 @@ from collections.abc import Callable
 from pydantic import BaseModel, ConfigDict, Field
 
 from crewai_app.domain.contracts.schemas import ExchangeId
-from crewai_app.flows.states import ExecutionLiquiditySnapshot
+from crewai_app.domain.contracts.schemas import MarketExecutionSnapshot
 from crewai_app.tools._base import TradingBotTool
 
 
@@ -21,7 +21,7 @@ class MarketSnapshotTool(TradingBotTool):
     description: str = "Load a read-only MCP market, depth, and slippage snapshot."
     args_schema: type[BaseModel] = MarketSnapshotInput
     agent_accessible: bool = True
-    loader: Callable[[ExchangeId, str], ExecutionLiquiditySnapshot] = Field(exclude=True)
+    loader: Callable[[ExchangeId, str], MarketExecutionSnapshot] = Field(exclude=True)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 

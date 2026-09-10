@@ -31,17 +31,18 @@ def build_input_dedup_key(message: TelegramMessageEnvelope) -> str:
 
 
 class InMemoryTelegramDeduplicator:
-    """Process-local placeholder for duplicate Chinese text/image Telegram inputs."""
+    """Process-local delivery index for duplicate multimodal Telegram inputs.
+
+    ``inspect`` is intentionally non-mutating. A key becomes delivered only
+    after the pipeline has published its prompt context successfully.
+    """
 
     def __init__(self) -> None:
         self._seen_keys: set[str] = set()
 
-    def check(self, message: TelegramMessageEnvelope) -> DeduplicationDecision:
+    def inspect(self, message: TelegramMessageEnvelope) -> DeduplicationDecision:
         dedup_key = message.dedup_key or build_input_dedup_key(message)
         is_duplicate = dedup_key in self._seen_keys
-        if not is_duplicate:
-            self._seen_keys.add(dedup_key)
-
         return DeduplicationDecision(
             scope=DeduplicationScope.MULTIMODAL_INPUT,
             is_duplicate=is_duplicate,
@@ -49,6 +50,17 @@ class InMemoryTelegramDeduplicator:
             matched_key=dedup_key if is_duplicate else None,
             reasons=["duplicate multimodal Telegram input"] if is_duplicate else [],
         )
+
+    def mark_delivered(self, message: TelegramMessageEnvelope) -> None:
+        """Record successful downstream delivery for a normalized message."""
+        self._seen_keys.add(message.dedup_key or build_input_dedup_key(message))
+
+    def check(self, message: TelegramMessageEnvelope) -> DeduplicationDecision:
+        """Compatibility helper with the historical check-and-mark behavior."""
+        decision = self.inspect(message)
+        if not decision.is_duplicate:
+            self.mark_delivered(message)
+        return decision
 
 
 __all__ = ["InMemoryTelegramDeduplicator", "build_input_dedup_key"]

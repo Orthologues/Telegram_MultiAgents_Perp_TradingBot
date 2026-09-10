@@ -1,4 +1,9 @@
-"""Public API contracts for CrewAI agent-owned skills.
+"""Legacy skill-API compatibility surface.
+
+Canonical CrewAI responsibility protocols are exported from
+crewai_app.agent_interfaces. The names below remain import-compatible for the
+retained frameworkless_app comparison path; deterministic policies are
+implemented under domain.policies and tools.
 
 File mappings:
 ``skills_api/{__init__,ministral_filter,omitted_stop_loss_inference,owner_qwen,qwen_agent_rag_loading,telegram_agent}.py``

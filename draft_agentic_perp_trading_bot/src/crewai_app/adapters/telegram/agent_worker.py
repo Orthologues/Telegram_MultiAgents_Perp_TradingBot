@@ -24,7 +24,7 @@ from crewai_app.domain.contracts.schemas import (
     TelegramAgentRetrievalBatch,
     TelegramMessageEnvelope,
 )
-from crewai_app.skills_api import TelegramAgentAPI
+from crewai_app.agent_interfaces.telegram import TelegramAgentAPI
 from crewai_app.adapters.telegram.normalizer import (
     normalize_telegram_agent_message,
 )

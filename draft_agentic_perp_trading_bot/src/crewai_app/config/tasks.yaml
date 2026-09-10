@@ -12,9 +12,12 @@ qwen_strategy_task:
 
 ministral_review_task:
   description: >
-    Review all five QWEN strategy candidates against the same Telegram context
-    and provenance. Validate structure and evidence, reject unresolved
-    ambiguity or semantic duplicates, and return one review for every tier.
+    Review all five QWEN strategy candidates against the same immutable source
+    context. Telegram context JSON: {telegram_prompt_context_json}
+    Active cursor JSON: {active_trade_cursors_json}
+    Serial-RAG JSON: {serial_rag_examples_json}
+    Validate structure and evidence, reject unresolved ambiguity or semantic
+    duplicates, and return one review for every tier.
     Do not apply confidence, stop-loss, liquidity, or execution policy.
   expected_output: >
     A MinistralStrategyReviewSet containing exactly one typed review for each

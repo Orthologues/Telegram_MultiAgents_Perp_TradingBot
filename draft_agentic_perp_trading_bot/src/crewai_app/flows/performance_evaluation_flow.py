@@ -10,7 +10,10 @@ from crewai_app.domain.contracts.schemas import (
     StrategyTier,
     TestnetVenuePerformanceComparison,
 )
-from crewai_app.domain.performance.metrics import summarize_strategy_tiers
+from crewai_app.domain.performance.metrics import (
+    summarize_strategy_dimensions,
+    summarize_strategy_tiers,
+)
 from crewai_app.domain.performance.venue_comparison import (
     compare_testnet_venue_performance,
 )
@@ -23,6 +26,7 @@ from crewai_app.flows.states import (
 class PerformanceEvaluationFlow(Flow[PerformanceEvaluationState]):
     """Evaluate venue reliability and every strategy tier separately."""
 
+    _skip_auto_memory = True
     initial_state = PerformanceEvaluationState
 
     def __init__(self, *, tracing: bool = False) -> None:
@@ -43,6 +47,9 @@ class PerformanceEvaluationFlow(Flow[PerformanceEvaluationState]):
         self,
     ) -> dict[StrategyTier, StrategyTierPerformanceSummary]:
         self.state.strategy_summaries = summarize_strategy_tiers(
+            self.state.strategy_outcomes
+        )
+        self.state.strategy_dimension_summaries = summarize_strategy_dimensions(
             self.state.strategy_outcomes
         )
         return self.state.strategy_summaries

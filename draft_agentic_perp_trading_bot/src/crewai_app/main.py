@@ -19,13 +19,18 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-from decimal import Decimal
 from pathlib import Path
 
 from pydantic import BaseModel, Field
 
 from crewai_app.adapters.aws.persistence.decision_repository import (
     InMemoryDecisionRepository,
+)
+from crewai_app.adapters.local_harness import (
+    StaticCursorContextLoader,
+    StaticMarketSnapshotLoader,
+    StaticParentContextLoader,
+    StaticSerialRagLoader,
 )
 from crewai_app.crew import CrewModelSettings
 from crewai_app.crews.signal_evaluation_crew import CrewSignalEvaluator
@@ -35,9 +40,6 @@ from crewai_app.domain.contracts.schemas import (
     TelegramMessageEnvelope,
     TelegramPromptContext,
     TradeThreadCursor,
-)
-from crewai_app.domain.policies.execution_gate import (
-    validate_market_snapshot,
 )
 from crewai_app.flows.states import ExecutionLiquiditySnapshot, ExecutionMode
 from crewai_app.flows.telegram_signal_flow import (
@@ -54,6 +56,13 @@ class PreliminaryRunInput(BaseModel):
     serial_rag_examples: list[SerialRagExample] = Field(default_factory=list)
     active_trade_cursors: list[TradeThreadCursor] = Field(default_factory=list)
     market_snapshots: dict[ExchangeId, ExecutionLiquiditySnapshot]
+
+
+# Kept as import aliases for the existing local-harness test surface.
+_StaticCursorContextLoader = StaticCursorContextLoader
+_StaticMarketSnapshotLoader = StaticMarketSnapshotLoader
+_StaticParentContextLoader = StaticParentContextLoader
+_StaticSerialRagLoader = StaticSerialRagLoader
 
 
 def run() -> None:
@@ -111,51 +120,3 @@ def train() -> None:
 
 def test() -> None:
     raise RuntimeError("use the deterministic pytest suite for migration verification")
-
-
-class _StaticParentContextLoader:
-    def __init__(self, context: TelegramPromptContext) -> None:
-        self.context = context
-
-    async def load(self, message: TelegramMessageEnvelope) -> TelegramPromptContext:
-        return self.context
-
-
-class _StaticCursorContextLoader:
-    def __init__(self, cursors: list[TradeThreadCursor]) -> None:
-        self.cursors = cursors
-
-    async def load(self, message: TelegramMessageEnvelope) -> list[TradeThreadCursor]:
-        return list(self.cursors)
-
-
-class _StaticSerialRagLoader:
-    def __init__(self, examples: list[SerialRagExample]) -> None:
-        self.examples = examples
-
-    async def load(self, message: TelegramMessageEnvelope) -> list[SerialRagExample]:
-        return list(self.examples)
-
-
-class _StaticMarketSnapshotLoader:
-    def __init__(
-        self,
-        snapshots: dict[ExchangeId, ExecutionLiquiditySnapshot],
-    ) -> None:
-        self.snapshots = snapshots
-
-    async def load(
-        self,
-        exchange_id: ExchangeId,
-        symbol: str,
-        reference_price: Decimal,
-    ) -> ExecutionLiquiditySnapshot:
-        snapshot = self.snapshots[exchange_id]
-        validate_market_snapshot(
-            snapshot_symbol=snapshot.market.symbol,
-            requested_symbol=symbol,
-            snapshot_reference_price=snapshot.reference_price,
-            reference_price=reference_price,
-            current_price=snapshot.market.current_price,
-        )
-        return snapshot

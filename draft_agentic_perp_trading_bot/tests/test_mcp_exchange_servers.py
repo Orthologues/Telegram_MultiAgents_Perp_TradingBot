@@ -30,7 +30,7 @@ hyperliquid_server = _load_server_module(
     "mcp_servers/hyperliquid_mcp/server.py",
 )
 AsterConfig = aster_server.AsterConfig
-AsterV3PublicClient = aster_server.AsterV3PublicClient
+AsterV1PublicClient = aster_server.AsterV1PublicClient
 HyperliquidConfig = hyperliquid_server.HyperliquidConfig
 HyperliquidInfoClient = hyperliquid_server.HyperliquidInfoClient
 HyperliquidOrderIntent = hyperliquid_server.HyperliquidOrderIntent
@@ -52,7 +52,7 @@ def test_mainnet_handoffs_require_an_independent_opt_in() -> None:
 
 
 def test_aster_symbol_resolution_uses_exchange_info() -> None:
-    client = AsterV3PublicClient(AsterConfig())
+    client = AsterV1PublicClient(AsterConfig())
     client._exchange_info = {
         "symbols": [
             {"symbol": "BTCUSDT", "status": "TRADING"},
@@ -69,13 +69,13 @@ def test_aster_symbol_resolution_uses_exchange_info() -> None:
         asyncio.run(client.require_tradable_symbol("MISSINGUSDT"))
 
 
-def test_aster_mcp_uses_v3_upstream_eip712_contract() -> None:
+def test_aster_mcp_uses_v1_hmac_sha256_contract() -> None:
     endpoints = AsterConfig().endpoints
 
-    assert endpoints.metadata_path == "/fapi/v3/exchangeInfo"
-    assert endpoints.order_path == "/fapi/v3/order"
-    assert endpoints.signing_scheme == "eip712_api_wallet_via_aster_mcp"
-    assert endpoints.api_key_header is None
+    assert endpoints.metadata_path == "/fapi/v1/exchangeInfo"
+    assert endpoints.order_path == "/fapi/v1/order"
+    assert endpoints.signing_scheme == "hmac_sha256_api_secret"
+    assert endpoints.api_key_header == "X-MBX-APIKEY"
 
 
 def test_hyperliquid_asset_indexes_are_resolved_from_network_metadata() -> None:

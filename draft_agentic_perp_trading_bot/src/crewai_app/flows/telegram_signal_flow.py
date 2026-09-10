@@ -19,7 +19,11 @@ from typing import Protocol
 
 from crewai.flow.flow import Flow, listen, start
 
-from crewai_app.flows.orchestration import process_message
+from crewai_app.flows.orchestration import (
+    process_message,
+    select_strategy_tier_for_market,
+)
+from crewai_app.agent_interfaces.qwen import SerialRagLoaderAPI
 from crewai_app.adapters.telegram.deduplication import (
     InMemoryTelegramDeduplicator,
 )
@@ -33,14 +37,13 @@ from crewai_app.domain.contracts.schemas import (
     PairRiskLimit,
     QwenSignalHypothesis,
     QwenStrategyCandidateSet,
+    SignalEvaluationResult,
     SerialRagExample,
-    StrategyTier,
     TelegramMessageEnvelope,
     TelegramPromptContext,
     TradeThreadCursor,
 )
 from crewai_app.domain.lifecycle.cursor import ConcurrentTradeCursorManager
-from crewai_app.domain.policies.execution_gate import evaluate_deterministic_risk
 from crewai_app.domain.policies.stop_loss import MinistralStopLossPolicy
 from crewai_app.flows.states import (
     DecisionRecord,
@@ -58,10 +61,6 @@ class ParentContextLoader(Protocol):
 
 class CursorContextLoader(Protocol):
     async def load(self, message: TelegramMessageEnvelope) -> list[TradeThreadCursor]: ...
-
-
-class SerialRagLoader(Protocol):
-    async def load(self, message: TelegramMessageEnvelope) -> list[SerialRagExample]: ...
 
 
 class MarketSnapshotLoader(Protocol):
@@ -124,12 +123,15 @@ class CompatibilityDeterministicDecisionService:
         reviews: MinistralStrategyReviewSet,
         market_snapshots: Mapping[ExchangeId, ExecutionLiquiditySnapshot],
     ) -> DeterministicDecisionOutcome:
+        SignalEvaluationResult(
+            candidates=candidates,
+            reviews=reviews,
+        ).validate_for_message(message)
         if not market_snapshots:
             return DeterministicDecisionOutcome(
                 rejection_reasons=["market_snapshot_unavailable"]
             )
 
-        first_snapshot = next(iter(market_snapshots.values()))
         qwen_agent = _PrecomputedQwenAgent(candidates)
         filter_agent = _PrecomputedMinistralAgent(reviews, market_snapshots)
         request = await process_message(
@@ -139,15 +141,13 @@ class CompatibilityDeterministicDecisionService:
             telegram_deduplicator=self.telegram_deduplicator,
             prompt_context=prompt_context,
             pair_blacklisted=self.pair_blacklisted,
-            current_price=first_snapshot.reference_price,
-            reference_price=first_snapshot.reference_price,
-            market_snapshot=None,
             tradfi_perpetual_pair=self.tradfi_perpetual_pair,
             trade_cursor_manager=self.trade_cursor_manager,
             risk_limits=self.risk_limits,
             existing_position_notional_by_exchange=(
                 self.existing_position_notional_by_exchange
             ),
+            market_snapshots=market_snapshots,
         )
         if request is None:
             return DeterministicDecisionOutcome(
@@ -155,70 +155,14 @@ class CompatibilityDeterministicDecisionService:
             )
         if request.intent.execution_network != ExchangeNetwork.TESTNET:
             return DeterministicDecisionOutcome(rejection_reasons=["mainnet_disabled"])
-
-        missing = [
-            exchange_id.value
-            for exchange_id in request.intent.target_exchanges
-            if exchange_id not in market_snapshots
-        ]
-        if missing:
-            return DeterministicDecisionOutcome(
-                rejection_reasons=[
-                    "market_snapshot_unavailable:" + ",".join(sorted(missing))
-                ]
-            )
-
-        liquidity_rejections = sorted(
-            {
-                reason
-                for exchange_id in request.intent.target_exchanges
-                for reason in market_snapshots[exchange_id].rejection_reasons
-            }
-        )
-        if liquidity_rejections:
-            return DeterministicDecisionOutcome(
-                rejection_reasons=liquidity_rejections
-            )
-
-        existing_notional = self.existing_position_notional_by_exchange or {}
-        limit_by_exchange = {
-            decision.exchange_id: decision.limits for decision in request.risk_decisions
-        }
-        risk_decisions = [
-            evaluate_deterministic_risk(
-                request.sizing,
-                exchange_id=exchange_id,
-                network=request.intent.execution_network,
-                symbol=request.intent.symbol,
-                limits=limit_by_exchange[exchange_id],
-                existing_position_notional_usd=existing_notional.get(
-                    exchange_id,
-                    Decimal("0"),
-                ),
-                pair_blacklisted=self.pair_blacklisted,
-                instant_order=request.intent.order_type == "market",
-                current_price=market_snapshots[exchange_id].market.current_price,
-                reference_price=market_snapshots[exchange_id].reference_price,
-                asset_group=request.intent.asset_group,
-                tradfi_perpetual_pair=self.tradfi_perpetual_pair,
-            )
-            for exchange_id in request.intent.target_exchanges
-        ]
-        rejection_reasons = sorted(
-            {reason for decision in risk_decisions for reason in decision.reasons}
-        )
-        if rejection_reasons:
-            return DeterministicDecisionOutcome(rejection_reasons=rejection_reasons)
-        return DeterministicDecisionOutcome(
-            approved_execution_request=request.model_copy(
-                update={"risk_decisions": risk_decisions}
-            )
-        )
+        return DeterministicDecisionOutcome(approved_execution_request=request)
 
 
 class TelegramSignalFlow(Flow[TelegramSignalState]):
     """Dispatch one message through context, Crew, policy, and persistence."""
 
+    # CrewAI's automatic LanceDB memory is not the source of trading truth.
+    _skip_auto_memory = True
     initial_state = TelegramSignalState
 
     def __init__(
@@ -226,7 +170,7 @@ class TelegramSignalFlow(Flow[TelegramSignalState]):
         *,
         parent_context_loader: ParentContextLoader,
         cursor_context_loader: CursorContextLoader,
-        serial_rag_loader: SerialRagLoader,
+        serial_rag_loader: SerialRagLoaderAPI,
         signal_evaluator: SignalEvaluator,
         market_snapshot_loader: MarketSnapshotLoader,
         deterministic_decision_service: DeterministicDecisionService,
@@ -289,8 +233,7 @@ class TelegramSignalFlow(Flow[TelegramSignalState]):
             self.state.serial_rag_examples,
             self.state.active_trade_cursors,
         )
-        if result.candidates.owner_id != message.owner_id:
-            raise ValueError("QWEN candidate owner does not match Flow routing")
+        result.validate_for_message(message)
         self.state.candidate_set = result.candidates
         self.state.ministral_review_set = result.reviews
         self.state.trace_steps.extend(
@@ -302,22 +245,22 @@ class TelegramSignalFlow(Flow[TelegramSignalState]):
     async def load_market_snapshots(self) -> dict[ExchangeId, ExecutionLiquiditySnapshot]:
         candidates = self._candidate_set()
         reviews = self._review_set()
+        selected_tier = select_strategy_tier_for_market(
+            self._message(),
+            candidates,
+            reviews.reviews,
+            self.state.active_trade_cursors,
+        )
         requested: dict[ExchangeId, tuple[str, Decimal]] = {}
-        for tier in StrategyTier:
-            review = reviews.reviews[tier]
+        if selected_tier is not None:
+            review = reviews.reviews[selected_tier]
             intent = review.canonical_intent
-            hypothesis = candidates.candidates[tier]
-            if review.status != "approved" or intent is None or not hypothesis.entries:
-                continue
-            for exchange_id in intent.target_exchanges:
-                identity = (intent.symbol.upper(), hypothesis.entries[0])
-                previous = requested.get(exchange_id)
-                if previous is not None and previous != identity:
-                    self.state.rejection_reasons.append(
-                        f"ambiguous_market_snapshot:{exchange_id.value}"
-                    )
-                    continue
-                requested[exchange_id] = identity
+            hypothesis = candidates.candidates[selected_tier]
+            if review.status == "approved" and intent is not None and hypothesis.entries:
+                requested = {
+                    exchange_id: (intent.symbol.upper(), hypothesis.entries[0])
+                    for exchange_id in intent.target_exchanges
+                }
 
         snapshots = {
             exchange_id: await self.market_snapshot_loader.load(
@@ -353,12 +296,34 @@ class TelegramSignalFlow(Flow[TelegramSignalState]):
     @listen(apply_deterministic_policies)
     async def persist_decision(self) -> DecisionRecord:
         message = self._message()
+        request = self.state.approved_execution_request
+        rejection_reasons = list(self.state.rejection_reasons)
+        if (
+            request is not None
+            and self.execution_mode.permits(request.intent.execution_network)
+            and self.execution_intent_publisher is None
+        ):
+            rejection_reasons.append("execution_intent_publisher_unconfigured")
+        self.state.rejection_reasons = sorted(set(rejection_reasons))
+        self.state.trace_steps.append("persist_decision")
         decision = DecisionRecord(
             flow_id=self.state.id,
+            idempotency_key=(
+                request.idempotency_key
+                if request is not None
+                else message.dedup_key
+                or f"{message.channel_id}:{message.telegram_message_id}"
+            ),
             owner_id=message.owner_id,
             channel_id=message.channel_id,
             telegram_message_id=message.telegram_message_id,
-            approved_execution_request=self.state.approved_execution_request,
+            prompt_context=self._prompt_context(),
+            serial_rag_examples=list(self.state.serial_rag_examples),
+            candidate_set=self.state.candidate_set,
+            ministral_review_set=self.state.ministral_review_set,
+            market_snapshots=dict(self.state.market_snapshots),
+            trace_steps=list(self.state.trace_steps),
+            approved_execution_request=request,
             rejection_reasons=list(self.state.rejection_reasons),
             recorded_at=datetime.now(timezone.utc),
         )
@@ -376,9 +341,6 @@ class TelegramSignalFlow(Flow[TelegramSignalState]):
         ):
             return None
         if self.execution_intent_publisher is None:
-            self.state.rejection_reasons.append(
-                "execution_intent_publisher_unconfigured"
-            )
             return None
         await self.execution_intent_publisher.publish(request)
         self.state.execution_intent_emitted = True

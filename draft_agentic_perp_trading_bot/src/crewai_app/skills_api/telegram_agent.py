@@ -1,4 +1,4 @@
-"""Retrieval-only TelegramAgent skill API.
+"""Compatibility re-export for the canonical retrieval-only Telegram API.
 
 File mappings:
 ``skills_api/telegram_agent.py`` <- ``frameworkless_app/skills_api/telegram_agent.py``;
@@ -7,16 +7,6 @@ File mappings:
 
 from __future__ import annotations
 
-from typing import Protocol
+from crewai_app.agent_interfaces.telegram import TelegramAgentAPI  # noqa: F401
 
-from crewai_app.domain.contracts.schemas import TelegramAgentRetrievalBatch
-
-
-class TelegramAgentAPI(Protocol):
-    telegram_chat_id: str
-
-    async def retrieve_messages(
-        self,
-        *,
-        maximum_messages: int | None,
-    ) -> TelegramAgentRetrievalBatch: ...
+__all__ = ["TelegramAgentAPI"]

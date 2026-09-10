@@ -208,6 +208,33 @@ def _evaluation(message: TelegramMessageEnvelope) -> SignalEvaluationResult:
     )
 
 
+def test_signal_evaluation_rejects_review_retargeting_source_signal() -> None:
+    message = _message()
+    evaluation = _evaluation(message)
+    tier = StrategyTier.INTERMEDIATE
+    review = evaluation.reviews.reviews[tier]
+    assert review.canonical_intent is not None
+    altered_review = review.model_copy(
+        update={
+            "canonical_intent": review.canonical_intent.model_copy(
+                update={"signal_dedup_key": "unrelated-signal"}
+            )
+        }
+    )
+    altered_reviews = evaluation.reviews.model_copy(
+        update={
+            "reviews": {
+                **evaluation.reviews.reviews,
+                tier: altered_review,
+            }
+        }
+    )
+    altered_evaluation = evaluation.model_copy(update={"reviews": altered_reviews})
+
+    with pytest.raises(ValueError, match="does not match"):
+        altered_evaluation.validate_for_message(message)
+
+
 def _market_snapshot(exchange_id: ExchangeId) -> ExecutionLiquiditySnapshot:
     settlement_asset = (
         SettlementAsset.USDT

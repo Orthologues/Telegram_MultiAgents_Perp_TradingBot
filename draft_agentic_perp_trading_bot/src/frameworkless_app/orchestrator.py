@@ -198,12 +198,17 @@ async def process_message(
                 lifecycle_strategy if transition_requested else None
             ),
         )
+    # The legacy request remains a comparison model; convert the canonical
+    # risk decision at this explicit migration boundary.
+    legacy_risk_decisions = [
+        decision.model_dump(mode="python") for decision in risk_decisions
+    ]
     return ApprovedExecutionRequest(
         intent=intent,
         sizing=sizing,
         confidence=confidence,
         lifecycle_strategy=lifecycle_strategy,
-        risk_decisions=risk_decisions,
+        risk_decisions=legacy_risk_decisions,
         idempotency_key=message.dedup_key or f"{message.channel_id}:{message.telegram_message_id}",
         source_telegram_message_id=message.telegram_message_id,
         parent_message_ids=list(message.parent_messages),

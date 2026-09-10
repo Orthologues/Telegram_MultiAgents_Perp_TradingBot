@@ -12,5 +12,6 @@ __pycache__/
 **/.pytest_cache/
 **/.env.prod
 **/legacy/
+**/ASTRA_drafts/
 .vscode/*
 !.vscode/settings.json

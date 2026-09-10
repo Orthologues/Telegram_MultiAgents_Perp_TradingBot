@@ -197,6 +197,45 @@ class DeduplicationDecision(BaseModel):
     reasons: list[str] = Field(default_factory=list)
 
 
+class TradingMessageRelation(StrEnum):
+    """Semantic relation between an incoming message and prior context."""
+
+    DUPLICATE = "duplicate"
+    CONTINUATION = "continuation"
+    NEW_SIGNAL = "new_signal"
+    AMBIGUOUS = "ambiguous"
+
+
+class TradingMessageRelationDecision(BaseModel):
+    """Reviewable QWEN relation output, separate from byte and signal deduplication."""
+
+    owner_id: OwnerId
+    channel_id: str
+    telegram_message_id: str = Field(pattern=r"^[0-9]+$")
+    relation: TradingMessageRelation
+    matched_message_ids: list[str] = Field(default_factory=list)
+    confidence: float = Field(ge=0.0, le=1.0)
+    reason_codes: list[str] = Field(default_factory=list)
+    needs_human_review: bool = False
+
+    @field_validator("matched_message_ids")
+    @classmethod
+    def validate_matched_message_ids(cls, message_ids: list[str]) -> list[str]:
+        if any(not message_id.isdigit() for message_id in message_ids):
+            raise ValueError("matched message IDs must be numeric Telegram message IDs")
+        if len(message_ids) != len(set(message_ids)):
+            raise ValueError("matched message IDs must not repeat")
+        if message_ids != sorted(message_ids, key=int):
+            raise ValueError("matched message IDs must be chronological")
+        return message_ids
+
+    @model_validator(mode="after")
+    def require_review_for_ambiguity(self) -> Self:
+        if self.relation == TradingMessageRelation.AMBIGUOUS:
+            self.needs_human_review = True
+        return self
+
+
 class TelegramAgentRetrievedMessage(BaseModel):
     """Message shape returned by AG2's TelegramRetrieveTool."""
 
@@ -400,6 +439,7 @@ class TelegramPromptMessage(BaseModel):
     raw_text: str | None = None
     raw_media_present: bool = False
     media_s3_uri: str | None = None
+    media_hashes: list[str] = Field(default_factory=list)
 
     @classmethod
     def from_envelope(cls, message: TelegramMessageEnvelope) -> Self:
@@ -411,6 +451,7 @@ class TelegramPromptMessage(BaseModel):
             raw_text=message.raw_text,
             raw_media_present=message.raw_media_present,
             media_s3_uri=message.media_s3_uri,
+            media_hashes=list(message.media_hashes),
         )
 
 
@@ -591,6 +632,26 @@ class MarketAnalysisSnapshot(BaseModel):
     def validate_venue(self) -> Self:
         _validate_settlement_asset(self.exchange_id, self.settlement_asset)
         return self
+
+
+class MarketExecutionSnapshot(BaseModel):
+    """Venue-specific market data required before a deterministic gate."""
+
+    market: MarketAnalysisSnapshot
+    reference_price: Decimal = Field(gt=Decimal("0"))
+    order_book_depth_usd: Decimal = Field(ge=Decimal("0"))
+    minimum_order_book_depth_usd: Decimal = Field(gt=Decimal("0"))
+    expected_slippage_fraction: Decimal = Field(ge=Decimal("0"))
+    maximum_expected_slippage_fraction: Decimal = Field(ge=Decimal("0"))
+
+    @property
+    def rejection_reasons(self) -> list[str]:
+        reasons: list[str] = []
+        if self.order_book_depth_usd < self.minimum_order_book_depth_usd:
+            reasons.append("insufficient_order_book_depth")
+        if self.expected_slippage_fraction > self.maximum_expected_slippage_fraction:
+            reasons.append("excessive_expected_slippage")
+        return reasons
 
 
 class OmittedStopLossDecision(BaseModel):
@@ -777,13 +838,128 @@ class CanonicalTradeIntent(BaseModel):
 
 
 class FilterDecision(BaseModel):
-    status: str
+    status: Literal["approved", "rejected", "needs_review"]
     quality_score: float = Field(ge=0.0, le=1.0)
     canonical_intent: CanonicalTradeIntent | None = None
     rejection_reasons: list[str] = Field(default_factory=list)
     reviewer_model: str
     deduplication: DeduplicationDecision | None = None
     omitted_stop_loss: OmittedStopLossDecision | None = None
+
+
+class MinistralStrategyReviewSet(BaseModel):
+    """One shared Ministral review for every QWEN strategy tier."""
+
+    owner_id: OwnerId
+    channel_id: str
+    reviewer_model: str = Field(min_length=1)
+    reviews: dict[StrategyTier, FilterDecision]
+
+    @field_validator("reviews")
+    @classmethod
+    def validate_all_tiers(
+        cls,
+        reviews: dict[StrategyTier, FilterDecision],
+    ) -> dict[StrategyTier, FilterDecision]:
+        if set(reviews) != set(StrategyTier):
+            raise ValueError("Ministral reviews must contain exactly all five strategy tiers")
+        return reviews
+
+
+class SignalEvaluationResult(BaseModel):
+    """Typed output of the sequential owner-QWEN and shared-Ministral Crew."""
+
+    candidates: QwenStrategyCandidateSet
+    reviews: MinistralStrategyReviewSet
+
+    @model_validator(mode="after")
+    def validate_identity(self) -> Self:
+        if self.candidates.owner_id != self.reviews.owner_id:
+            raise ValueError("QWEN and Ministral owner IDs must match")
+        if self.candidates.channel_id != self.reviews.channel_id:
+            raise ValueError("QWEN and Ministral channel IDs must match")
+        return self
+
+    def validate_for_message(self, message: TelegramMessageEnvelope) -> None:
+        """Bind every candidate and review to the exact source envelope."""
+        if (
+            self.candidates.owner_id != message.owner_id
+            or self.candidates.channel_id != message.channel_id
+            or self.candidates.asset_group != message.asset_group
+            or self.candidates.source_dedup_key != message.dedup_key
+        ):
+            raise ValueError("candidate set does not match the Telegram source")
+
+        for tier in StrategyTier:
+            hypothesis = self.candidates.candidates[tier]
+            if (
+                hypothesis.owner_id != message.owner_id
+                or hypothesis.channel_id != message.channel_id
+                or hypothesis.asset_group != message.asset_group
+                or hypothesis.strategy_tier != tier
+                or (
+                    hypothesis.source_dedup_key is not None
+                    and hypothesis.source_dedup_key != message.dedup_key
+                )
+            ):
+                raise ValueError(f"{tier.value} candidate does not match the Telegram source")
+            review = self.reviews.reviews[tier]
+            if review.reviewer_model != self.reviews.reviewer_model:
+                raise ValueError(f"{tier.value} review has mismatched reviewer attribution")
+            intent = review.canonical_intent
+            if intent is None:
+                continue
+            if (
+                review.status != "approved"
+                or intent.owner_id != message.owner_id
+                or intent.channel_id != message.channel_id
+                or intent.asset_group != message.asset_group
+                or intent.strategy_tier != tier
+                or intent.signal_dedup_key != message.dedup_key
+                or hypothesis.symbol is None
+                or intent.symbol.upper() != hypothesis.symbol.upper()
+                or intent.entries != hypothesis.entries
+                or intent.take_profit != hypothesis.take_profit
+            ):
+                raise ValueError(f"{tier.value} review does not match its QWEN candidate")
+            if hypothesis.stop_loss is not None and intent.stop_loss != hypothesis.stop_loss:
+                raise ValueError(f"{tier.value} review changed an explicit source stop-loss")
+            if hypothesis.intent_type in (IntentType.NEW_ORDER, IntentType.ADD_POSITION):
+                allowed_actions = (TradeAction.OPEN_LONG, TradeAction.OPEN_SHORT)
+            elif hypothesis.intent_type == IntentType.CLOSE_POSITION:
+                allowed_actions = (TradeAction.CLOSE_LONG, TradeAction.CLOSE_SHORT)
+            elif hypothesis.intent_type == IntentType.UPDATE_STOP_LOSS:
+                allowed_actions = (
+                    TradeAction.OPEN_LONG,
+                    TradeAction.OPEN_SHORT,
+                    TradeAction.REDUCE_LONG,
+                    TradeAction.REDUCE_SHORT,
+                )
+            elif hypothesis.intent_type == IntentType.UPDATE_TAKE_PROFIT:
+                allowed_actions = (
+                    TradeAction.OPEN_LONG,
+                    TradeAction.OPEN_SHORT,
+                    TradeAction.REDUCE_LONG,
+                    TradeAction.REDUCE_SHORT,
+                )
+            else:
+                allowed_actions = ()
+            if intent.action not in allowed_actions:
+                raise ValueError(f"{tier.value} candidate has an incompatible action")
+            if hypothesis.direction is None:
+                raise ValueError(f"{tier.value} candidate has no direction")
+            if intent.action in (
+                TradeAction.OPEN_LONG,
+                TradeAction.CLOSE_LONG,
+                TradeAction.REDUCE_LONG,
+            ) and hypothesis.direction.lower() != "long":
+                raise ValueError(f"{tier.value} review changed the candidate direction")
+            if intent.action in (
+                TradeAction.OPEN_SHORT,
+                TradeAction.CLOSE_SHORT,
+                TradeAction.REDUCE_SHORT,
+            ) and hypothesis.direction.lower() != "short":
+                raise ValueError(f"{tier.value} review changed the candidate direction")
 
 
 class PositionSizingDecision(BaseModel):
@@ -865,6 +1041,14 @@ class ClosedTradeOutcome(BaseModel):
     settlement_asset: SettlementAsset
     symbol: str = Field(min_length=1)
     signal_dedup_key: str | None = None
+    strategy_tier: StrategyTier | None = None
+    position_id: str | None = None
+    outcome_id: str | None = None
+    fully_closed: bool = True
+    owner_id: OwnerId | None = None
+    channel_id: str | None = None
+    asset_group: AssetGroup | None = None
+    lifecycle_stage: str | None = Field(default=None, min_length=1)
     entry_notional_quote: Decimal = Field(gt=Decimal("0"))
     closed_at: datetime
     realized_pnl_quote: Decimal
@@ -891,6 +1075,41 @@ class ClosedTradeOutcome(BaseModel):
     @property
     def net_pnl_percentage(self) -> Decimal:
         return self.net_pnl_quote / self.entry_notional_quote * Decimal("100")
+
+
+class StrategyOutcome(BaseModel):
+    """One executed or counterfactual result assigned to a strategy tier."""
+
+    strategy_tier: StrategyTier
+    outcome: ClosedTradeOutcome
+    counterfactual: bool = False
+
+    @model_validator(mode="after")
+    def validate_tier_identity(self) -> Self:
+        if (
+            self.outcome.strategy_tier is not None
+            and self.outcome.strategy_tier != self.strategy_tier
+        ):
+            raise ValueError("strategy outcome tier must match its closed outcome")
+        return self
+
+
+class StrategyTierPerformanceSummary(BaseModel):
+    """Separate executed and counterfactual P/L for one strategy tier."""
+
+    strategy_tier: StrategyTier
+    owner_id: OwnerId | None = None
+    channel_id: str | None = None
+    asset_group: AssetGroup | None = None
+    lifecycle_stage: str | None = None
+    sample_count: int = Field(ge=0)
+    executed_count: int = Field(ge=0)
+    counterfactual_count: int = Field(ge=0)
+    profitable_count: int = Field(ge=0)
+    losing_count: int = Field(ge=0)
+    net_pnl_percentage: Decimal
+    executed_net_pnl_percentage: Decimal = Decimal("0")
+    counterfactual_net_pnl_percentage: Decimal = Decimal("0")
 
 
 class VenuePerformanceSummary(BaseModel):
@@ -1048,6 +1267,27 @@ class ApprovedExecutionRequest(BaseModel):
         ):
             raise ValueError("confidence must match the lifecycle strategy provenance")
         return self
+
+
+class DecisionRecord(BaseModel):
+    """Persisted Flow decision with source, evaluation, and trace provenance."""
+
+    flow_id: str
+    idempotency_key: str = Field(min_length=1)
+    owner_id: OwnerId
+    channel_id: str
+    telegram_message_id: str
+    prompt_context: TelegramPromptContext | None = None
+    serial_rag_examples: list[SerialRagExample] = Field(default_factory=list)
+    candidate_set: QwenStrategyCandidateSet | None = None
+    ministral_review_set: MinistralStrategyReviewSet | None = None
+    market_snapshots: dict[ExchangeId, MarketExecutionSnapshot] = Field(
+        default_factory=dict
+    )
+    trace_steps: list[str] = Field(default_factory=list)
+    approved_execution_request: ApprovedExecutionRequest | None = None
+    rejection_reasons: list[str] = Field(default_factory=list)
+    recorded_at: datetime
 
 
 __all__ = [name for name in globals() if not name.startswith("_")]

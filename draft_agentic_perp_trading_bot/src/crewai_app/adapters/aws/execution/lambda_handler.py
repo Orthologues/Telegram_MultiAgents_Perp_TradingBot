@@ -24,7 +24,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     Real implementation responsibilities:
     - parse ApprovedExecutionRequest
     - load Aster or Hyperliquid API-wallet secrets
-    - delegate Aster V3 signing to the official Aster MCP client
+    - sign Aster V1 requests with the API secret inside Lambda
     - delegate Hyperliquid signing and response parsing to the upstream MCP/SDK
     - enforce kill-switch config
     - write execution audit logs

@@ -277,3 +277,20 @@ Relocated contracts, lifecycle, policies, performance, Telegram, MCP, AWS, and
 orchestration modules into `crewai_app`, while preserving `frameworkless_app`
 for comparison and review. Applied the same explicit file-to-file provenance
 method established by `d66f474`.
+
+### 2026-09-10 — pending: consolidated Astra migration and skills review
+
+Established canonical CrewAI contracts and responsibility interfaces, separated
+message observation from successful delivery, preserved shared QWEN/Ministral
+context, validated reviewed intents against their source, and delayed cursor
+attachment until deterministic market gates passed. Aligned MCP execution with
+Aster V1 REST/HMAC, added five-tier performance grouping by owner/channel/asset/
+lifecycle dimensions, refreshed the architecture map, and retained
+`frameworkless_app` for comparison. Focused checks pass; full CrewAI Flow
+verification and human review of execution-sensitive code remain pending.
+
+Reworked `SKILLS.md` around ownership, invariants, implementation status, and
+verification. Made `skills_api` compatibility-only, added canonical QWEN
+message-relation, synonym, and position-reduction interfaces, and added a
+chronological typed relation contract. Updated the architecture map and active
+CrewAI boundary notes; no commit ID is assigned yet.

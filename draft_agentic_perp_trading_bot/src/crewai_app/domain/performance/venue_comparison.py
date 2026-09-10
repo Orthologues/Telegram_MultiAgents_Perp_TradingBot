@@ -31,10 +31,21 @@ def compare_testnet_venue_performance(
     totals: dict[tuple[str, ExchangeId], tuple[Decimal, Decimal]] = defaultdict(
         lambda: (Decimal("0"), Decimal("0"))
     )
+    seen_outcomes: set[tuple[str, ExchangeId, str]] = set()
     for outcome in outcomes:
-        if outcome.network != ExchangeNetwork.TESTNET or not outcome.signal_dedup_key:
+        if (
+            outcome.network != ExchangeNetwork.TESTNET
+            or not outcome.signal_dedup_key
+            or not outcome.fully_closed
+        ):
             continue
-        key = (outcome.signal_dedup_key, outcome.exchange_id)
+        signal_key = _comparison_key(outcome)
+        outcome_identity = outcome.outcome_id or outcome.model_dump_json()
+        identity = (signal_key, outcome.exchange_id, outcome_identity)
+        if identity in seen_outcomes:
+            continue
+        seen_outcomes.add(identity)
+        key = (signal_key, outcome.exchange_id)
         net_pnl, entry_notional = totals[key]
         totals[key] = (
             net_pnl + outcome.net_pnl_quote,
@@ -42,7 +53,9 @@ def compare_testnet_venue_performance(
         )
 
     aster_keys = {
-        signal_key for signal_key, exchange_id in totals if exchange_id == ExchangeId.ASTER
+        signal_key
+        for signal_key, exchange_id in totals
+        if exchange_id == ExchangeId.ASTER
     }
     hyperliquid_keys = {
         signal_key for signal_key, exchange_id in totals if exchange_id == ExchangeId.HYPERLIQUID
@@ -74,6 +87,13 @@ def compare_testnet_venue_performance(
         higher_net_pnl_exchange=higher_net_pnl_exchange,
         computed_at=computed_at or datetime.now(timezone.utc),
     )
+
+
+def _comparison_key(outcome: ClosedTradeOutcome) -> str:
+    """Match the same signal and strategy tier, when tier metadata exists."""
+    if outcome.strategy_tier is None:
+        return outcome.signal_dedup_key or ""
+    return f"{outcome.signal_dedup_key}::{outcome.strategy_tier.value}"
 
 
 def _summarize(

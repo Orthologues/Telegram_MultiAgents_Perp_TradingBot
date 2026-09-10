@@ -1,4 +1,7 @@
-"""Typed API for the omitted stop-loss inference skill.
+"""Compatibility API for the deterministic omitted-stop-loss policy.
+
+The canonical implementation is domain.policies.stop_loss exposed to a Flow
+through tools.stop_loss_policy_tool; this module is not a model interface.
 
 File mappings:
 ``skills_api/omitted_stop_loss_inference.py`` <-

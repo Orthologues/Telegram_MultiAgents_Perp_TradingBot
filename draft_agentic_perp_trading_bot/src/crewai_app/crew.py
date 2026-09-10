@@ -13,11 +13,10 @@ from pydantic import BaseModel, Field, field_validator
 from crewai_app.domain.contracts.schemas import (
     ACCEPTABLE_ALTERNATIVE_OWNER_MODEL_IDS,
     BedrockModelId,
+    MinistralStrategyReviewSet,
     OwnerId,
     QwenStrategyCandidateSet,
 )
-from crewai_app.flows.states import MinistralStrategyReviewSet
-
 _OWNER_AGENT_CONFIG = {
     OwnerId.OWNER_A_SHU_QIN: "owner_a_qwen",
     OwnerId.OWNER_B_LAO_TU: "owner_b_qwen",

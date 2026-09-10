@@ -6,6 +6,20 @@ File mappings:
 ``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
 """
 
-from crewai_app.skills_api.ministral_filter import MinistralFilterAPI
+from typing import Protocol
 
-__all__ = ["MinistralFilterAPI"]
+from crewai_app.domain.contracts.schemas import (
+    FilterDecision,
+    MarketAnalysisSnapshot,
+    QwenSignalHypothesis,
+    TelegramPromptContext,
+)
+class MinistralReviewAPI(Protocol):
+    async def review(
+        self,
+        hypothesis: QwenSignalHypothesis,
+        prompt_context: TelegramPromptContext,
+        market_snapshot: MarketAnalysisSnapshot | None = None,
+    ) -> FilterDecision: ...
+
+__all__ = ["MinistralReviewAPI"]

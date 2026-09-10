@@ -8,6 +8,8 @@ File mappings:
 from crewai_app.domain.contracts.definitions import (
     ClosedTradeOutcome,
     PerformanceMetricsSnapshot,
+    StrategyOutcome,
+    StrategyTierPerformanceSummary,
     TestnetVenuePerformanceComparison,
     VenuePerformanceSummary,
 )
@@ -15,6 +17,8 @@ from crewai_app.domain.contracts.definitions import (
 __all__ = [
     "ClosedTradeOutcome",
     "PerformanceMetricsSnapshot",
+    "StrategyOutcome",
+    "StrategyTierPerformanceSummary",
     "TestnetVenuePerformanceComparison",
     "VenuePerformanceSummary",
 ]

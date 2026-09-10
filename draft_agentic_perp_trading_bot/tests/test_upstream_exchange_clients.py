@@ -104,3 +104,30 @@ def test_guarded_handoffs_emit_upstream_native_order_arguments() -> None:
 def test_aster_uses_api_wallet_secret_boundary() -> None:
     assert exchange_signing_secret(ExchangeId.ASTER) == SecretName.ASTER_API_WALLET
     assert SecretName.ASTER_API_WALLET.value.endswith("/aster/api-wallet")
+
+
+def test_crewai_aster_v1_signer_matches_hmac_sha256_contract() -> None:
+    from crewai_app.adapters.aws.execution.upstream_clients import (
+        AsterV1Credentials,
+        sign_aster_v1_params,
+    )
+
+    signed = sign_aster_v1_params(
+        {
+            "symbol": "BTCUSDT",
+            "side": "BUY",
+            "type": "LIMIT",
+            "quantity": "1",
+            "price": "9000",
+            "timeInForce": "GTC",
+            "recvWindow": 5000,
+            "timestamp": 1591702613943,
+        },
+        "2b5eb11e18796d12d88f13dc27dbbd02c2cc51ff7059765ed9821957d82bb4d9",
+    )
+
+    assert signed["signature"] == (
+        "3c661234138461fcc7a7d8746c6558c9842d4e10870d2ecbedf7777cad694af9"
+    )
+    credentials = AsterV1Credentials(api_key="api-key", secret_key="secret-key")
+    assert credentials.secret_key not in repr(credentials)

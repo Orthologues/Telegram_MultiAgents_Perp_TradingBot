@@ -16,13 +16,13 @@ from crewai_app.adapters.exchanges.mcp.venue_contracts import (
     get_exchange_profile,
 )
 from crewai_app.adapters.exchanges.mcp.upstream_contracts import (
-    ASTER_V3_TARGET,
+    ASTER_V1_TARGET,
     HYPERLIQUID_MCP_TARGET,
     UpstreamProxyTarget,
 )
 
 __all__ = [
-    "ASTER_V3_TARGET",
+    "ASTER_V1_TARGET",
     "AsterGateway",
     "ExchangeEndpointProfile",
     "ExchangeGateway",

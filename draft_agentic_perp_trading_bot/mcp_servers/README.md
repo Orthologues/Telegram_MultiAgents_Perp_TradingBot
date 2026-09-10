@@ -4,7 +4,7 @@ This folder contains exchange-specific MCP servers that back the scaffolded
 exchange gateway.
 
 - `hyperliquid_mcp/`: guarded proxy to the pinned Hyperliquid MCP interface.
-- `aster_mcp/`: Aster V3 reads and guarded proxy to the official Aster MCP.
+- `aster_mcp/`: Aster V1 REST reads and a guarded proxy to the Lambda signing boundary.
 
 The intended split is:
 

@@ -22,6 +22,8 @@ from crewai_app.domain.contracts.definitions import (
     TelegramPromptContext,
     TelegramPromptMessage,
     TelegramRagMessageReference,
+    TradingMessageRelation,
+    TradingMessageRelationDecision,
 )
 
 __all__ = [
@@ -41,4 +43,6 @@ __all__ = [
     "TelegramPromptContext",
     "TelegramPromptMessage",
     "TelegramRagMessageReference",
+    "TradingMessageRelation",
+    "TradingMessageRelationDecision",
 ]

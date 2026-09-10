@@ -13,15 +13,15 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from frameworkless_app.mcp_gateway.venue_contracts import (
+from crewai_app.adapters.exchanges.mcp.venue_contracts import (
     ExchangeEndpointProfile,
     get_exchange_profile,
 )
-from frameworkless_app.mcp_gateway.upstream_contracts import (
+from crewai_app.adapters.exchanges.mcp.upstream_contracts import (
     HYPERLIQUID_MCP_TARGET,
     hyperliquid_mcp_order_invocation,
 )
-from frameworkless_app.schemas import ExchangeId, ExchangeNetwork
+from crewai_app.domain.contracts.schemas import ExchangeId, ExchangeNetwork
 
 SUPPORTED_CANDLE_INTERVALS = frozenset({"5m", "15m", "1h", "4h"})
 

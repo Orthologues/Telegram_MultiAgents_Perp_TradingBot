@@ -3,33 +3,25 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Protocol, TypeVar
+from typing import TypeVar
 
 from crewai.tasks.task_output import TaskOutput
 from pydantic import BaseModel
 
 from crewai_app.crew import CrewModelSettings, TradingSignalCrew
+from crewai_app.agent_interfaces.qwen import SignalEvaluationAPI
 from crewai_app.domain.contracts.schemas import (
+    SignalEvaluationResult,
+    MinistralStrategyReviewSet,
     QwenStrategyCandidateSet,
     SerialRagExample,
     TelegramMessageEnvelope,
     TelegramPromptContext,
     TradeThreadCursor,
 )
-from crewai_app.flows.states import (
-    MinistralStrategyReviewSet,
-    SignalEvaluationResult,
-)
 
 
-class SignalEvaluator(Protocol):
-    async def evaluate(
-        self,
-        message: TelegramMessageEnvelope,
-        prompt_context: TelegramPromptContext,
-        serial_rag_examples: list[SerialRagExample],
-        active_trade_cursors: list[TradeThreadCursor],
-    ) -> SignalEvaluationResult: ...
+SignalEvaluator = SignalEvaluationAPI
 
 
 class CrewSignalEvaluator:
@@ -64,7 +56,9 @@ class CrewSignalEvaluator:
             output.tasks_output[1],
             MinistralStrategyReviewSet,
         )
-        return SignalEvaluationResult(candidates=candidates, reviews=reviews)
+        result = SignalEvaluationResult(candidates=candidates, reviews=reviews)
+        result.validate_for_message(message)
+        return result
 
 
 OutputModel = TypeVar("OutputModel", bound=BaseModel)

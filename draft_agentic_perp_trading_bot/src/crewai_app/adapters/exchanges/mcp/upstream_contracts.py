@@ -25,12 +25,12 @@ class UpstreamProxyTarget:
         return asdict(self)
 
 
-ASTER_V3_TARGET = UpstreamProxyTarget(
-    repository="https://github.com/asterdex/aster-mcp",
-    revision="71fa3cf02401573f7450668c265c8f4b11c78db0",
-    package="aster-mcp",
-    interface="aster_mcp.v3_client.AsterClientV3",
-    operation="create_order",
+ASTER_V1_TARGET = UpstreamProxyTarget(
+    repository="https://docs.asterdex.com/for-developers/aster-api/api-documentation",
+    revision="v1",
+    package="Aster REST API",
+    interface="HMAC-SHA256 REST client",
+    operation="POST /fapi/v1/order",
 )
 
 HYPERLIQUID_MCP_TARGET = UpstreamProxyTarget(
@@ -42,7 +42,7 @@ HYPERLIQUID_MCP_TARGET = UpstreamProxyTarget(
 )
 
 
-def aster_v3_order_invocation(
+def aster_v1_order_invocation(
     *,
     symbol: str,
     side: str,
@@ -54,16 +54,18 @@ def aster_v3_order_invocation(
     source_intent_id: str,
 ) -> dict[str, Any]:
     return {
-        "target": ASTER_V3_TARGET.as_dict(),
+        "target": ASTER_V1_TARGET.as_dict(),
         "arguments": {
             "symbol": symbol,
             "side": side,
-            "order_type": order_type,
+            "type": order_type,
             "quantity": str(quantity),
             "price": str(price) if price is not None else None,
-            "time_in_force": time_in_force,
-            "reduce_only": reduce_only,
-            "new_client_order_id": stable_client_order_id(source_intent_id),
+            "timeInForce": time_in_force,
+            "reduceOnly": reduce_only,
+            "newClientOrderId": stable_client_order_id(source_intent_id),
+            "recvWindow": 5000,
+            "signing": "HMAC-SHA256 inside Lambda",
         },
     }
 
@@ -93,15 +95,15 @@ def hyperliquid_mcp_order_invocation(
 
 
 def stable_client_order_id(source_intent_id: str) -> str:
-    """Return the 128-bit hex client-order form accepted by both upstreams."""
-    return f"0x{sha256(source_intent_id.encode()).hexdigest()[:32]}"
+    """Return a stable client-order identifier for either venue."""
+    return sha256(source_intent_id.encode()).hexdigest()[:32]
 
 
 __all__ = [
-    "ASTER_V3_TARGET",
+    "ASTER_V1_TARGET",
     "HYPERLIQUID_MCP_TARGET",
     "UpstreamProxyTarget",
-    "aster_v3_order_invocation",
+    "aster_v1_order_invocation",
     "hyperliquid_mcp_order_invocation",
     "stable_client_order_id",
 ]

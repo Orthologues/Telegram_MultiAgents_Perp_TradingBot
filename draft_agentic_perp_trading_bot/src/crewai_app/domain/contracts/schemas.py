@@ -12,11 +12,13 @@ from crewai_app.domain.contracts.execution import (
     ACCEPTABLE_ALTERNATIVE_OWNER_MODEL_IDS,
     ApprovedExecutionRequest,
     BedrockModelId,
+    DecisionRecord,
     DeterministicRiskDecision,
     ExchangeId,
     ExchangeNetwork,
     IndicatorTimeframe,
     MarketAnalysisSnapshot,
+    MarketExecutionSnapshot,
     MarketLiquidityTier,
     OmittedStopLossDecision,
     PairBlacklistDecision,
@@ -29,6 +31,8 @@ from crewai_app.domain.contracts.execution import (
 from crewai_app.domain.contracts.performance import (
     ClosedTradeOutcome,
     PerformanceMetricsSnapshot,
+    StrategyOutcome,
+    StrategyTierPerformanceSummary,
     TestnetVenuePerformanceComparison,
     VenuePerformanceSummary,
 )
@@ -49,6 +53,8 @@ from crewai_app.domain.contracts.telegram import (
     TelegramPromptContext,
     TelegramPromptMessage,
     TelegramRagMessageReference,
+    TradingMessageRelation,
+    TradingMessageRelationDecision,
 )
 from crewai_app.domain.contracts.trading import (
     CanonicalTradeIntent,
@@ -57,6 +63,7 @@ from crewai_app.domain.contracts.trading import (
     FilterDecision,
     IntentType,
     LifecycleStrategySource,
+    MinistralStrategyReviewSet,
     PositionDirection,
     PositionLifecycleEvent,
     PositionLifecycleStrategy,
@@ -64,6 +71,7 @@ from crewai_app.domain.contracts.trading import (
     PositionSizingDecision,
     QwenSignalHypothesis,
     QwenStrategyCandidateSet,
+    SignalEvaluationResult,
     StrategyTier,
     TakeProfitFillEvent,
     TakeProfitLevel,

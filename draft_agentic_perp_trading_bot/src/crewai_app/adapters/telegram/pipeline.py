@@ -79,7 +79,7 @@ class TelegramIngestionPipeline:
         for message in batch.messages:
             contextualized_message = await self._resolve_parent_messages(message)
             archived_message = await self._raw_media_archive.archive(contextualized_message)
-            deduplication = self._input_deduplicator.check(archived_message)
+            deduplication = self._input_deduplicator.inspect(archived_message)
             await self._metadata_repository.put(
                 TelegramIngestionRecord(
                     message=archived_message,
@@ -104,6 +104,7 @@ class TelegramIngestionPipeline:
                     }
                 )
             await self._bedrock_publisher.publish(context)
+            self._input_deduplicator.mark_delivered(archived_message)
             published.append(archived_message)
             await self._poller.commit_message(archived_message)
 

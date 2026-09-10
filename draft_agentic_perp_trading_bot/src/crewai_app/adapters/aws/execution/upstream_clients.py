@@ -9,14 +9,19 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from importlib import import_module
+from hashlib import sha256
+import hmac
+import time
 from typing import Any, Protocol, Self
+from urllib.parse import urlencode
+
+import httpx
 
 
-class AsterV3Client(Protocol):
-    """Official Aster MCP V3 client subset used by Lambda."""
+class AsterV1Client(Protocol):
+    """Small signed REST subset used by the Aster V1 Lambda boundary."""
 
-    def create_order(
+    async def create_order(
         self,
         symbol: str,
         side: str,
@@ -32,62 +37,105 @@ class AsterV3Client(Protocol):
 
 
 @dataclass(frozen=True, slots=True)
-class AsterV3Credentials:
-    """Aster API-wallet material loaded only inside the Lambda boundary."""
+class AsterV1Credentials:
+    """Aster API key material loaded only inside the Lambda boundary."""
 
-    user: str
-    signer: str
-    private_key: str = field(repr=False)
+    api_key: str
+    secret_key: str = field(repr=False)
 
     def __post_init__(self) -> None:
-        _require_hex(self.user, 40, "user")
-        _require_hex(self.signer, 40, "signer")
-        _require_hex(self.private_key, 64, "private_key")
+        if not self.api_key.strip() or not self.secret_key.strip():
+            raise ValueError("Aster API key and secret key must not be blank")
 
     @classmethod
     def from_secret_payload(cls, payload: Mapping[str, object]) -> Self:
-        user = payload.get("user")
-        signer = payload.get("signer")
-        private_key = payload.get("private_key")
-        if not all(isinstance(value, str) for value in (user, signer, private_key)):
+        api_key = payload.get("api_key")
+        secret_key = payload.get("secret_key")
+        if not all(isinstance(value, str) for value in (api_key, secret_key)):
             raise ValueError(
-                "Aster V3 secret payload requires string user, signer, and private_key"
+                "Aster V1 secret payload requires string api_key and secret_key"
             )
-        return cls(user=user, signer=signer, private_key=private_key)
+        return cls(api_key=api_key, secret_key=secret_key)
 
 
-def create_aster_v3_client(
-    credentials: AsterV3Credentials,
+@dataclass(slots=True)
+class AsterV1RestClient:
+    credentials: AsterV1Credentials
+    base_url: str
+    timeout_seconds: float = 15.0
+
+    async def create_order(
+        self,
+        symbol: str,
+        side: str,
+        order_type: str,
+        quantity: float | str,
+        price: float | str | None = None,
+        stop_price: float | str | None = None,
+        time_in_force: str = "GTC",
+        reduce_only: bool = False,
+        new_client_order_id: str | None = None,
+        recv_window: int = 5000,
+    ) -> Any:
+        params: dict[str, object] = {
+            "symbol": symbol,
+            "side": side,
+            "type": order_type,
+            "quantity": quantity,
+            "timeInForce": time_in_force,
+            "reduceOnly": str(reduce_only).lower(),
+            "recvWindow": recv_window,
+            "timestamp": int(time.time() * 1000),
+        }
+        if price is not None:
+            params["price"] = price
+        if stop_price is not None:
+            params["stopPrice"] = stop_price
+        if new_client_order_id is not None:
+            params["newClientOrderId"] = new_client_order_id
+        signed = sign_aster_v1_params(params, self.credentials.secret_key)
+        async with httpx.AsyncClient(
+            base_url=self.base_url,
+            timeout=self.timeout_seconds,
+            headers={"X-MBX-APIKEY": self.credentials.api_key},
+        ) as client:
+            response = await client.post("/fapi/v1/order", params=signed)
+            if response.status_code == 503:
+                raise RuntimeError(
+                    "Aster order status is unknown after HTTP 503; reconcile by "
+                    "client order ID before any retry"
+                )
+            response.raise_for_status()
+            return response.json()
+
+
+def sign_aster_v1_params(
+    params: Mapping[str, object],
+    secret_key: str,
+) -> dict[str, object]:
+    """Add the HMAC-SHA256 signature required by Aster signed endpoints."""
+    query = urlencode([(key, value) for key, value in params.items()])
+    signature = hmac.new(
+        secret_key.encode("utf-8"),
+        query.encode("utf-8"),
+        sha256,
+    ).hexdigest()
+    return {**params, "signature": signature}
+
+
+def create_aster_v1_client(
+    credentials: AsterV1Credentials,
     *,
     base_url: str,
-) -> AsterV3Client:
-    """Instantiate the official client without reimplementing EIP-712."""
-    try:
-        client_type = import_module("aster_mcp.v3_client").AsterClientV3
-    except (AttributeError, ImportError) as exc:
-        raise RuntimeError(
-            "Install the exchange-upstreams extra to use authenticated Aster V3"
-        ) from exc
-    return client_type(
-        user=credentials.user,
-        signer=credentials.signer,
-        private_key=credentials.private_key,
-        base_url=base_url,
-    )
-
-
-def _require_hex(value: str, digits: int, field_name: str) -> None:
-    normalized = value.removeprefix("0x")
-    if len(normalized) != digits:
-        raise ValueError(f"Aster {field_name} must contain {digits} hexadecimal digits")
-    try:
-        int(normalized, 16)
-    except ValueError as exc:
-        raise ValueError(f"Aster {field_name} must be hexadecimal") from exc
+) -> AsterV1Client:
+    """Construct the Aster V1 REST client inside the execution boundary."""
+    return AsterV1RestClient(credentials=credentials, base_url=base_url)
 
 
 __all__ = [
-    "AsterV3Client",
-    "AsterV3Credentials",
-    "create_aster_v3_client",
+    "AsterV1Client",
+    "AsterV1Credentials",
+    "AsterV1RestClient",
+    "create_aster_v1_client",
+    "sign_aster_v1_params",
 ]

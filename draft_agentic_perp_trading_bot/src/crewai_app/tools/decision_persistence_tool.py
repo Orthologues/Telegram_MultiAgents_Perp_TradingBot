@@ -6,7 +6,7 @@ from collections.abc import Callable
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from crewai_app.flows.states import DecisionRecord
+from crewai_app.domain.contracts.schemas import DecisionRecord
 from crewai_app.tools._base import TradingBotTool
 
 
@@ -26,4 +26,8 @@ class DecisionPersistenceTool(TradingBotTool):
     def _run(self, decision: DecisionRecord | dict) -> dict:
         record = DecisionRecord.model_validate(decision)
         self.writer(record)
-        return {"flow_id": record.flow_id, "persisted": True}
+        return {
+            "flow_id": record.flow_id,
+            "idempotency_key": record.idempotency_key,
+            "persisted": True,
+        }

@@ -75,39 +75,42 @@ TelegramAgent retrieval
 
 ## Agent API Interfaces
 
-Typed contracts live in
-`draft_agentic_perp_trading_bot/src/frameworkless_app/skills_api/`:
+Canonical agent contracts live in
+`draft_agentic_perp_trading_bot/src/crewai_app/agent_interfaces/`:
 
 ```text
 TelegramAgentAPI.retrieve_messages(...) -> TelegramAgentRetrievalBatch
-QwenAgentRagLoadingAPI.load_rag_profile(...) -> OwnerRagProfile
-OwnerQwenAPI.infer_strategy_candidates(...) -> QwenStrategyCandidateSet
-OwnerQwenAPI.infer_signal(...) -> QwenSignalHypothesis
-OwnerQwenAPI.infer_synonym(...) -> TradingMessageSynonymDecision
-OwnerQwenAPI.infer_position_reduction(...) -> PositionReductionHypothesis
-MinistralFilterAPI.protect_entry_after_take_profit(...) -> TakeProfitProtectionDecision
-MinistralFilterAPI.record_execution_event(...) -> None
-OmittedStopLossInferenceAPI.infer_omitted_stop_loss(...) -> OmittedStopLossDecision
-MinistralFilterAPI.review(..., market_snapshot) -> FilterDecision
+SerialRagLoaderAPI.load(...) -> list[SerialRagExample]
+QwenCandidateInferenceAPI.infer_strategy_candidates(...) -> QwenStrategyCandidateSet
+QwenMessageRelationAPI.classify_message_relation(...) -> TradingMessageRelationDecision
+QwenSynonymInferenceAPI.infer_synonym(...) -> TradingMessageSynonymDecision
+QwenPositionReductionAPI.infer_position_reduction(...) -> PositionReductionHypothesis
+SignalEvaluationAPI.evaluate(...) -> SignalEvaluationResult
+MinistralReviewAPI.review(..., market_snapshot) -> FilterDecision
+LegacySignalInferenceAPI.infer_signal(...) -> QwenSignalHypothesis
 ```
 
-The shared synonym skill is review-only and is implemented by every
-`OwnerQwenAgent` in `qwen_agents/owner_agent.py`. The minimalist Chinese reply
-skill has no trading API. No agent API may call an exchange; approved execution
-remains behind the MCP gateway.
+The compatibility skill contracts remain in
+`draft_agentic_perp_trading_bot/src/crewai_app/skills_api/` for the retained
+legacy comparison path; the canonical Flow imports `agent_interfaces` instead.
+The shared synonym and message-relation skills are review-only capabilities of
+the selected owner QWEN workflow. Omitted-stop-loss and TP protection are
+deterministic policy/lifecycle responsibilities, not agent APIs. No agent API
+may call an exchange; approved execution remains behind the MCP gateway.
 
 ## Data and Execution Rules
 
 - Keep input deduplication, semantic QWEN deduplication, and Ministral signal
   deduplication as separate stages.
-- Keep S3 archival, DynamoDB persistence, and Bedrock handoff behind
-  `telegram_ingestion/storage.py` and `pipeline.py`.
-- Keep live parent-linked cursor lifecycle logic in `trade_cursor.py`; use
-  conditional DynamoDB version writes so independent cursors can progress
-  concurrently.
+- Keep S3 archival, DynamoDB persistence, and the downstream Bedrock handoff
+  behind `crewai_app/adapters/telegram/` and its Flow boundary.
+- Keep live parent-linked cursor lifecycle logic in
+  `crewai_app/domain/lifecycle/cursor.py`; use conditional DynamoDB version
+  writes so independent cursors can progress concurrently.
 - Keep exchange-specific behavior behind MCP; agents must not call exchanges.
-- Default both venues to testnet. Keep both API wallets inside Secrets Manager
-  and Lambda; delegate signing to the pinned Aster and Hyperliquid upstreams.
+- Default both venues to testnet. Keep both API credentials inside Secrets
+  Manager and Lambda; use the canonical Aster V1 REST/HMAC and Hyperliquid
+  upstream boundaries for signing and submission.
 - Preserve owner, channel, Telegram message ID, timestamps, parent IDs, media
   hashes, deduplication key, model ID, confidence, and strategy tier.
 
@@ -144,10 +147,15 @@ Caveats:
 - Do not change the paragraphs under the subtitle `prompts for the most recent Agentic Update` under this file unless there is a basic grammatic error.
 - Introduce only minimalist and necessary changes to the `.md` files across the repository.
 
+The historical instructions above are superseded for the active scaffold: use
+the Aster V1 REST/HMAC boundary already implemented in `crewai_app` and retain
+the legacy Aster V3 material only for review comparison.
+
 ## <code>Crew.ai</code> refactoring
 
 This is a full replacement of the current agent-orchestration scaffold with a
-CrewAI application, not a parallel adapter. Follow [Build agentic systems with
+CrewAI application. The legacy `frameworkless_app` remains intact temporarily
+for comparison and review. Follow [Build agentic systems with
 CrewAI and Amazon Bedrock](https://aws.amazon.com/blogs/machine-learning/build-agentic-systems-with-crewai-and-amazon-bedrock/)
 and its [reference repository](https://github.com/aws-samples/sample-agentic-frameworks-on-aws/tree/main/crewai/aws-security-auditor-crew).
 CrewAI owns agent, task, Crew, Flow, Bedrock LLM, structured-output, and tracing
@@ -162,7 +170,7 @@ cross-channel strategy summaries.
 
 ```text
 TelegramAgent/Telethon on Lightsail
-  -> normalize, hydrate, archive, deduplicate, and publish to SQS
+  -> normalize, hydrate, archive, deduplicate, and publish to the planned SQS boundary
   -> CrewAI TelegramSignalFlow
      -> load chronological parent context and active DynamoDB cursors
      -> select one owner QWEN definition
@@ -170,7 +178,7 @@ TelegramAgent/Telethon on Lightsail
      -> validate five strategy candidates
      -> apply deterministic policies outside the Crew
      -> persist the decision and publish an approved execution intent
-  -> guarded Aster/Hyperliquid MCP and Lambda boundary
+  -> guarded Aster/Hyperliquid MCP and Lambda boundary (submission planned)
   -> PositionLifecycleFlow and PerformanceEvaluationFlow
 ```
 
@@ -296,10 +304,11 @@ draft_agentic_perp_trading_bot/
   tools are typed `BaseTool` subclasses in `tools/*_tool.py`; typed Flow state
   lives in `flows/states.py`; stateful routing is implemented in
   `flows/*_flow.py`.
-- This is a planned relocation of the non-CrewAI boundaries only; do not move
-  code until the plan is approved. Flows coordinate agent interfaces, domain
-  policies, tools, and adapters. Retain `skills_api/` until its public contracts
-  have equivalent coverage under `agent_interfaces/`, then remove it.
+- Migration is in progress: `crewai_app` is the canonical runtime scaffold and
+  `frameworkless_app` remains intact for comparison. Flows coordinate agent
+  interfaces, domain policies, tools, and adapters. Retain `skills_api/` as a
+  compatibility surface until its public contracts have equivalent reviewed
+  coverage under `agent_interfaces/`.
 
 ### Observability
 
@@ -339,28 +348,29 @@ Telegram content, credentials, or raw media.
    static checks and test collection, record failures, and convert intended
    invariants into explicit test criteria. Do not treat the current
    implementation as behaviorally authoritative.
-2. Move only superseded orchestration files to the git-ignored `legacy/`. Keep
-   shared contracts, adapters, and test imports available until their CrewAI
-   replacements satisfy the documented contracts.
+2. Establish `crewai_app` as the canonical implementation while leaving
+   `frameworkless_app` intact for independent comparison. Keep compatibility
+   imports until the CrewAI contracts satisfy the documented tests.
 3. Pin the CrewAI app scaffold and its tools, then configure Bedrock model IDs,
-   AWS region, SQS, RAG, observability, and IAM-based credentials. Never pass
-   access keys to agents.
+   AWS region, and IAM-based credentials. Treat SQS, production RAG retrieval,
+   and observability as separate integration work; never pass access keys to
+   agents.
 4. Add typed CrewAI Flow states and custom tools derived from `BaseTool` for
    reply-tree context, S3 serial RAG JSON, DynamoDB cursors, market data, and
    decision persistence.
 5. Implement IAM-authenticated Bedrock `LLM` construction for the owner-specific
    QWEN definitions and the shared Ministral definition. Build the
    YAML-configured sequential Crew and `TelegramSignalFlow` with
-   Pydantic-validated outputs. Permit configured retries only for transient
-   Bedrock failures and structured-output repair.
+   Pydantic-validated outputs. Permit a configured maximum only for transient
+   Bedrock request failures and structured-output repair. For a network-ambiguous
+   exchange placement, reconcile the stable client order ID before any deliberate
+   resubmission; never blindly retry order placement or persistence mutation.
 6. Add lifecycle and performance flows. A cursor closes only after its position
-   and active orders are fully closed. After an order-placement network failure,
-   reconcile its unique client order ID with the venue before deciding whether
-   to resubmit; never blindly retry an order placement or persistence mutation.
-   Evaluate all five strategy tiers by owner, channel, asset group, and lifecycle
-   stage. Mark non-executed tiers as counterfactual replay results. Separately
-   compare Aster and Hyperliquid using matched closed positions with the same
-   signal deduplication key and strategy tier executed on both venues.
+   and active orders are fully closed. Evaluate all five strategy tiers by owner,
+   channel, asset group, and lifecycle stage. Mark non-executed tiers as
+   counterfactual replay results. Separately compare Aster and Hyperliquid using
+   matched closed positions with the same signal deduplication key and strategy
+   tier executed on both venues.
 7. Deploy the CrewAI worker with a least-privilege IAM task role. Keep Telegram
    sessions on Lightsail and credentials within AWS Secrets Manager and
    KMS-protected boundaries. Keep mainnet execution disabled throughout the

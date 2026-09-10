@@ -3,6 +3,8 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 
+import pytest
+
 from frameworkless_app.qwen_agents.owner_agent import OwnerQwenAgent
 from frameworkless_app.schemas import (
     AssetGroup,
@@ -17,6 +19,15 @@ from crewai_app.skills_api import (
     OwnerQwenAPI,
     QwenAgentRagLoadingAPI,
     TelegramAgentAPI,
+)
+from crewai_app.agent_interfaces import (
+    QwenMessageRelationAPI,
+    QwenPositionReductionAPI,
+    QwenSynonymInferenceAPI,
+)
+from crewai_app.domain.contracts.schemas import (
+    TradingMessageRelation,
+    TradingMessageRelationDecision,
 )
 
 
@@ -40,6 +51,35 @@ def test_skills_api_exports_explicit_agent_contracts() -> None:
     assert hasattr(MinistralFilterAPI, "protect_entry_after_take_profit")
     assert hasattr(MinistralFilterAPI, "record_execution_event")
     assert hasattr(MinistralFilterAPI, "infer_omitted_stop_loss")
+
+
+def test_canonical_qwen_capabilities_are_separate_from_compatibility_aggregate() -> None:
+    assert hasattr(QwenMessageRelationAPI, "classify_message_relation")
+    assert hasattr(QwenPositionReductionAPI, "infer_position_reduction")
+    assert hasattr(QwenSynonymInferenceAPI, "infer_synonym")
+    assert not hasattr(QwenMessageRelationAPI, "load_rag_profile")
+    assert not hasattr(QwenSynonymInferenceAPI, "infer_position_reduction")
+
+
+def test_message_relation_decision_preserves_chronological_matches() -> None:
+    decision = TradingMessageRelationDecision(
+        owner_id=OwnerId.OWNER_A_SHU_QIN,
+        channel_id="owner_a_channel_a",
+        telegram_message_id="1037",
+        relation=TradingMessageRelation.AMBIGUOUS,
+        matched_message_ids=["811", "1002"],
+        confidence=0.2,
+    )
+
+    assert decision.needs_human_review is True
+    assert decision.matched_message_ids == ["811", "1002"]
+    with pytest.raises(ValueError, match="chronological"):
+        TradingMessageRelationDecision.model_validate(
+            {
+                **decision.model_dump(),
+                "matched_message_ids": ["1002", "811"],
+            }
+        )
 
 
 def _message() -> TelegramMessageEnvelope:

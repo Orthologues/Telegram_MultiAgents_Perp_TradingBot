@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from decimal import Decimal
-
 from crewai.flow.flow import FlowState
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -14,11 +12,15 @@ from crewai_app.domain.contracts.schemas import (
     ExchangeId,
     ExchangeNetwork,
     ExchangeTradeState,
-    FilterDecision,
-    MarketAnalysisSnapshot,
+    DecisionRecord,
+    MarketExecutionSnapshot,
+    MinistralStrategyReviewSet,
     OwnerId,
     QwenStrategyCandidateSet,
     SerialRagExample,
+    SignalEvaluationResult,
+    StrategyOutcome,
+    StrategyTierPerformanceSummary,
     StrategyTier,
     TelegramMessageEnvelope,
     TelegramPromptContext,
@@ -27,70 +29,8 @@ from crewai_app.domain.contracts.schemas import (
 )
 
 
-class MinistralStrategyReviewSet(BaseModel):
-    """One shared Ministral review for every QWEN strategy tier."""
-
-    owner_id: OwnerId
-    channel_id: str
-    reviewer_model: str = Field(min_length=1)
-    reviews: dict[StrategyTier, FilterDecision]
-
-    @field_validator("reviews")
-    @classmethod
-    def validate_all_tiers(
-        cls,
-        reviews: dict[StrategyTier, FilterDecision],
-    ) -> dict[StrategyTier, FilterDecision]:
-        if set(reviews) != set(StrategyTier):
-            raise ValueError("Ministral reviews must contain exactly all five strategy tiers")
-        return reviews
-
-
-class SignalEvaluationResult(BaseModel):
-    """Structured result returned by the sequential QWEN-Ministral Crew."""
-
-    candidates: QwenStrategyCandidateSet
-    reviews: MinistralStrategyReviewSet
-
-    @model_validator(mode="after")
-    def validate_identity(self) -> SignalEvaluationResult:
-        if self.candidates.owner_id != self.reviews.owner_id:
-            raise ValueError("QWEN and Ministral owner IDs must match")
-        if self.candidates.channel_id != self.reviews.channel_id:
-            raise ValueError("QWEN and Ministral channel IDs must match")
-        return self
-
-
-class ExecutionLiquiditySnapshot(BaseModel):
-    """MCP market data required by deterministic pre-execution gates."""
-
-    market: MarketAnalysisSnapshot
-    reference_price: Decimal = Field(gt=Decimal("0"))
-    order_book_depth_usd: Decimal = Field(ge=Decimal("0"))
-    minimum_order_book_depth_usd: Decimal = Field(gt=Decimal("0"))
-    expected_slippage_fraction: Decimal = Field(ge=Decimal("0"))
-    maximum_expected_slippage_fraction: Decimal = Field(ge=Decimal("0"))
-
-    @property
-    def rejection_reasons(self) -> list[str]:
-        reasons: list[str] = []
-        if self.order_book_depth_usd < self.minimum_order_book_depth_usd:
-            reasons.append("insufficient_order_book_depth")
-        if self.expected_slippage_fraction > self.maximum_expected_slippage_fraction:
-            reasons.append("excessive_expected_slippage")
-        return reasons
-
-
-class DecisionRecord(BaseModel):
-    """Flow-only persistence record for approved and rejected decisions."""
-
-    flow_id: str
-    owner_id: OwnerId
-    channel_id: str
-    telegram_message_id: str
-    approved_execution_request: ApprovedExecutionRequest | None = None
-    rejection_reasons: list[str] = Field(default_factory=list)
-    recorded_at: datetime
+# Compatibility names retained for callers that imported the old Flow state.
+ExecutionLiquiditySnapshot = MarketExecutionSnapshot
 
 
 class DeterministicDecisionOutcome(BaseModel):
@@ -127,22 +67,6 @@ class PositionLifecycleState(FlowState):
     cursor: TradeThreadCursor | None = None
 
 
-class StrategyOutcome(BaseModel):
-    strategy_tier: StrategyTier
-    outcome: ClosedTradeOutcome
-    counterfactual: bool = False
-
-
-class StrategyTierPerformanceSummary(BaseModel):
-    strategy_tier: StrategyTier
-    sample_count: int = Field(ge=0)
-    executed_count: int = Field(ge=0)
-    counterfactual_count: int = Field(ge=0)
-    profitable_count: int = Field(ge=0)
-    losing_count: int = Field(ge=0)
-    net_pnl_percentage: Decimal
-
-
 class PerformanceEvaluationState(FlowState):
     """State for matched-venue and five-tier performance evaluation."""
 
@@ -151,6 +75,9 @@ class PerformanceEvaluationState(FlowState):
     venue_comparison: TestnetVenuePerformanceComparison | None = None
     strategy_summaries: dict[StrategyTier, StrategyTierPerformanceSummary] = Field(
         default_factory=dict
+    )
+    strategy_dimension_summaries: list[StrategyTierPerformanceSummary] = Field(
+        default_factory=list
     )
     computed_at: datetime | None = None
 
@@ -168,14 +95,42 @@ class PerformanceEvaluationState(FlowState):
 class ExecutionMode(BaseModel):
     testnet_enabled: bool = False
     mainnet_enabled: bool = False
+    testnet_acceptance_complete: bool = False
+    execution_review_complete: bool = False
+    operator_authorized: bool = False
 
     @model_validator(mode="after")
     def reject_unsafe_mainnet(self) -> ExecutionMode:
-        if self.mainnet_enabled:
+        if self.mainnet_enabled and not (
+            self.testnet_acceptance_complete
+            and self.execution_review_complete
+            and self.operator_authorized
+        ):
             raise ValueError(
-                "mainnet requires a separately reviewed operator-controlled implementation"
+                "mainnet requires completed testnet acceptance, execution review, "
+                "and explicit operator authorization"
             )
         return self
 
     def permits(self, network: ExchangeNetwork) -> bool:
-        return network == ExchangeNetwork.TESTNET and self.testnet_enabled
+        return (
+            network == ExchangeNetwork.TESTNET
+            and self.testnet_enabled
+            or network == ExchangeNetwork.MAINNET
+            and self.mainnet_enabled
+        )
+
+
+__all__ = [
+    "DecisionRecord",
+    "DeterministicDecisionOutcome",
+    "ExecutionLiquiditySnapshot",
+    "ExecutionMode",
+    "MinistralStrategyReviewSet",
+    "PerformanceEvaluationState",
+    "PositionLifecycleState",
+    "SignalEvaluationResult",
+    "StrategyOutcome",
+    "StrategyTierPerformanceSummary",
+    "TelegramSignalState",
+]

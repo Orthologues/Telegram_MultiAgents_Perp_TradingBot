@@ -316,6 +316,71 @@ def test_pipeline_persists_records_and_publishes_only_unique_messages() -> None:
     asyncio.run(scenario())
 
 
+def test_pipeline_retries_publication_after_failure() -> None:
+    from crewai_app.adapters.telegram.agent_worker import (
+        CallableTelegramAgentRetriever as CanonicalRetriever,
+        TelegramAgentPoller as CanonicalPoller,
+    )
+    from crewai_app.adapters.telegram.pipeline import (
+        BedrockInputPublisher as CanonicalPublisher,
+        TelegramIngestionPipeline as CanonicalPipeline,
+    )
+    from crewai_app.adapters.telegram.storage import (
+        InMemoryMessageMetadataRepository as CanonicalMetadata,
+        InMemoryRawMediaArchive as CanonicalArchive,
+        InMemoryTelegramMessageReceiptStore as CanonicalReceipts,
+    )
+    from crewai_app.domain.contracts.schemas import (
+        TelegramAgentChannelConfig as CanonicalConfig,
+    )
+
+    async def retrieve(*, maximum_messages: int | None) -> dict:
+        return {
+            "message_count": 1,
+            "messages": [_retrieved_message("101")],
+            "start_time": "latest",
+        }
+
+    publish_attempts: list[str] = []
+
+    async def publish(context) -> None:
+        publish_attempts.append(context.current_message.telegram_message_id)
+        if len(publish_attempts) == 1:
+            raise RuntimeError("transient Bedrock transport failure")
+
+    async def scenario() -> None:
+        retriever = CanonicalRetriever(
+            telegram_chat_id="-1001234567890",
+            retrieve=retrieve,
+        )
+        receipt_store = CanonicalReceipts()
+        poller = CanonicalPoller(
+            retrievers={"owner_a_channel_a": retriever},
+            receipt_store=receipt_store,
+        )
+        pipeline = CanonicalPipeline(
+            poller=poller,
+            raw_media_archive=CanonicalArchive(),
+            metadata_repository=CanonicalMetadata(),
+            bedrock_publisher=CanonicalPublisher(publish),
+        )
+        config = CanonicalConfig(
+            channel_id="owner_a_channel_a",
+            telegram_chat_id="-1001234567890",
+        )
+
+        with pytest.raises(RuntimeError, match="transient Bedrock"):
+            await pipeline.process_once(config)
+        assert await receipt_store.contains("owner_a_channel_a", "101") is False
+        processed = await pipeline.process_once(config)
+
+        assert [message.telegram_message_id for message in processed] == ["101"]
+        assert publish_attempts == ["101", "101"]
+        assert await receipt_store.contains("owner_a_channel_a", "101") is True
+
+    asyncio.run(scenario())
+
+
 def test_pipeline_expands_parent_messages_in_chronological_order() -> None:
     async def retrieve(*, maximum_messages: int | None) -> dict:
         return {

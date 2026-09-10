@@ -1,477 +1,334 @@
 # Project Skills
 
-This file is a compact index of repeatable repository workflows. It complements
-`AGENTS.md`; it is not a second architecture specification.
+This file is the compact workflow index for the scaffold. It complements
+AGENTS.md and does not replace the architecture mapping. Status labels mean
+local (implemented in the scaffold), compatibility (retained for the legacy
+comparison path), planned (interface or integration gap), and research (not an
+approved runtime policy).
 
 ## Package Boundaries
 
-`crewai_app` is the canonical CrewAI application. `frameworkless_app` is the
-deterministic compatibility layer retained during migration. Use `crewai_app`
-for new Flows, tools, policies, and agent interfaces; use
-`frameworkless_app` only for compatibility implementations and APIs. The old
-`agentic_perp_trading_bot` package name is retired. A post-CrewAI LangGraph
-implementation is planned separately at
-`draft_agentic_perp_trading_bot/src/langgraph_app/`.
+Use src/crewai_app/ as the canonical application. Keep
+src/frameworkless_app/ intact for comparison; do not treat it as a second
+runtime or delete it during this migration. Canonical agent responsibility
+protocols live in src/crewai_app/agent_interfaces/. The
+src/crewai_app/skills_api/ package is a compatibility facade only.
+Deterministic policies live under domain/policies/ and their Flow-only
+wrappers under tools/. The later LangGraph implementation is reserved at
+src/langgraph_app/.
 
 ## Flowchart to Scaffold
 
 Use the Figma board as the design source and
-`draft_agentic_perp_trading_bot/architecture_to_code_mapping.md` as the code
-mapping.
+draft_agentic_perp_trading_bot/architecture_to_code_mapping.md as the
+file-to-file map. Update the map when a responsibility moves; update README
+only when the public overview changes.
 
-Example:
+~~~text
+TelegramAgent/Telethon retrieval
+  -> adapters/telegram/normalize, hydrate, archive, and deduplicate
+  -> publish normalized context to the downstream boundary
+  -> flows/telegram_signal_flow.py
+  -> one owner QWEN definition + shared Ministral review
+  -> deterministic domain policies and Flow-only persistence
+  -> guarded Aster/Hyperliquid execution boundary
+~~~
 
-```text
-new Figma node: "TelegramAgent"
-  -> crewai_app/flows/telegram_signal_flow.py
-  -> crewai_app/adapters/telegram/
-  -> crewai_app/tools/parent_context_tool.py
-  -> crewai_app/domain/contracts/telegram.py
-  -> frameworkless_app/telegram_ingestion/ for compatibility behavior
-  -> tests/test_crewai_app.py
-```
-
-When a boundary moves, update the mapping document and README together. Do not
-copy the entire flowchart into source code comments.
+Telegram transport belongs to adapters/telegram/; the Flow consumes its
+normalized envelope. Do not copy the full flowchart into source comments.
 
 ## TelegramAgent Ingestion
 
-Run one long-lived polling service on Lightsail, with EC2 as the scale-up path,
-and one authorized Telegram user session. Schedule the target channels through
-lightweight per-chat retrieval adapters that preserve each `chat_id`,
-per-message receipt, and provenance boundary. Because AG2 retrieval is scoped to
-one `chat_id`, an
-adapter may wrap a per-chat TelegramAgent object internally, but these objects
-remain in the same worker and are not independently deployed services. Expose
-only retrieval through the executor. Do not register `TelegramSendTool` and do
-not route TelegramAgent output directly to an exchange or trading model.
+Owner: adapters/telegram/ and the Lightsail retrieval worker. Status: local
+worker and in-memory adapters; production S3, DynamoDB, SQS, and media
+hydration are planned.
 
-TelegramAgent retrieval is pull-based. Retrieve a bounded recent window without
-a channel-level cursor, normalize Chinese text and image metadata before model
-inference, archive raw media in S3, store searchable metadata in DynamoDB, and
-compute a stable input deduplication key. AG2 exposes only a media-presence flag,
-so use an adjacent authenticated media hydrator to obtain bytes and hashes
-before recording the message receipt.
+Use one long-lived worker and one authorized user session. Configure lightweight
+per-chat retrieval adapters inside the shared worker; do not deploy one
+TelegramAgent service per channel. Expose retrieval only. Do not register a
+send tool or route TelegramAgent output directly to an exchange.
 
-For the A-zhu private-chat workflow, use the minimalist Chinese reply skill
-when a short acknowledgment is explicitly required. Keep this response path
-separate from retrieval and exchange execution: it may acknowledge receipt, but
-it must not infer trade parameters, confirm execution, or replace QWEN analysis.
+Process each bounded pull in this order:
 
-Example path:
+~~~text
+retrieve and validate batch
+  -> normalize text, provenance, and media presence
+  -> hydrate media and archive raw bytes
+  -> persist source metadata
+  -> update the owner reply-tree index
+  -> build chronological parent context and load active cursor snapshots
+  -> publish the immutable normalized context
+  -> record a per-message receipt only after successful publication
+~~~
 
-```text
-TelegramAgent retrieval with no channel cursor
-  -> validate structured retrieval batch
-  -> order messages chronologically
-  -> TelegramMessageEnvelope
-  -> traverse prior reply-tree messages from the owner QWEN in-memory index
-     into parent_messages (oldest first)
-  -> TelegramPromptContext with ID-labeled parent blocks and current block last
-  -> query active DynamoDB trade cursors by parent message IDs
-  -> expose matching pair/exchange/order/position state to QWEN and Ministral
-  -> pass the same context to QWEN and Ministral prompts
-  -> hydrate/archive media and persist metadata
-  -> exact content/media identity check
-  -> retrieve candidate message history
-  -> owner-specific QWEN deduplication reasoning
-  -> accepted new or continuation context
-  -> conditionally record each `(channel_id, telegram_message_id)` receipt
-```
+The local pipeline uses an injected publisher and in-memory stores. A failed
+publication must remain replayable. A duplicate may be acknowledged only when
+a local or durable delivery record proves that the earlier publication
+succeeded; metadata persistence alone is not delivery.
 
-Keep retrieval and per-message receipt recording as separate operations. Use a
-conditional DynamoDB receipt write and only one active, leased worker per
-Telegram user session. Preserve `owner_id`,
-`channel_id`, `telegram_chat_id`, `telegram_message_id`, `source_timestamp`,
-`parent_messages`, `asset_group`, and `strategy_tier_hint`
-so multiple channels can feed one owner agent without losing provenance.
-DynamoDB is both a live coordination store and a replay dataset. Query active
-trade cursors by parent message IDs, but keep chronological message bodies in
-the owner QWEN ElastiCache reply tree with a process-local read-through cache.
-Retain omitted take-profit/stop-loss cases, inferred levels, later updates,
-execution outcomes, and pair-blacklisting inputs.
+Preserve owner_id, channel_id, telegram_chat_id, telegram_message_id,
+source_timestamp, parent_messages, media_hashes, asset_group, and
+strategy_tier_hint. Parent messages are traversed oldest first and are passed
+as ID-labelled blocks to both QWEN and Ministral. Keep message bodies in the
+owner reply-tree index/cache; use DynamoDB for durable metadata, concurrent
+trade cursors, and replay records. The minimalist Chinese acknowledgment for
+the A-zhu private-chat workflow is a separately authorized, non-trading path.
 
 ## Concurrent Trade Cursors
 
-Maintain one active `TradeThreadCursor` per parent-linked symbol, exchange, and
-direction. A new message may resolve several concurrent candidates from its
-chronological `parent_messages`; match the intended cursor by canonical symbol,
-Aster or Hyperliquid exchange, network, and long/short direction. Store only
-messages assigned to that cursor, not the complete parent list.
+Owner: domain/lifecycle/cursor.py plus its persistence adapter. Status: local
+manager and in-memory repository; conditional DynamoDB storage is planned.
 
-Each cursor stores sets of active order IDs and open position IDs in DynamoDB.
-Use conditional version writes so unrelated cursors update independently. An
-order fill, reduction, or partial close updates the sets but does not close the
-cursor. Close it only after a position has opened, no open position remains,
-and all active orders are gone.
+Maintain concurrent cursors for parent-linked symbol, exchange, network,
+settlement asset, and direction. A message may resolve several candidates from
+its ordered parent list. Store only message IDs assigned to a cursor; parent
+context is not automatic cursor membership.
+
+Each cursor stores active order IDs and open position IDs. An update, fill,
+reduction, or partial close does not close a cursor. Close it only after a
+position has opened, all positions are closed, and all active orders are gone.
+Rejected updates must not revise the selected lifecycle policy. Conditional
+version writes must update unrelated cursors independently.
 
 ## Minimalist Chinese Reply
 
-Use this skill only for the A-zhu private-chat workflow when a concise response
-is explicitly required. Produce a brief Chinese acknowledgment equivalent to
-"yes" or "ok", without adding market commentary, inferred stop-loss or
-take-profit levels, execution claims, or new trading instructions. Preserve the
-source message and response provenance for later replay and review.
+Use only for the A-zhu private-chat workflow when explicitly authorized.
+Return a brief Chinese acknowledgment equivalent to "yes" or "ok". Do not add
+market commentary, inferred levels, execution claims, or trading instructions.
+Preserve source and response provenance. This path has no exchange capability.
 
 ## Agentic Deduplication
 
-Do not understand serial Chinese trading messages with Python keyword,
-substring, or regular-expression rules. The owner-specific QWEN agent must
-apply this deduplication reasoning skill to the message sequence and RAG
-examples. Use Python only for exact byte/media identity, candidate retrieval,
-persistence, and state.
+Owner: owner-specific QWEN reasoning, with deterministic identity helpers.
+Status: byte/media identity is local; semantic relation reasoning and durable
+signal acceptance are planned.
 
-This is a reasoning skill within each owner-specific QWEN agent, not a separate
-keyword-based Python service. It receives:
+Keep these stages separate:
 
-- the original Chinese text and available images;
-- the owner/channel/asset-group context;
-- the versioned owner RAG profile with serial message-to-execution examples for
-  conservative, intermediate, and radical strategy tiers;
-- annotated incorrectly executed examples and their error explanations; and
-- a small set of candidate prior messages and active signal state.
+1. Input identity: Python may hash exact text and hydrated media bytes.
+2. Message relation: QWEN classifies duplicate, continuation, new_signal, or
+   ambiguous from chronological context and RAG.
+3. Signal identity: reviewed structured hypotheses receive a durable
+   signal_dedup_key.
+4. Delivery receipt: publication success is recorded separately.
 
-It returns a structured decision, not an order:
+Do not use keyword, substring, or regular-expression rules to interpret Chinese
+trading messages. The relation result is a reviewable decision, not an order:
 
-```json
+~~~jsonc
 {
   "relation": "continuation",
-  "matched_message_ids": ["owner_c_channel_1842"],
+  "matched_message_ids": ["<real channel-scoped Telegram ID, oldest first>"],
   "confidence": 0.91,
   "reason_codes": ["same_symbol", "updated_entry_range"],
   "needs_human_review": false
 }
-```
+~~~
 
-The RAG unit should preserve the complete sequence rather than an isolated
-message:
-
-```json
-{
-  "example_id": "owner-c-btc-001",
-  "strategy_tier": "conservative",
-  "messages": [
-    {
-      "telegram_message_id": "1001",
-      "telegram_message_url": "https://t.me/c/123456/1001"
-    },
-    {
-      "telegram_message_id": "1002",
-      "telegram_message_url": "https://t.me/c/123456/1002"
-    }
-  ],
-  "s3_archive_uri": "s3://PRIVATE_RAG_BUCKET/owner_c_btc-001.json",
-  "execution_label": "incorrect",
-  "error_reason": "stop-loss update was applied to the wrong position"
-}
-```
-
-Manually add authentic examples only. Keep their Telegram IDs and URLs in the
-owner JSON profile, archive the complete text/media sequence in private S3,
-and record its S3 URI in the same example object. Do not invent message URLs,
-IDs, or execution outcomes.
-
-Use these relations:
-
-- `duplicate`: a repost, quoted message, repeated screenshot, or materially
-  identical signal;
-- `continuation`: an update to an existing entry, position, target, stop, or
-  execution state;
-- `new_signal`: a distinct trade hypothesis;
-- `ambiguous`: insufficient evidence to merge safely.
-
-For example, a later Chinese message saying to add to an existing position may
-be a continuation, not a duplicate. A message announcing that an order was
-executed may update state without creating a new entry hypothesis. The QWEN
-agent must learn these distinctions from the owner and channel RAG examples,
-including examples where the resulting execution was wrong.
-
-The runtime sequence is:
-
-```text
-byte-identical hash shortcut only
-  -> retrieve bounded candidate history
-  -> owner-specific QWEN deduplication reasoning skill
-  -> persist decision and provenance
-  -> owner-specific QWEN trade hypothesis for accepted new or continuation input
-```
-
-Low-confidence and ambiguous cases are retained and routed for review. Measure
-the skill with a labeled replay set: duplicate precision/recall, continuation
-link accuracy, false-merge rate, and new-signal recall. Test fixtures should
-contain complete serial message sequences, not only isolated first-seen and
-repeated-message pairs.
+This is a shape illustration, not a fixture. IDs are channel-scoped strings;
+real curated records must use their authentic Telegram IDs and URLs. A later
+add-to-position or execution-update message can be a continuation rather than
+a duplicate. Low-confidence and ambiguous outputs are retained for review.
+Measure relation precision/recall, continuation-link accuracy, false merges,
+and new-signal recall using complete serial message sequences.
 
 ## QWEN-Agent RAG-loading
 
-Load the owner-specific serial JSON RAG profile, provide recent signal and
-position context, and request a `QwenStrategyCandidateSet` containing all five
-tiers. Include the same `TelegramPromptContext` supplied by ingestion: parent
-messages must remain ID-labeled, ordered oldest-to-newest, and available to both
-QWEN and Ministral.
+Owner: agent_interfaces.qwen.SerialRagLoaderAPI and the selected owner QWEN
+definition. Status: local profile loading; authenticated S3 retrieval, ranking,
+lifecycle filtering, and image-byte delivery are planned.
 
-Example output boundary:
+Load the owner profile and serial examples separately from QWEN inference.
+Provide the same immutable TelegramPromptContext, parent IDs/media hashes,
+active cursor snapshots, and RAG records to QWEN and Ministral. Each QWEN run
+must return all five strategy tiers. Every hypothesis is a proposal, never an
+order.
 
-```json
-{
-  "owner_id": "owner_c_bi_jia_suo",
-  "asset_group": "btc_eth",
-  "strategy_tier": "intermediate",
-  "intent_type": "open",
-  "symbol": "BTCUSDT",
-  "direction": "long",
-  "entries": ["65000"],
-  "stop_loss": "64200",
-  "take_profit": ["66000", "67000"],
-  "confidence": 0.78,
-  "evidence": ["Chinese source message", "chart attachment"]
-}
-```
-
-The example is a hypothesis, not an order. Do not add exchange credentials or
-position sizing to the model prompt as a substitute for deterministic policy.
+The output boundary requires owner_id, channel_id, asset_group, strategy_tier,
+intent_type, symbol/direction when known, entries, confidence, evidence, and
+the source deduplication key. Omitted stop-losses remain unset for deterministic
+derivation. Curated serial-RAG objects contain chronological message
+references, an S3 archive URI, strategy tier, and execution label. Do not
+invent message IDs, URLs, media, or outcomes; current profile examples are
+empty until manually populated.
 
 ## Confidence Calculation
 
-Confidence is a synthetic, traceable feature for ranking trade hypotheses and
-selecting one of five tiers from ultra-conservative to ultra-radical. It does
-not perform hard rejection; deterministic risk owns execution constraints.
-Persist the selected tier, recommended size, leverage, and confidence
-provenance on each trade cursor. Parent-linked lifecycle updates inherit this
-policy; only an explicit `strategy_tier_hint` with a Ministral-approved target
-candidate creates the next policy revision.
+Owner: domain/policies/confidence.py. Status: local synthetic-v2 baseline;
+learned features are research.
 
-The initial feature groups are:
+Confidence ranks hypotheses and selects one of five strategy tiers. It is not a
+hard rejection rule. The current synthetic baseline combines source confidence
+(0.45), Ministral quality when available (0.25), and replay performance when
+available (0.30), renormalizing available weights. Persist the selected tier,
+confidence, size, leverage, formula version, and provenance on the lifecycle
+cursor.
 
-- owner and strategy performance from recent simulation runs, including recent
-  win rate and cumulative gain for the relevant strategy tier;
-- technical alignment from `5m`, `15m`, `1h`, and `4h` KDJ, Bollinger-width,
-  and ATR features, plus the existing MACD features;
-- 4-hour and 1-day EMA trend features; and
-- recent coin volatility, with higher volatility lowering the volatility
-  component of confidence.
+At lifecycle commencement, confidence selects the initial policy. A
+parent-linked continuation inherits it unless an explicit strategy_tier_hint is
+reviewed and accepted as a policy revision. This selection is independent of
+deterministic execution permission.
 
-The first implementation should expose the components separately and combine
-normalized values through a versioned synthetic function, for example:
-
-```text
-confidence_synthetic = clip(
-    w_performance * performance_score
-  + w_technical   * technical_alignment_score
-  + w_trend       * ema_trend_score
-  + w_volatility  * volatility_penalty,
-    0,
-    1,
-)
-```
-
-The weights, normalization windows, volatility measure, and indicator
-aggregation are provisional research parameters, not established truth. Store
-the feature snapshot, simulation window, strategy tier, weights, formula
-version, and timestamp with every confidence result so it can be replayed.
-
-The intended learned version requires chronological ML experiments, initially
-with an RNN or LSTM over the time-ordered feature and outcome history. Define
-the target from simulated execution outcomes, prevent future-data leakage,
-compare against the synthetic baseline, and calibrate the resulting score
-before using it for agent weighting. Preserve separate train, validation, and
-forward-test periods. Until that evaluation is complete, use the synthetic
-score only for analysis or conservative weighting and never as permission to
-execute an order.
+The proposed technical/EMA/volatility features and RNN/LSTM experiments are
+research. They must use chronological train/validation/forward-test windows,
+prevent future-data leakage, and be compared with the synthetic baseline
+before influencing live decisions.
 
 ## Omitted Stop-Loss Inference
 
-When an order omits its stop-loss, QWEN must leave `stop_loss` unset. The
-Aster/Hyperliquid MCP boundary supplies current price, market capitalization,
-24-hour quote volume, trading-pair type, and EMA, MACD, KDJ, RSI, Bollinger,
-ATR, and realized-volatility snapshots for `5m`, `15m`, `1h`, and `4h`.
-Ministral applies the versioned deterministic policy in
-`crewai_app.domain.policies.stop_loss`.
+Owner: deterministic domain/policies/stop_loss.py, invoked by a Flow through
+tools/stop_loss_policy_tool.py. Status: local pure policy; complete MCP supplier
+and measured deadline are planned.
 
-The draft pair-type bands are `1.2%`-`3.5%` for TradFi, `1.5%`-`5%` for
-mainstream coins, and `2.5%`-`8%` for altcoins. Score timeframes at
-`10%`/`20%`/`30%`/`40%`, and score EMA, MACD, KDJ, RSI, Bollinger width, ATR,
-and realized volatility at `12%`/`12%`/`10%`/`10%`/`18%`/`23%`/`15%`.
-Adverse EMA/MACD direction receives the full normalized component; aligned
-direction receives half. Combine `35%` volume score with `65%` technical score,
-then interpolate inside the pair-type band.
+QWEN leaves an omitted stop-loss unset. The Aster/Hyperliquid market boundary
+must provide price, market capitalization, quote volume, pair type, and EMA,
+MACD, KDJ, RSI, Bollinger width, ATR, and realized volatility for 5m, 15m, 1h,
+and 4h. The deterministic policy uses:
 
-The final distance remains globally bounded to `1.2%`-`8%` from entry 1, or
-from the average of entry 1 and entry 2. Place the stop below that reference
-for a long and above it for a short.
+- distance bands: 1.2%-3.5% TradFi, 1.5%-5% mainstream coins, and 2.5%-8%
+  altcoins;
+- timeframe weights 10%/20%/30%/40%;
+- indicator weights EMA/MACD/KDJ/RSI/Bollinger/ATR/realized volatility of
+  12%/12%/10%/10%/18%/23%/15%; and
+- 35% volume score plus 65% technical score.
 
-Record the MCP snapshot, pair type, liquidity tier, component scores, distance,
-policy version, and derived price. Keep Ministral stop-loss reasoning within a
-one-second budget. Explicit source stop-losses are preserved, and omitted
-stop-loss derivation does not add another hard-rejection rule. Backtest all
-thresholds and weights before production use. Its API contract is
-`crewai_app.agent_interfaces.ministral.MinistralFilterAPI.infer_omitted_stop_loss`.
+The anchor is entry 1, or the arithmetic mean of entry 1 and entry 2. The
+result remains globally bounded to 1.2%-8%, below the anchor for a long and
+above it for a short. Invalid or missing required market inputs must stop
+derivation rather than receive a fabricated fallback. The one-second value is
+a computation-budget requirement until elapsed time is measured.
 
 ## Pair Blacklisting
 
-Use a deterministic temporary blacklist to reject exchange/symbol pairs whose
-recent realized performance is persistently poor. This is a deterministic
-risk rejection, not a QWEN decision.
+Owner: domain/policies/execution_gate.py. Status: local deterministic policy
+with a pending policy clarification.
 
-For each canonical `(exchange_id, symbol)` pair, use closed trades whose close
-timestamp is within the trailing 90 days from the evaluation time:
+For each canonical exchange/symbol pair, evaluate closed net outcomes within
+the trailing 90 days. Exclude open, cancelled, incomplete, and breakeven
+records; require minimum observations; count net wins and losses; and blacklist
+only when the win/loss ratio is strictly below the configured threshold. Keep
+the window, counts, threshold, minimums, policy version, and timestamp.
 
-1. Use net realized P/L after fees, funding, and execution costs.
-2. Count `net_pnl > 0` as a win and `net_pnl < 0` as a loss.
-3. Exclude breakeven, open, cancelled, and incomplete trades.
-4. Require configurable minimum observations, such as
-   `min_closed_trades` and `min_losses`, before making a blacklist decision.
-5. Calculate `win_loss_ratio = wins / losses` when losses are nonzero. Treat a
-   pair with wins and no losses as having an infinite ratio; do not blacklist
-   a pair with insufficient observations.
-6. Set `blacklisted = true` only when the ratio is strictly below the
-   configured threshold.
-
-Example decision:
-
-```json
-{
-  "exchange_id": "hyperliquid",
-  "symbol": "ALTUSDT",
-  "window_days": 90,
-  "wins": 3,
-  "losses": 7,
-  "win_loss_ratio": 0.4286,
-  "threshold": 0.75,
-  "min_closed_trades": 10,
-  "blacklisted": true,
-  "computed_at": "2026-07-18T12:00:00Z"
-}
-```
-
-Persist the window, trade counts, net-P/L definition, threshold, minimum
-sample settings, computation time, and policy version with every decision.
-Apply the blacklist before order execution, and do not allow QWEN, Ministral,
-or a confidence score to override it. Deterministic risk also enforces
-instant-order price deviation plus owner/pair leverage and cumulative
-position-value limits. If profit-to-loss amount
-is later used instead of win/loss count, define it as a separate metric rather
-than silently changing this ratio.
-
-Test the boundary cases: a pair exactly at the threshold, one trade below the
-threshold, no losses, insufficient observations, trades outside the 90-day
-window, and fees that change a nominal win into a net loss.
+The current code also contains a stop-loss-reversal criterion. Its relationship
+to the ratio-only rule is unresolved and requires human policy approval; do not
+hide the discrepancy in documentation. No QWEN, Ministral, or confidence score
+may override a confirmed blacklist. Deterministic gates also enforce instant-
+order price deviation, depth, slippage, leverage, and cumulative limits.
 
 ## Ministral Validation
 
-Run the 8B and 14B variants through the same adapter and record the model id.
-Validate schema and source evidence, reject prompt injection and unresolved
-ambiguity, deduplicate equivalent hypotheses, then emit a canonical intent.
+Owner: agent_interfaces.ministral.MinistralReviewAPI and the shared Ministral
+agent. Status: local one-model structured review; model comparison and stronger
+evidence/injection checks are planned.
 
-Example decision flow:
+Review all five QWEN candidates against the same immutable source context.
+Validate source identity, evidence, ambiguity, candidate/review binding, and
+semantic signal duplication. Emit one typed review per tier. Only an approved
+reviewed proposal can reach deterministic canonicalization:
 
-```text
-QWEN hypothesis
-  -> schema and evidence checks
-  -> signal deduplication
-  -> approve/reject with reasons
-  -> CanonicalTradeIntent only on approval
-```
+~~~text
+QWEN five-tier candidates
+  -> shared Ministral review
+  -> source and structure validation
+  -> deterministic confidence, sizing, and execution gates
+  -> Flow-only persistence or execution intent
+~~~
 
-Keep explanations and labels available to the performance engine, but never let
-free-form model reasoning override the pair blacklist or instant-order price
-distance check.
+The 8B/14B comparison is an evaluation workflow, not current runtime behavior.
+Ministral never calls an exchange, mutates a cursor, or overrides a
+deterministic gate.
 
 ## Reduce Position and Protect Entry (QWEN)
 
-Use this owner-QWEN skill when a Telegram message instructs the bot to reduce an
-existing position and move its stop-loss into profit. Return a reviewable
-position-management hypothesis, not an executable order.
+Owner: agent_interfaces.qwen.QwenPositionReductionAPI. Status: typed
+compatibility contract; lifecycle integration is planned.
 
-The hypothesis must request a reduction of `30%`-`40%` of the position's
-configured maximum total quantity. Move the stop-loss `0.15%` beyond the
-average entry price in the profitable direction: above entry for a long and
-below entry for a short. The live direction, average entry, maximum quantity,
-exchange constraints, and current order state must come from MCP and be
-validated by Ministral.
-
-After the reduction is confirmed, cancel and replace only the still-unfilled
-TP1, TP2, and TP3 reduce-only limit orders so their quantities match the
-remaining position. Preserve filled take-profit orders and execution history.
-Its API contract is
-`crewai_app.agent_interfaces.qwen.OwnerQwenAPI.infer_position_reduction`.
+Return a reviewable hypothesis requesting a 30%-40% reduction of the
+configured maximum total quantity and a 0.15% profitable-direction stop
+offset. Deterministic Flow services must validate live quantity, average entry,
+venue rounding, reduce-only constraints, confirmation, and unfilled TP1/TP2/TP3
+resizing. QWEN does not cancel, replace, or submit orders.
 
 ## Take-Profit Fill Entry Protection (Ministral)
 
-Use this skill when the MCP boundary emits an authenticated take-profit fill
-event independently of TelegramAgent. After TP1 fills, Ministral must
-immediately request that the stop-loss move `0.15%` beyond the average entry
-price in the profitable direction.
+Owner: deterministic take-profit policy coordinated by the lifecycle Flow.
+Status: legacy pure policy is available; authenticated event ingress, durable
+idempotency, and guarded application are planned.
 
-After TP2 fills following TP1, move the stop-loss to the recorded TP1 price only
-when TP3 is configured and remains unfilled. Validate the position direction,
-fill sequence, configured take-profit levels, average entry, TP1 price, and
-current stop-loss. Never loosen a stop that is already more profitable.
+After authenticated TP1 fill, request a stop 0.15% beyond average entry in the
+profitable direction. After TP2 follows TP1, move the stop to recorded TP1 only
+when TP3 remains configured and unfilled. Never loosen an existing stop.
 
-Deduplicate repeated fill events by their stable event ID and return a typed
-adjustment decision for MCP execution; Ministral must not call an exchange
-directly. Its API contract is
-`crewai_app.agent_interfaces.ministral.MinistralFilterAPI.protect_entry_after_take_profit`.
+Deduplicate by stable event ID and return a typed adjustment decision. A
+deterministic execution boundary, not Ministral, applies it. "Immediately" is
+a service objective until elapsed time is measured.
 
 ## Weight and Confidence
 
-Use realized, replayable metrics such as TP1/TP2 hit rate, stop-loss rate,
-cumulative P/L, and post-stop-loss reversal rate to update owner/channel and
-strategy-tier weights. The confidence engine selects the strategy tier, while
-the deterministic risk engine enforces execution constraints.
+Owner: deterministic sizing and confidence policies. Status: fixed scaffold
+weights are local; learned updates are research.
 
-Example order path:
-
-```text
-canonical intent
-  -> weight-adjusted sizing
-  -> confidence-based strategy tier
-  -> deterministic risk constraints
-  -> ApprovedExecutionRequest
-```
+Use replayable TP1/TP2, stop-loss, P/L, and reversal metrics to evaluate future
+owner/channel/strategy-tier weighting. Confidence selects the tier before
+sizing; sizing then applies fixed owner/asset weights, quality scaling, tier
+multipliers, and leverage bounds. Do not place blacklist or execution
+permission in this skill.
 
 ## Paired Testnet Venue Performance
 
-Compare Aster and Hyperliquid reliability only over the intersection of closed
-testnet positions sharing the same `signal_dedup_key`. Aggregate partial closes
-per signal and venue, normalize net P/L by entry notional, and report wins,
-losses, gross profit, gross loss, net P/L, mean P/L, and profit-to-loss ratio.
-Exclude unmatched signals and all mainnet outcomes so differences in signal
-selection do not contaminate the Aster-USDT versus Hyperliquid-USDC comparison.
-Use `crewai_app.domain.performance.venue_comparison.compare_testnet_venue_performance`.
+Owner: domain/performance/venue_comparison.py and PerformanceEvaluationFlow.
+Status: local partial implementation.
+
+Compare Aster and Hyperliquid only on the intersection of deduplicated, fully
+closed testnet positions sharing the same signal_dedup_key and strategy_tier.
+Aggregate partial closes at the position/signal grain, normalize net P/L by
+allocated entry notional, and report the metric units and sample counts.
+Exclude unmatched signals and mainnet outcomes. Evaluate all five strategy
+tiers separately, including clearly labelled counterfactual replay results.
+
+P/L is not by itself a complete reliability measure. Keep execution status,
+position identity, venue/network, owner, channel, asset group, lifecycle stage,
+and outcome provenance so later strategy optimization is reproducible.
 
 ## Trading Message Synonym Inference
 
-Use QWEN reasoning to infer the meaning of Chinese trading messages quickly.
-Build a baseline vocabulary of signal classes and associate each class with a
-conditional strategy profile indexed by the trading pair's reference price at
-message time. Map each incoming Telegram message to its closest baseline
-synonym and return the matched class, strategy identifier, evidence, and
-confidence. Pass this structured result to Ministral for validation. This skill
-produces no execution command and must not call Aster or Hyperliquid APIs.
-Its API contract is
-`crewai_app.agent_interfaces.qwen.OwnerQwenAPI.infer_synonym`.
+Owner: selected owner QWEN; agent_interfaces.qwen.QwenSynonymInferenceAPI.
+Status: review-only placeholder.
+
+Infer a closest baseline signal class and conditional strategy profile from
+authenticated, timestamped context and serial RAG. Allow abstention when no
+baseline is safe. Return the matched class, strategy identifier, evidence, and
+confidence for Ministral review. Keep synonym meaning separate from duplicate,
+continuation, and new-signal relation. This skill creates no execution command
+and calls no Aster or Hyperliquid API.
 
 ## Exchange and AWS Boundary
 
-Keep Aster and Hyperliquid adapters behind the MCP gateway and default both to
-testnet. Use ECS WebSockets for low-latency market data and signed HTTPS REST for
-execution. The local augmented proxies preserve deterministic guards, while
-Lambda retrieves API-wallet and kill-switch secrets and delegates signing to
-the pinned official Aster V3 client or referenced Hyperliquid MCP/SDK. Secrets
-never enter logs, fixtures, RAG files, or commits.
+Owner: exchange adapters, MCP proxies, and AWS execution boundaries. Status:
+typed/local boundaries; production signing submission, secret retrieval, SQS,
+WebSockets, and observability exporters are planned.
+
+Keep Aster and Hyperliquid behind the MCP gateway and default to testnet.
+Aster V1 uses REST/HMAC signing; Hyperliquid uses its approved upstream signing
+boundary. The local augmented proxies provide read-only market/depth/slippage
+snapshots and unsigned handoffs. Lambda is the intended credential and guarded
+execution boundary. Secrets never enter prompts, logs, fixtures, RAG files, or
+commits. Stable client order IDs support reconciliation but do not prove
+execution idempotency.
 
 ## Verification
 
-For every behavior change, add the smallest focused test first, then run:
+For behavior changes, add a focused test first. From
+draft_agentic_perp_trading_bot/:
 
-```bash
-cd draft_agentic_perp_trading_bot
+~~~bash
 uv sync --extra aws --extra telegram --extra exchange-upstreams --extra dev --extra crewai
 uv run pytest -q
 uv run ruff check .
 uv run python -m compileall -q src tests
-```
+~~~
 
-If the change is documentation-only, at minimum run `git diff --check` and
-verify that all referenced paths exist.
+For documentation-only edits, run git diff --check and verify referenced
+paths. Distinguish static/offline and focused tests from full Flow execution:
+the local CrewAI Flow remains an integration scaffold and is not certified by
+test collection alone.

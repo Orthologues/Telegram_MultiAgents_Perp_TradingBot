@@ -7,8 +7,11 @@ File mappings:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+
+from pydantic import BaseModel
 
 from crewai_app.domain.contracts.schemas import (
     AssetGroup,
@@ -34,7 +37,7 @@ def evaluate_deterministic_risk(
     *,
     exchange_id: ExchangeId,
     symbol: str,
-    limits: PairRiskLimit,
+    limits: PairRiskLimit | BaseModel | Mapping[str, object],
     network: ExchangeNetwork = ExchangeNetwork.TESTNET,
     existing_position_notional_usd: Decimal = Decimal("0"),
     pair_blacklisted: bool = False,
@@ -45,7 +48,8 @@ def evaluate_deterministic_risk(
     tradfi_perpetual_pair: bool = False,
 ) -> DeterministicRiskDecision:
     """Apply reproducible execution constraints to one exchange request."""
-    _validate_limit_identity(sizing, exchange_id, network, symbol, limits)
+    canonical_limits = coerce_pair_risk_limit(limits)
+    _validate_limit_identity(sizing, exchange_id, network, symbol, canonical_limits)
     if existing_position_notional_usd < 0:
         raise ValueError("existing_position_notional_usd must not be negative")
 
@@ -58,9 +62,9 @@ def evaluate_deterministic_risk(
 
     if pair_blacklisted:
         reasons.append("trading_pair_blacklisted")
-    if sizing.leverage > limits.maximum_leverage:
+    if sizing.leverage > canonical_limits.maximum_leverage:
         reasons.append("requested_leverage_exceeds_pair_limit")
-    if cumulative_notional > limits.maximum_cumulative_position_notional_usd:
+    if cumulative_notional > canonical_limits.maximum_cumulative_position_notional_usd:
         reasons.append("cumulative_position_notional_exceeds_pair_limit")
 
     if instant_order:
@@ -88,11 +92,22 @@ def evaluate_deterministic_risk(
         existing_position_notional_usd=existing_position_notional_usd,
         cumulative_position_notional_usd=cumulative_notional,
         requested_leverage=sizing.leverage,
-        limits=limits,
+        limits=canonical_limits,
         reasons=reasons,
         instant_price_deviation=deviation,
         maximum_instant_price_deviation=maximum_deviation,
     )
+
+
+def coerce_pair_risk_limit(
+    limits: PairRiskLimit | BaseModel | Mapping[str, object],
+) -> PairRiskLimit:
+    """Validate legacy risk-limit payloads at the canonical contract boundary."""
+    if isinstance(limits, PairRiskLimit):
+        return limits
+    if isinstance(limits, BaseModel):
+        return PairRiskLimit.model_validate(limits.model_dump(mode="python"))
+    return PairRiskLimit.model_validate(dict(limits))
 
 
 def instant_price_deviation_threshold(

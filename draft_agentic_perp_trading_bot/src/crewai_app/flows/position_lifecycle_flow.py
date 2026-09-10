@@ -12,6 +12,7 @@ from crewai_app.flows.states import PositionLifecycleState
 class PositionLifecycleFlow(Flow[PositionLifecycleState]):
     """Refresh a cursor and close it only after positions and orders are gone."""
 
+    _skip_auto_memory = True
     initial_state = PositionLifecycleState
 
     def __init__(

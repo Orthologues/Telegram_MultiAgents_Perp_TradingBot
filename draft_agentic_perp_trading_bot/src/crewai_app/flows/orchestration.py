@@ -16,9 +16,17 @@ from __future__ import annotations
 from collections.abc import Mapping
 from decimal import Decimal
 
+from crewai_app.agent_interfaces.ministral import MinistralReviewAPI
+from crewai_app.agent_interfaces.qwen import (
+    LegacySignalInferenceAPI,
+    QwenCandidateInferenceAPI,
+)
 from crewai_app.domain.policies.confidence import evaluate_confidence
 from crewai_app.domain.performance.position_sizing import compute_position_size
-from crewai_app.domain.policies.execution_gate import evaluate_deterministic_risk
+from crewai_app.domain.policies.execution_gate import (
+    evaluate_deterministic_risk,
+    validate_market_snapshot,
+)
 from crewai_app.domain.contracts.schemas import (
     ApprovedExecutionRequest,
     CanonicalTradeIntent,
@@ -29,19 +37,20 @@ from crewai_app.domain.contracts.schemas import (
     IntentType,
     LifecycleStrategySource,
     MarketAnalysisSnapshot,
+    MarketExecutionSnapshot,
     PairRiskLimit,
     PerformanceMetricsSnapshot,
     PositionDirection,
     PositionLifecycleStrategy,
     PositionSizingDecision,
     QwenSignalHypothesis,
+    QwenStrategyCandidateSet,
     StrategyTier,
     TelegramMessageEnvelope,
     TelegramPromptContext,
     TradeAction,
     TradeThreadCursor,
 )
-from crewai_app.skills_api import MinistralFilterAPI, OwnerQwenAPI
 from crewai_app.adapters.telegram.deduplication import InMemoryTelegramDeduplicator
 from crewai_app.domain.lifecycle.cursor import ConcurrentTradeCursorManager
 
@@ -50,8 +59,8 @@ __all__ = ["process_message"]
 
 async def process_message(
     message: TelegramMessageEnvelope,
-    qwen_agent: OwnerQwenAPI,
-    filter_agent: MinistralFilterAPI,
+    qwen_agent: QwenCandidateInferenceAPI | LegacySignalInferenceAPI,
+    filter_agent: MinistralReviewAPI,
     telegram_deduplicator: InMemoryTelegramDeduplicator | None = None,
     prompt_context: TelegramPromptContext | None = None,
     pair_blacklisted: bool = False,
@@ -63,10 +72,11 @@ async def process_message(
     performance_snapshot: PerformanceMetricsSnapshot | None = None,
     risk_limits: Mapping[ExchangeId, PairRiskLimit] | None = None,
     existing_position_notional_by_exchange: Mapping[ExchangeId, Decimal] | None = None,
+    market_snapshots: Mapping[ExchangeId, MarketExecutionSnapshot] | None = None,
 ) -> ApprovedExecutionRequest | None:
     """Run one normalized message through five-tier review and deterministic policy."""
     if telegram_deduplicator is not None:
-        input_deduplication = telegram_deduplicator.check(message)
+        input_deduplication = telegram_deduplicator.inspect(message)
         if input_deduplication.is_duplicate:
             return None
 
@@ -105,27 +115,13 @@ async def process_message(
         and message.strategy_tier_hint != inherited_strategy.strategy_tier
     )
 
-    if inherited_strategy is not None and not transition_requested:
-        confidence = _confidence_from_lifecycle(inherited_strategy)
-    else:
-        mean_quality = sum(
-            decision.quality_score for _, decision in filter_decisions.values()
-        ) / len(filter_decisions)
-        confidence = evaluate_confidence(
-            source_confidence,
-            quality_score=mean_quality,
-            performance=performance_snapshot,
-        )
-        if transition_requested:
-            confidence = confidence.model_copy(
-                update={
-                    "strategy_tier": message.strategy_tier_hint,
-                    "reasons": [
-                        *confidence.reasons,
-                        "explicit_parent_linked_telegram_strategy_transition",
-                    ],
-                }
-            )
+    confidence = _select_confidence(
+        message,
+        source_confidence,
+        filter_decisions,
+        lifecycle_cursors,
+        performance_snapshot,
+    )
 
     selected = filter_decisions.get(confidence.strategy_tier)
     if selected is None:
@@ -171,6 +167,28 @@ async def process_message(
         )
     limits_by_exchange = risk_limits or {}
     current_notional_by_exchange = existing_position_notional_by_exchange or {}
+    expected_reference_price = (
+        reference_price
+        if reference_price is not None
+        else (hypothesis.entries[0] if hypothesis.entries else None)
+    )
+    if market_snapshots is not None:
+        target_exchanges = set(intent.target_exchanges)
+        if expected_reference_price is None:
+            return None
+        if target_exchanges - set(market_snapshots):
+            return None
+        if any(
+            _snapshot_rejection_reasons(
+                market_snapshots[exchange_id],
+                exchange_id=exchange_id,
+                network=intent.execution_network,
+                symbol=intent.symbol,
+                reference_price=expected_reference_price,
+            )
+            for exchange_id in intent.target_exchanges
+        ):
+            return None
     risk_decisions = [
         evaluate_deterministic_risk(
             sizing,
@@ -190,8 +208,16 @@ async def process_message(
             ),
             pair_blacklisted=pair_blacklisted,
             instant_order=intent.order_type == "market",
-            current_price=effective_current_price,
-            reference_price=reference_price,
+            current_price=(
+                market_snapshots[exchange_id].market.current_price
+                if market_snapshots is not None
+                else effective_current_price
+            ),
+            reference_price=(
+                market_snapshots[exchange_id].reference_price
+                if market_snapshots is not None
+                else reference_price
+            ),
             asset_group=intent.asset_group,
             tradfi_perpetual_pair=tradfi_perpetual_pair,
         )
@@ -200,6 +226,26 @@ async def process_message(
     if not risk_decisions or any(not decision.approved for decision in risk_decisions):
         return None
 
+    if hypothesis.intent_type != IntentType.NEW_ORDER:
+        matched_exchanges = {
+            cursor.exchange_id
+            for cursor in lifecycle_cursors
+            if _cursor_matches_intent(cursor, intent)
+        }
+        if matched_exchanges != set(intent.target_exchanges):
+            return None
+
+    request = ApprovedExecutionRequest(
+        intent=intent,
+        sizing=sizing,
+        confidence=confidence,
+        lifecycle_strategy=lifecycle_strategy,
+        risk_decisions=risk_decisions,
+        idempotency_key=message.dedup_key
+        or f"{message.channel_id}:{message.telegram_message_id}",
+        source_telegram_message_id=message.telegram_message_id,
+        parent_message_ids=list(message.parent_messages),
+    )
     trade_cursors = []
     if trade_cursor_manager is not None:
         trade_cursors = await trade_cursor_manager.attach_message_for_intent(
@@ -211,21 +257,112 @@ async def process_message(
                 lifecycle_strategy if transition_requested else None
             ),
         )
-    return ApprovedExecutionRequest(
-        intent=intent,
-        sizing=sizing,
-        confidence=confidence,
-        lifecycle_strategy=lifecycle_strategy,
-        risk_decisions=risk_decisions,
-        idempotency_key=message.dedup_key or f"{message.channel_id}:{message.telegram_message_id}",
-        source_telegram_message_id=message.telegram_message_id,
-        parent_message_ids=list(message.parent_messages),
-        trade_cursor_ids=[cursor.cursor_id for cursor in trade_cursors],
+    approved_request = request.model_copy(
+        update={"trade_cursor_ids": [cursor.cursor_id for cursor in trade_cursors]}
     )
+    if telegram_deduplicator is not None:
+        telegram_deduplicator.mark_delivered(message)
+    return approved_request
+
+
+def select_strategy_tier_for_market(
+    message: TelegramMessageEnvelope,
+    candidates: QwenStrategyCandidateSet,
+    reviews: Mapping[StrategyTier, FilterDecision],
+    active_trade_cursors: list[TradeThreadCursor],
+    *,
+    performance_snapshot: PerformanceMetricsSnapshot | None = None,
+) -> StrategyTier | None:
+    """Select the one tier whose market snapshot the Flow must load."""
+    filter_decisions = {
+        tier: (candidates.candidates[tier], decision)
+        for tier, decision in reviews.items()
+        if decision.status == "approved" and decision.canonical_intent is not None
+    }
+    if not filter_decisions:
+        return None
+    lifecycle_cursors = _matching_lifecycle_cursors(
+        filter_decisions,
+        active_trade_cursors,
+    )
+    source_confidence = candidates.interpretation_confidence
+    return _select_confidence(
+        message,
+        source_confidence,
+        filter_decisions,
+        lifecycle_cursors,
+        performance_snapshot,
+    ).strategy_tier
+
+
+def _select_confidence(
+    message: TelegramMessageEnvelope,
+    source_confidence: float,
+    filter_decisions: Mapping[
+        StrategyTier,
+        tuple[QwenSignalHypothesis, FilterDecision],
+    ],
+    lifecycle_cursors: list[TradeThreadCursor],
+    performance_snapshot: PerformanceMetricsSnapshot | None,
+) -> ConfidenceDecision:
+    inherited_strategy = _shared_lifecycle_strategy(lifecycle_cursors)
+    transition_requested = (
+        inherited_strategy is not None
+        and message.strategy_tier_hint is not None
+        and message.strategy_tier_hint != inherited_strategy.strategy_tier
+    )
+    if inherited_strategy is not None and not transition_requested:
+        return _confidence_from_lifecycle(inherited_strategy)
+
+    mean_quality = sum(
+        decision.quality_score for _, decision in filter_decisions.values()
+    ) / len(filter_decisions)
+    confidence = evaluate_confidence(
+        source_confidence,
+        quality_score=mean_quality,
+        performance=performance_snapshot,
+    )
+    if transition_requested:
+        confidence = confidence.model_copy(
+            update={
+                "strategy_tier": message.strategy_tier_hint,
+                "reasons": [
+                    *confidence.reasons,
+                    "explicit_parent_linked_telegram_strategy_transition",
+                ],
+            }
+        )
+    return confidence
+
+
+def _snapshot_rejection_reasons(
+    snapshot: MarketExecutionSnapshot,
+    *,
+    exchange_id: ExchangeId,
+    network: ExchangeNetwork,
+    symbol: str,
+    reference_price: Decimal,
+) -> list[str]:
+    reasons = list(snapshot.rejection_reasons)
+    if snapshot.market.exchange_id != exchange_id:
+        reasons.append("market_snapshot_exchange_mismatch")
+    if snapshot.market.network != network:
+        reasons.append("market_snapshot_network_mismatch")
+    try:
+        validate_market_snapshot(
+            snapshot_symbol=snapshot.market.symbol,
+            requested_symbol=symbol,
+            snapshot_reference_price=snapshot.reference_price,
+            reference_price=reference_price,
+            current_price=snapshot.market.current_price,
+        )
+    except ValueError as exc:
+        reasons.append(str(exc))
+    return reasons
 
 
 async def _infer_hypotheses(
-    qwen_agent: OwnerQwenAPI,
+    qwen_agent: QwenCandidateInferenceAPI | LegacySignalInferenceAPI,
     message: TelegramMessageEnvelope,
     context: TelegramPromptContext,
 ) -> tuple[list[QwenSignalHypothesis], float, bool]:

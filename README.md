@@ -27,9 +27,10 @@ position lifecycle.
 Ministral validates them; confidence selects and persists one position-lifecycle
 strategy, including recommended size and leverage, while deterministic risk
 enforces pair, price, leverage, and cumulative position-value limits.
-Paired testnet P/L summaries compare only identical signals executed on both
-Aster-USDT and Hyperliquid-USDC. Guarded local MCP proxies delegate signed
-execution to pinned upstream Aster V3 EIP-712 and Hyperliquid MCP/SDK clients.
+Paired testnet P/L summaries compare only identical, fully closed signal-tier
+outcomes executed on both Aster-USDT and Hyperliquid-USDC. The canonical Aster
+boundary uses V1 REST/HMAC; guarded local MCP proxies remain non-executing and
+delegate exchange submission to the AWS execution boundary.
 
 Manual serial RAG JSON profiles will preserve each example message's Telegram
 ID and URL together with its private AWS S3 archive URI; authentic examples are
@@ -56,15 +57,14 @@ cd draft_agentic_perp_trading_bot && uv sync --extra aws --extra dev --extra cre
   Crew, typed Flows, tools, domain boundaries, and adapters.
 - `AGENTS.md`: architecture contract and repository rules.
 - `SKILLS.md`: concise implementation workflows.
-- `draft_agentic_perp_trading_bot/src/frameworkless_app/skills_api/`:
-  typed skill APIs for TelegramAgent, QWEN order-translation agents, and the
-  Ministral validation agent.
-- `draft_agentic_perp_trading_bot/src/frameworkless_app/qwen_agents/owner_agent.py`:
-  owner QWEN API and shared review-only synonym and position-management skills.
-- `draft_agentic_perp_trading_bot/src/frameworkless_app/trade_cursor.py`:
-  parent-linked concurrent trade-cursor lifecycle and DynamoDB boundary.
-- `draft_agentic_perp_trading_bot/src/frameworkless_app/risk_engine/`:
-  deterministic execution constraints.
+- `draft_agentic_perp_trading_bot/src/crewai_app/agent_interfaces/`: canonical
+  typed TelegramAgent, QWEN, and Ministral responsibilities.
+- `draft_agentic_perp_trading_bot/src/crewai_app/adapters/telegram/`: canonical
+  retrieval, parent-tree, receipt, and metadata boundaries.
+- `draft_agentic_perp_trading_bot/src/crewai_app/domain/`: canonical contracts,
+  cursor lifecycle, performance, confidence, stop-loss, and execution gates.
+- `draft_agentic_perp_trading_bot/src/frameworkless_app/`: retained legacy
+  implementation for comparison until migration review is complete.
 - `preliminary_flowchart_Figma.png`: local architecture snapshot.
 
 The design source is the [AgenticPerpTradingBotArch flowchart](https://www.figma.com/board/IosVAXW713NeWhTTU962vC/AgenticPerpTradingBotArch?node-id=402-140).
