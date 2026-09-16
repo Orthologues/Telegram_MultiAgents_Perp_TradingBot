@@ -1,26 +1,15 @@
 # Project Skills
 
 This file is the compact workflow index for the scaffold. It complements
-AGENTS.md and does not replace the architecture mapping. Status labels mean
+`AGENTS.md` and does not replace the architecture mapping. Status labels mean
 local (implemented in the scaffold), compatibility (retained for the legacy
 comparison path), planned (interface or integration gap), and research (not an
 approved runtime policy).
 
-## Package Boundaries
-
-Use src/crewai_app/ as the canonical application. Keep
-src/frameworkless_app/ intact for comparison; do not treat it as a second
-runtime or delete it during this migration. Canonical agent responsibility
-protocols live in src/crewai_app/agent_interfaces/. The
-src/crewai_app/skills_api/ package is a compatibility facade only.
-Deterministic policies live under domain/policies/ and their Flow-only
-wrappers under tools/. The later LangGraph implementation is reserved at
-src/langgraph_app/.
-
 ## Flowchart to Scaffold
 
 Use the Figma board as the design source and
-draft_agentic_perp_trading_bot/architecture_to_code_mapping.md as the
+`draft_agentic_perp_trading_bot/architecture_to_code_mapping.md` as the
 file-to-file map. Update the map when a responsibility moves; update README
 only when the public overview changes.
 
@@ -34,12 +23,12 @@ TelegramAgent/Telethon retrieval
   -> guarded Aster/Hyperliquid execution boundary
 ~~~
 
-Telegram transport belongs to adapters/telegram/; the Flow consumes its
+Telegram transport belongs to `adapters/telegram/`; the Flow consumes its
 normalized envelope. Do not copy the full flowchart into source comments.
 
 ## TelegramAgent Ingestion
 
-Owner: adapters/telegram/ and the Lightsail retrieval worker. Status: local
+Owner: `adapters/telegram/` and the Lightsail retrieval worker. Status: local
 worker and in-memory adapters; production S3, DynamoDB, SQS, and media
 hydration are planned.
 
@@ -47,6 +36,10 @@ Use one long-lived worker and one authorized user session. Configure lightweight
 per-chat retrieval adapters inside the shared worker; do not deploy one
 TelegramAgent service per channel. Expose retrieval only. Do not register a
 send tool or route TelegramAgent output directly to an exchange.
+
+Session provisioning is an operator-controlled local-login and encrypted
+Lightsail handoff; the worker only loads the pre-provisioned session. Follow the
+authoritative security and failure-stop rules in `AGENTS.md`.
 
 Process each bounded pull in this order:
 
@@ -66,17 +59,17 @@ publication must remain replayable. A duplicate may be acknowledged only when
 a local or durable delivery record proves that the earlier publication
 succeeded; metadata persistence alone is not delivery.
 
-Preserve owner_id, channel_id, telegram_chat_id, telegram_message_id,
-source_timestamp, parent_messages, media_hashes, asset_group, and
-strategy_tier_hint. Parent messages are traversed oldest first and are passed
+Preserve `owner_id`, `channel_id`, `telegram_chat_id`, `telegram_message_id`,
+`source_timestamp`, `parent_messages`, `media_hashes`, `asset_group`, and
+`strategy_tier_hint`. Parent messages are traversed oldest first and are passed
 as ID-labelled blocks to both QWEN and Ministral. Keep message bodies in the
 owner reply-tree index/cache; use DynamoDB for durable metadata, concurrent
-trade cursors, and replay records. The minimalist Chinese acknowledgment for
-the A-zhu private-chat workflow is a separately authorized, non-trading path.
+trade cursors, and replay records. All sources use the same retrieval-only
+channel workflow; no private-chat reply path is supported.
 
 ## Concurrent Trade Cursors
 
-Owner: domain/lifecycle/cursor.py plus its persistence adapter. Status: local
+Owner: `domain/lifecycle/cursor.py` plus its persistence adapter. Status: local
 manager and in-memory repository; conditional DynamoDB storage is planned.
 
 Maintain concurrent cursors for parent-linked symbol, exchange, network,
@@ -87,15 +80,10 @@ context is not automatic cursor membership.
 Each cursor stores active order IDs and open position IDs. An update, fill,
 reduction, or partial close does not close a cursor. Close it only after a
 position has opened, all positions are closed, and all active orders are gone.
-Rejected updates must not revise the selected lifecycle policy. Conditional
-version writes must update unrelated cursors independently.
-
-## Minimalist Chinese Reply
-
-Use only for the A-zhu private-chat workflow when explicitly authorized.
-Return a brief Chinese acknowledgment equivalent to "yes" or "ok". Do not add
-market commentary, inferred levels, execution claims, or trading instructions.
-Preserve source and response provenance. This path has no exchange capability.
+Policy revisions follow the acceptance rule in [Confidence Calculation](#confidence-calculation);
+rejected updates leave the selected policy unchanged. Each cursor replacement
+is conditional on that cursor's expected version, so a stale write cannot
+overwrite newer state.
 
 ## Agentic Deduplication
 
@@ -154,7 +142,7 @@ empty until manually populated.
 
 ## Confidence Calculation
 
-Owner: domain/policies/confidence.py. Status: local synthetic-v2 baseline;
+Owner: `domain/policies/confidence.py`. Status: local synthetic-v2 baseline;
 learned features are research.
 
 Confidence ranks hypotheses and selects one of five strategy tiers. It is not a
@@ -176,8 +164,8 @@ before influencing live decisions.
 
 ## Omitted Stop-Loss Inference
 
-Owner: deterministic domain/policies/stop_loss.py, invoked by a Flow through
-tools/stop_loss_policy_tool.py. Status: local pure policy; complete MCP supplier
+Owner: deterministic `domain/policies/stop_loss.py`, invoked by a Flow through
+`tools/stop_loss_policy_tool.py`. Status: local pure policy; complete MCP supplier
 and measured deadline are planned.
 
 QWEN leaves an omitted stop-loss unset. The Aster/Hyperliquid market boundary
@@ -200,7 +188,7 @@ a computation-budget requirement until elapsed time is measured.
 
 ## Pair Blacklisting
 
-Owner: domain/policies/execution_gate.py. Status: local deterministic policy
+Owner: `domain/policies/execution_gate.py`. Status: local deterministic policy
 with a pending policy clarification.
 
 For each canonical exchange/symbol pair, evaluate closed net outcomes within
@@ -276,7 +264,7 @@ permission in this skill.
 
 ## Paired Testnet Venue Performance
 
-Owner: domain/performance/venue_comparison.py and PerformanceEvaluationFlow.
+Owner: `domain/performance/venue_comparison.py` and `PerformanceEvaluationFlow`.
 Status: local partial implementation.
 
 Compare Aster and Hyperliquid only on the intersection of deduplicated, fully
@@ -319,7 +307,7 @@ execution idempotency.
 ## Verification
 
 For behavior changes, add a focused test first. From
-draft_agentic_perp_trading_bot/:
+`draft_agentic_perp_trading_bot/`:
 
 ~~~bash
 uv sync --extra aws --extra telegram --extra exchange-upstreams --extra dev --extra crewai

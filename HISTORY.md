@@ -301,3 +301,12 @@ Removed the historical Agentic Update prompts and completed CrewAI scaffold,
 layout, domain-boundary, and local implementation instructions from `AGENTS.md`.
 Retained only the outstanding production integration, observability, deployment,
 reliability, and completion-gate requirements, and synchronized `STATUS.md`.
+
+### 2026-09-16 — pending: retired the private-chat acknowledgment workflow
+
+Migrated A-zhu's active source from a direct chat to a conventional private
+Telegram channel. Removed the obsolete Minimalist Chinese Reply guidance and
+direct-chat routing while preserving A-zhu's owner-specific QWEN and replay
+data. Confirmed that the reply skill had remained documentation-only: no Python
+implementation or `skills_api` export existed to remove. Telegram access
+remains retrieval-only with no send capability.

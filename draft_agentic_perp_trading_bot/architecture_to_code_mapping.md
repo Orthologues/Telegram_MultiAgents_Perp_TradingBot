@@ -7,7 +7,7 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 - Owner A: Shu-qin, mixed BTC/ETH, alts, TradFi, day and longer trading
 - Owner B: Lao-tu, mixed BTC/ETH, alts, TradFi, day trading
 - Owner C: Bi-jia-suo, separate BTC/ETH and alts/TradFi day-trading channels
-- Owner D: A-zhu, legacy replay channels plus one active private/public route
+- Owner D: A-zhu, legacy replay channels plus one active private Telegram channel
 
 ## Canonical Runtime
 

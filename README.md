@@ -13,13 +13,21 @@ Chinese text in Telegram trading channels, including implicit entries,
 exits, context, screenshots, and owner-specific terminology.
 
 Telegram ingestion runs as one shared polling worker using one authorized user
-session. Channel-specific chat IDs, per-message receipts, and provenance are
-handled by lightweight retrieval adapters within that worker. The scaffold does
-not require one independently deployed TelegramAgent service per channel. Each
-delivered message includes oldest-to-newest `parent_messages` IDs for serial
-reply-tree context retrieval. ElastiCache stores the owner reply-tree indexes,
-while DynamoDB stores enriched metadata and concurrent live trade cursors,
-including Aster or Hyperliquid active orders and open positions.
+session. The initial interactive session login is performed locally by the
+operator, then cleanly disconnected and encrypted before being handed off to
+the Lightsail deployment; the worker never performs interactive login or
+automated re-authentication. Channel-specific chat IDs, per-message receipts,
+and provenance are handled by lightweight retrieval adapters within that
+worker. The scaffold does not require one independently deployed TelegramAgent
+service per channel. Each delivered message includes oldest-to-newest
+`parent_messages` IDs for serial reply-tree context retrieval. ElastiCache
+stores the owner reply-tree indexes, while DynamoDB stores enriched metadata
+and concurrent live trade cursors, including Aster or Hyperliquid active orders
+and open positions.
+
+All owner inputs now arrive through Telegram channels, including A-zhu's
+conventional private channel. The scaffold has no direct-chat acknowledgment
+workflow and exposes no Telegram send capability.
 
 Each owner QWEN agent emits five reviewable strategy-tier candidates for every
 incoming trading signal, primarily for continuations of an existing perpetual

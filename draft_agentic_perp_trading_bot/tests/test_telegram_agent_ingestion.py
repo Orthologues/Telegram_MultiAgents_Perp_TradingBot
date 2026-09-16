@@ -3,6 +3,9 @@ from datetime import datetime, timezone
 
 import pytest
 
+from crewai_app.adapters.telegram.normalizer import (
+    OWNER_CHANNEL_MAP as CREWAI_OWNER_CHANNEL_MAP,
+)
 from frameworkless_app.schemas import (
     AssetGroup,
     IngestionTransport,
@@ -15,6 +18,7 @@ from frameworkless_app.telegram_ingestion.agent_worker import (
     TelegramAgentPoller,
 )
 from frameworkless_app.telegram_ingestion.normalizer import (
+    OWNER_CHANNEL_MAP as FRAMEWORKLESS_OWNER_CHANNEL_MAP,
     attach_archived_media,
     normalize_telegram_agent_message,
 )
@@ -88,8 +92,7 @@ def test_normalizer_preserves_direct_parent_message_id() -> None:
     ("channel_id", "expected_asset_group"),
     [
         ("owner_c_alts_tradfi", AssetGroup.ALTS_TRADFI),
-        ("owner_d_active_private_chat", AssetGroup.CRYPTO),
-        ("owner_d_active_public_channel", AssetGroup.CRYPTO),
+        ("owner_d_active_private_channel", AssetGroup.CRYPTO),
     ],
 )
 def test_corrected_figma_channel_routes_preserve_asset_scope(
@@ -103,6 +106,15 @@ def test_corrected_figma_channel_routes_preserve_asset_scope(
     )
 
     assert envelope.asset_group == expected_asset_group
+
+
+def test_owner_d_active_source_is_a_private_channel_in_both_runtimes() -> None:
+    expected_route = (OwnerId.OWNER_D_A_ZHU, AssetGroup.CRYPTO)
+
+    for channel_map in (CREWAI_OWNER_CHANNEL_MAP, FRAMEWORKLESS_OWNER_CHANNEL_MAP):
+        assert channel_map["owner_d_active_private_channel"] == expected_route
+        assert "owner_d_active_private_chat" not in channel_map
+        assert "owner_d_active_public_channel" not in channel_map
 
 
 def test_unhydrated_media_messages_do_not_share_an_exact_dedup_key() -> None:

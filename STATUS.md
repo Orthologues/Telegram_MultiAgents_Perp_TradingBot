@@ -3,7 +3,7 @@
 Maintenance rule: **OVERWRITE** this file on every update. It is the current
 state, not a development log. The log is `HISTORY.md`.
 
-Last updated: 2026-09-10
+Last updated: 2026-09-16
 
 ## Phase
 
@@ -24,6 +24,10 @@ Telethon image hydration and authentic serial RAG examples.
 - `agent_interfaces/` is the canonical responsibility boundary. `skills_api/`
   now remains a compatibility facade, with typed QWEN relation, synonym, and
   position-reduction capabilities defined separately.
+- A-zhu's active source is a conventional private Telegram channel. The former
+  direct-chat acknowledgment workflow has been retired; neither `SKILLS.md`
+  nor `skills_api/` defines a reply skill, and Telegram ingestion remains
+  retrieval-only.
 - Aster uses the V1 REST/HMAC boundary; Hyperliquid remains behind its approved
   upstream boundary. Both remain testnet-first, with Lambda order submission
   guarded and not production-complete.
@@ -43,8 +47,11 @@ Telethon image hydration and authentic serial RAG examples.
 
 ## Verification
 
-- Focused migration tests and the non-Flow suite pass: `123 passed, 4
-  deselected`; Ruff, compilation, and whitespace checks also pass.
+- The current private-channel routing change passes the focused Telegram
+  ingestion suite (`17 passed`) and compatibility-API suite (`7 passed`), plus
+  targeted Ruff and compilation checks and `git diff --check`.
+- The previous wider migration baseline was `123 passed, 4 deselected`; it was
+  not rerun for this documentation and route cleanup.
 - The full suite is not certified: CrewAI 1.15.17 Flow integration can stall
   in the installed Python 3.11 runtime's executor/event shutdown path. This is
   an environment/runtime limitation, not evidence of full Flow correctness.

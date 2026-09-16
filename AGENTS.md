@@ -25,7 +25,15 @@ TelegramAgent retrieval
   -> Aster/Hyperliquid MCP gateway and Lambda execution boundary
 ```
 
-- Use one authorized Telegram user session and one shared polling worker.
+- Use one authorized Telegram user session and one shared polling worker. The
+  operator must perform the initial interactive Telegram login locally, verify
+  the expected account and allowlisted chats, disconnect cleanly, and migrate
+  the encrypted session to the Lightsail deployment through the approved
+  Secrets Manager/KMS boundary. The worker must load only this
+  pre-provisioned session; it must never perform interactive login, automated
+  re-authentication, proxy or IP rotation, or aggressive retry loops. This is
+  an operational safety measure, not a guarantee against Telegram account
+  restrictions; stop and alert on FloodWait or authentication failures.
 - TelegramAgent is pull-based and retrieval-only in the ingestion worker; do
   not register `TelegramSendTool` or connect it directly to an exchange.
 - Retrieve a bounded recent window without a channel-level cursor. Persist
@@ -49,6 +57,24 @@ TelegramAgent retrieval
 - Compare Aster-USDT and Hyperliquid-USDC testnet P/L only across the intersection
   of closed positions sharing the same signal deduplication key.
 
+## Package Boundaries
+
+`draft_agentic_perp_trading_bot/src/crewai_app/` is the intended canonical
+application. Retain
+`draft_agentic_perp_trading_bot/src/frameworkless_app/` as a legacy comparison
+implementation during the migration; it is not a second production runtime.
+Canonical agent responsibility protocols live in
+`draft_agentic_perp_trading_bot/src/crewai_app/agent_interfaces/`. Retain
+`draft_agentic_perp_trading_bot/src/crewai_app/skills_api/` only for
+compatibility with the legacy comparison path; new Flow responsibilities use
+`agent_interfaces` and the canonical domain boundaries. Deterministic policies
+live under `draft_agentic_perp_trading_bot/src/crewai_app/domain/policies/`,
+with Flow-only wrappers under
+`draft_agentic_perp_trading_bot/src/crewai_app/tools/`. The later LangGraph
+implementation at `draft_agentic_perp_trading_bot/src/langgraph_app/` is a
+roadmap item, not a current runtime. Keep the architecture mapping as the
+source of truth when responsibilities move.
+
 ## Agent Boundaries
 
 - Maintain four owner-specific QWEN agents; channels and asset groups route into
@@ -69,9 +95,6 @@ TelegramAgent retrieval
   review may increment its revision. Deterministic risk separately enforces
   pair blacklisting, instant-order price deviation, leverage, and cumulative
   owner/pair position-value limits. QWEN must leave an omitted stop-loss unset.
-- A-zhu's private-chat workflow may use a separately authorized minimalist
-  Chinese acknowledgment skill; it must not infer parameters or confirm
-  execution.
 
 ## Agent API Interfaces
 
@@ -187,10 +210,15 @@ Telegram content, credentials, or raw media.
 
 1. Complete the production AWS integrations and bounded RAG/relation workflow
    described above. Never pass access keys to agents.
+# COMMENTLOG: The order-retry requirement was unclear; rewrite it to explain
+# how to handle a timeout or lost response without creating duplicate orders.
 2. Add bounded retry handling only for transient Bedrock failures and
-   structured-output repair. For a network-ambiguous exchange placement,
-   reconcile the stable client order ID before any deliberate resubmission; never
-   blindly retry order placement or persistence mutation.
+   structured-output repair. If an exchange-order request times out or loses its
+   response, query the exchange with the same stable client order ID before
+   retrying. If the order already exists, treat the original request as
+   submitted and do not place a duplicate. Only retry after confirming that no
+   order exists, and apply the same idempotency safeguard to the related
+   persistence update.
 3. Deploy the CrewAI worker with a least-privilege IAM task role. Keep Telegram
    sessions on Lightsail and credentials within AWS Secrets Manager and
    KMS-protected boundaries. Keep mainnet execution disabled throughout the

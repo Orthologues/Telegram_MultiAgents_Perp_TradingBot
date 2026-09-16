@@ -36,11 +36,7 @@ OWNER_CHANNEL_MAP: dict[str, tuple[OwnerId, AssetGroup]] = {
         OwnerId.OWNER_D_A_ZHU,
         AssetGroup.ALTS_TRADFI,
     ),
-    "owner_d_active_private_chat": (
-        OwnerId.OWNER_D_A_ZHU,
-        AssetGroup.CRYPTO,
-    ),
-    "owner_d_active_public_channel": (
+    "owner_d_active_private_channel": (
         OwnerId.OWNER_D_A_ZHU,
         AssetGroup.CRYPTO,
     ),
