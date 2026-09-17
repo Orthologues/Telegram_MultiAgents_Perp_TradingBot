@@ -207,7 +207,7 @@ class TradingMessageRelation(StrEnum):
 
 
 class TradingMessageRelationDecision(BaseModel):
-    """Reviewable QWEN relation output, separate from byte and signal deduplication."""
+    """QWEN relation output, separate from byte and signal deduplication."""
 
     owner_id: OwnerId
     channel_id: str
@@ -216,7 +216,7 @@ class TradingMessageRelationDecision(BaseModel):
     matched_message_ids: list[str] = Field(default_factory=list)
     confidence: float = Field(ge=0.0, le=1.0)
     reason_codes: list[str] = Field(default_factory=list)
-    needs_human_review: bool = False
+    needs_human_labelling: bool = False
 
     @field_validator("matched_message_ids")
     @classmethod
@@ -230,9 +230,9 @@ class TradingMessageRelationDecision(BaseModel):
         return message_ids
 
     @model_validator(mode="after")
-    def require_review_for_ambiguity(self) -> Self:
+    def require_labelling_for_ambiguity(self) -> Self:
         if self.relation == TradingMessageRelation.AMBIGUOUS:
-            self.needs_human_review = True
+            self.needs_human_labelling = True
         return self
 
 
@@ -497,6 +497,33 @@ class TelegramPromptContext(BaseModel):
         return prompt_messages
 
 
+class QwenRagLabellingRecord(BaseModel):
+    """Deferred human-labelling input retained for later RAG curation."""
+
+    prompt_context: TelegramPromptContext
+    relation_decision: TradingMessageRelationDecision
+    queued_at: datetime
+    labelling_status: Literal["pending"] = "pending"
+
+    @model_validator(mode="after")
+    def validate_source_identity(self) -> Self:
+        message = self.prompt_context.current_message
+        decision = self.relation_decision
+        if (
+            decision.owner_id,
+            decision.channel_id,
+            decision.telegram_message_id,
+        ) != (
+            message.owner_id,
+            message.channel_id,
+            message.telegram_message_id,
+        ):
+            raise ValueError("labelling decision must match the current source message")
+        if not decision.needs_human_labelling:
+            raise ValueError("labelling records require needs_human_labelling=true")
+        return self
+
+
 class TelegramAgentPollBatch(BaseModel):
     channel_id: str
     telegram_chat_id: str
@@ -675,7 +702,7 @@ class OmittedStopLossDecision(BaseModel):
 
 
 class TradingMessageSynonymDecision(BaseModel):
-    """Reviewable baseline-synonym inference, never an execution command."""
+    """Baseline-synonym inference that may be queued for later labelling."""
 
     owner_id: OwnerId
     channel_id: str
@@ -686,11 +713,11 @@ class TradingMessageSynonymDecision(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     evidence: list[str] = Field(default_factory=list)
     reasons: list[str] = Field(default_factory=list)
-    needs_human_review: bool = True
+    needs_human_labelling: bool = True
 
 
 class PositionReductionHypothesis(BaseModel):
-    """Reviewable QWEN interpretation of a reduce-and-protect instruction."""
+    """QWEN interpretation that may be queued for later human labelling."""
 
     owner_id: OwnerId
     channel_id: str
@@ -729,7 +756,7 @@ class PositionReductionHypothesis(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     evidence: list[str] = Field(default_factory=list)
     ambiguities: list[str] = Field(default_factory=list)
-    needs_human_review: bool = True
+    needs_human_labelling: bool = True
 
 
 class TakeProfitFillEvent(BaseModel):

@@ -17,7 +17,7 @@ only when the public overview changes.
 TelegramAgent/Telethon retrieval
   -> adapters/telegram/normalize, hydrate, archive, and deduplicate
   -> publish normalized context to the downstream boundary
-  -> flows/telegram_signal_flow.py
+  -> `flows/telegram_signal_flow.py`
   -> one owner QWEN definition + shared Ministral review
   -> deterministic domain policies and Flow-only persistence
   -> guarded Aster/Hyperliquid execution boundary
@@ -88,20 +88,23 @@ overwrite newer state.
 ## Agentic Deduplication
 
 Owner: owner-specific QWEN reasoning, with deterministic identity helpers.
-Status: byte/media identity is local; semantic relation reasoning and durable
-signal acceptance are planned.
+Status: byte/media identity and deferred-labelling persistence are local;
+semantic relation reasoning, production table provisioning, Flow wiring, and
+durable signal acceptance are planned.
 
 Keep these stages separate:
 
 1. Input identity: Python may hash exact text and hydrated media bytes.
-2. Message relation: QWEN classifies duplicate, continuation, new_signal, or
+2. Message relation: QWEN classifies `duplicate`, `continuation`, `new_signal`, or
    ambiguous from chronological context and RAG.
-3. Signal identity: reviewed structured hypotheses receive a durable
-   signal_dedup_key.
-4. Delivery receipt: publication success is recorded separately.
+3. Deferred labelling: flagged messages and their prompt context enter the
+   dedicated DynamoDB labelling table without blocking ingestion.
+4. Signal identity: validated structured hypotheses receive a durable
+   `signal_dedup_key`.
+5. Delivery receipt: publication success is recorded separately.
 
 Do not use keyword, substring, or regular-expression rules to interpret Chinese
-trading messages. The relation result is a reviewable decision, not an order:
+trading messages. The relation result is a structured decision, not an order:
 
 ~~~jsonc
 {
@@ -109,20 +112,53 @@ trading messages. The relation result is a reviewable decision, not an order:
   "matched_message_ids": ["<real channel-scoped Telegram ID, oldest first>"],
   "confidence": 0.91,
   "reason_codes": ["same_symbol", "updated_entry_range"],
-  "needs_human_review": false
+  "needs_human_labelling": false
+}
+~~~
+
+`needs_human_labelling` schedules offline dataset work; it is not a synchronous
+approval gate. Ambiguous relations set it automatically, and other low-confidence
+outputs may set it explicitly. `DeferredQwenLabellingQueue` stores the complete
+ID-labelled prompt context and relation decision through
+`DynamoDBMessageLabellingRepository`, keyed by owner/channel and Telegram
+message ID. The queue and repository adapter are implemented; the production
+table and Flow call are still integration work.
+
+An illustrative serial RAG object preserves the complete message sequence and
+the execution result associated with it:
+
+~~~jsonc
+{
+  "example_id": "owner-c-btc-001",
+  "strategy_tier": "conservative",
+  "messages": [
+    {
+      "telegram_message_id": "<channel-scoped-message-id-1>",
+      "telegram_message_url": "https://t.me/c/<channel-id>/<message-id-1>"
+    },
+    {
+      "telegram_message_id": "<channel-scoped-message-id-2>",
+      "telegram_message_url": "https://t.me/c/<channel-id>/<message-id-2>"
+    }
+  ],
+  "s3_archive_uri": "s3://PRIVATE_RAG_BUCKET/owner-c-btc-001.json",
+  "execution_label": "incorrect",
+  "error_reason": "stop-loss update was applied to the wrong position"
 }
 ~~~
 
 This is a shape illustration, not a fixture. IDs are channel-scoped strings;
 real curated records must use their authentic Telegram IDs and URLs. A later
 add-to-position or execution-update message can be a continuation rather than
-a duplicate. Low-confidence and ambiguous outputs are retained for review.
-Measure relation precision/recall, continuation-link accuracy, false merges,
-and new-signal recall using complete serial message sequences.
+a duplicate. Low-confidence and ambiguous outputs are retained for deferred
+labelling. Only completed labels that pass curation may become serial RAG
+examples; queued model output is not itself trusted RAG data. Measure relation
+precision/recall, continuation-link accuracy, false merges, and new-signal
+recall using complete serial message sequences.
 
 ## QWEN-Agent RAG-loading
 
-Owner: agent_interfaces.qwen.SerialRagLoaderAPI and the selected owner QWEN
+Owner: `agent_interfaces.qwen.SerialRagLoaderAPI` and the selected owner QWEN
 definition. Status: local profile loading; authenticated S3 retrieval, ranking,
 lifecycle filtering, and image-byte delivery are planned.
 
@@ -132,13 +168,16 @@ active cursor snapshots, and RAG records to QWEN and Ministral. Each QWEN run
 must return all five strategy tiers. Every hypothesis is a proposal, never an
 order.
 
-The output boundary requires owner_id, channel_id, asset_group, strategy_tier,
-intent_type, symbol/direction when known, entries, confidence, evidence, and
-the source deduplication key. Omitted stop-losses remain unset for deterministic
-derivation. Curated serial-RAG objects contain chronological message
+The output boundary requires `owner_id`, `channel_id`, `asset_group`,
+`strategy_tier`, `intent_type`, `symbol`/`direction` when known, `entries`,
+`confidence`, `evidence`, and `source_dedup_key`. Omitted stop-losses remain
+unset for deterministic derivation. Curated serial-RAG objects contain
+chronological message
 references, an S3 archive URI, strategy tier, and execution label. Do not
 invent message IDs, URLs, media, or outcomes; current profile examples are
-empty until manually populated.
+empty until manually populated. Curators may promote completed records from the
+deferred DynamoDB labelling table only after validating their labels and
+provenance.
 
 ## Confidence Calculation
 
@@ -153,7 +192,7 @@ confidence, size, leverage, formula version, and provenance on the lifecycle
 cursor.
 
 At lifecycle commencement, confidence selects the initial policy. A
-parent-linked continuation inherits it unless an explicit strategy_tier_hint is
+parent-linked continuation inherits it unless an explicit `strategy_tier_hint` is
 reviewed and accepted as a policy revision. This selection is independent of
 deterministic execution permission.
 
@@ -205,7 +244,7 @@ order price deviation, depth, slippage, leverage, and cumulative limits.
 
 ## Ministral Validation
 
-Owner: agent_interfaces.ministral.MinistralReviewAPI and the shared Ministral
+Owner: `agent_interfaces.ministral.MinistralReviewAPI` and the shared Ministral
 agent. Status: local one-model structured review; model comparison and stronger
 evidence/injection checks are planned.
 
@@ -228,7 +267,7 @@ deterministic gate.
 
 ## Reduce Position and Protect Entry (QWEN)
 
-Owner: agent_interfaces.qwen.QwenPositionReductionAPI. Status: typed
+Owner: `agent_interfaces.qwen.QwenPositionReductionAPI`. Status: typed
 compatibility contract; lifecycle integration is planned.
 
 Return a reviewable hypothesis requesting a 30%-40% reduction of the
@@ -268,7 +307,7 @@ Owner: `domain/performance/venue_comparison.py` and `PerformanceEvaluationFlow`.
 Status: local partial implementation.
 
 Compare Aster and Hyperliquid only on the intersection of deduplicated, fully
-closed testnet positions sharing the same signal_dedup_key and strategy_tier.
+closed testnet positions sharing the same `signal_dedup_key` and `strategy_tier`.
 Aggregate partial closes at the position/signal grain, normalize net P/L by
 allocated entry notional, and report the metric units and sample counts.
 Exclude unmatched signals and mainnet outcomes. Evaluate all five strategy
@@ -280,7 +319,7 @@ and outcome provenance so later strategy optimization is reproducible.
 
 ## Trading Message Synonym Inference
 
-Owner: selected owner QWEN; agent_interfaces.qwen.QwenSynonymInferenceAPI.
+Owner: selected owner QWEN; `agent_interfaces.qwen.QwenSynonymInferenceAPI`.
 Status: review-only placeholder.
 
 Infer a closest baseline signal class and conditional strategy profile from

@@ -42,7 +42,9 @@ delegate exchange submission to the AWS execution boundary.
 
 Manual serial RAG JSON profiles will preserve each example message's Telegram
 ID and URL together with its private AWS S3 archive URI; authentic examples are
-not yet populated.
+not yet populated. QWEN relation outputs tagged `needs_human_labelling` are
+queued with their message context for later human labelling in a dedicated
+DynamoDB table; they do not wait for immediate review or enter RAG automatically.
 
 Omitted stop-losses are derived at the Ministral boundary from typed MCP
 pair type, volume, EMA, MACD, KDJ, RSI, Bollinger, ATR, and volatility inputs

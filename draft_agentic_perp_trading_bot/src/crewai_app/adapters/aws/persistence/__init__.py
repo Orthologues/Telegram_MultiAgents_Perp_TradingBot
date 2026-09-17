@@ -37,14 +37,22 @@ from crewai_app.adapters.aws.persistence.context_loaders import (
 from crewai_app.adapters.aws.persistence.decision_repository import (
     InMemoryDecisionRepository,
 )
+from crewai_app.adapters.aws.persistence.message_labelling import (
+    DeferredQwenLabellingQueue,
+    DynamoDBMessageLabellingRepository,
+    InMemoryMessageLabellingRepository,
+    MessageLabellingRepository,
+)
 
 __all__ = [
     "DynamoDBExecutionHistoryRepository",
+    "DynamoDBMessageLabellingRepository",
     "DynamoDBMessageMetadataRepository",
     "DynamoDBTradeCursorRepository",
     "ElastiCacheReplyTreeStore",
     "InMemoryExecutionHistoryRepository",
     "InMemoryDecisionRepository",
+    "InMemoryMessageLabellingRepository",
     "InMemoryMessageMetadataRepository",
     "InMemoryRawMediaArchive",
     "InMemoryReplyTreeStore",
@@ -52,8 +60,10 @@ __all__ = [
     "InMemoryTradeCursorRepository",
     "ReplyTreeStore",
     "LocalOwnerProfileRagLoader",
+    "MessageLabellingRepository",
     "ReplyTreeParentContextLoader",
     "S3RawMediaArchive",
     "TelegramMessageReceiptStore",
     "TradeCursorContextLoader",
+    "DeferredQwenLabellingQueue",
 ]

@@ -35,6 +35,8 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
   `src/crewai_app/adapters/local_harness.py`
 - S3, DynamoDB, ElastiCache, decision, and history boundaries:
   `src/crewai_app/adapters/aws/persistence/`
+- Deferred QWEN labelling queue and DynamoDB table adapter:
+  `src/crewai_app/adapters/aws/persistence/message_labelling.py`
 - Aster and Hyperliquid MCP gateway contracts:
   `src/crewai_app/adapters/exchanges/mcp/`
 - Standalone augmented MCP proxies:
@@ -56,6 +58,9 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 - QWEN message-relation reasoning is a separate typed capability for duplicate,
   continuation, new-signal, or ambiguous outcomes; local Flow wiring is planned
   and must not be confused with byte-level deduplication.
+- Relation outputs tagged `needs_human_labelling` are persisted asynchronously
+  with their prompt context for offline labelling. They enter serial RAG only
+  after label and provenance validation; ingestion never waits for a label.
 - Each QWEN run returns all five strategy tiers. Confidence selects the
   lifecycle policy; continuations inherit it unless an explicit reviewed update
   advances the revision.

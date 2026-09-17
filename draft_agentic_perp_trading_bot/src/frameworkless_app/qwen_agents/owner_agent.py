@@ -102,7 +102,7 @@ class OwnerQwenAgent:
             telegram_message_id=message.telegram_message_id,
             confidence=0.0,
             reasons=["placeholder implementation; authentic serial RAG is pending"],
-            needs_human_review=True,
+            needs_human_labelling=True,
         )
 
     async def infer_position_reduction(
@@ -122,5 +122,5 @@ class OwnerQwenAgent:
             ambiguities=[
                 "placeholder implementation; live position and order state are required"
             ],
-            needs_human_review=True,
+            needs_human_labelling=True,
         )

@@ -610,7 +610,7 @@ class OmittedStopLossDecision(BaseModel):
 
 
 class TradingMessageSynonymDecision(BaseModel):
-    """Reviewable baseline-synonym inference, never an execution command."""
+    """Baseline-synonym inference that may be queued for later labelling."""
 
     owner_id: OwnerId
     channel_id: str
@@ -621,11 +621,11 @@ class TradingMessageSynonymDecision(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     evidence: list[str] = Field(default_factory=list)
     reasons: list[str] = Field(default_factory=list)
-    needs_human_review: bool = True
+    needs_human_labelling: bool = True
 
 
 class PositionReductionHypothesis(BaseModel):
-    """Reviewable QWEN interpretation of a reduce-and-protect instruction."""
+    """QWEN interpretation that may be queued for later human labelling."""
 
     owner_id: OwnerId
     channel_id: str
@@ -664,7 +664,7 @@ class PositionReductionHypothesis(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     evidence: list[str] = Field(default_factory=list)
     ambiguities: list[str] = Field(default_factory=list)
-    needs_human_review: bool = True
+    needs_human_labelling: bool = True
 
 
 class TakeProfitFillEvent(BaseModel):

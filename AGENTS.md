@@ -54,6 +54,11 @@ TelegramAgent retrieval
   active orders remain.
 - Retain DynamoDB metadata for live coordination, replay, backtesting, and
   strategy optimization, including omitted TP/SL outcomes and blacklist data.
+- Persist QWEN outputs tagged `needs_human_labelling=true`, together with their
+  ID-labelled prompt context, in a dedicated DynamoDB labelling table. This is
+  an asynchronous RAG dataset workflow and must not pause message ingestion.
+  Promote a record into serial RAG only after its label and provenance have
+  been validated.
 - Compare Aster-USDT and Hyperliquid-USDC testnet P/L only across the intersection
   of closed positions sharing the same signal deduplication key.
 
@@ -130,6 +135,10 @@ may call an exchange; approved execution remains behind the MCP gateway.
 - Keep live parent-linked cursor lifecycle logic in
   `crewai_app/domain/lifecycle/cursor.py`; use conditional DynamoDB version
   writes so independent cursors can progress concurrently.
+- Keep deferred QWEN labelling persistence in
+  `crewai_app/adapters/aws/persistence/message_labelling.py`. The Flow queues a
+  flagged result after schema validation and does not wait for a person to
+  label it.
 - Keep exchange-specific behavior behind MCP; agents must not call exchanges.
 - Default both venues to testnet. Keep both API credentials inside Secrets
   Manager and Lambda; use the canonical Aster V1 REST/HMAC and Hyperliquid
@@ -143,6 +152,10 @@ may call an exchange; approved execution remains behind the MCP gateway.
 - Tests: `draft_agentic_perp_trading_bot/tests/`
 - Owner RAG profiles: versioned JSON without credentials. Populate them
   manually with authentic serial examples and their Telegram/S3 provenance.
+- In every source-file comment block and all Markdown prose, strictly enclose
+  every variable or field name in backticks, for example `signal_dedup_key`.
+  Apply this rule to `COMMENTLOG` and `CHANGELOG` entries as well; preserve
+  the native quoting required by JSON, YAML, and other code examples.
 - For Chinese interpretation, use serial RAG and QWEN reasoning; do not add
   keyword, substring, or regular-expression trading rules.
 - Add focused tests for behavior changes and run:
@@ -169,6 +182,9 @@ AWS state, deterministic policy, and exchange execution remain outside agents.
   hydration and private S3 archival, durable DynamoDB/ElastiCache adapters, and
   bounded semantic message-relation/RAG retrieval with lifecycle filtering and
   image delivery.
+- Provision the deferred-labelling DynamoDB table, wire the relation stage to
+  its repository, and add the offline curation path that validates completed
+  labels before promotion into owner RAG profiles.
 - Ensure the production Flow passes identical ID-labelled source context and
   provenance to QWEN and Ministral, and that decision persistence and execution
   intents are durable and idempotent.

@@ -47,7 +47,7 @@ class QwenCandidateInferenceAPI(Protocol):
 
 
 class QwenMessageRelationAPI(Protocol):
-    """Classify semantic message relations using context and serial RAG."""
+    """Classify relations; flagged outputs enter deferred human labelling."""
 
     async def classify_message_relation(
         self,
@@ -58,7 +58,7 @@ class QwenMessageRelationAPI(Protocol):
 
 
 class QwenSynonymInferenceAPI(Protocol):
-    """Infer a reviewable trading-message synonym without creating an order."""
+    """Infer a trading-message synonym without creating an order."""
 
     async def infer_synonym(
         self,

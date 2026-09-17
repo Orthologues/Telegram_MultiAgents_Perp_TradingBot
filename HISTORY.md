@@ -302,7 +302,7 @@ layout, domain-boundary, and local implementation instructions from `AGENTS.md`.
 Retained only the outstanding production integration, observability, deployment,
 reliability, and completion-gate requirements, and synchronized `STATUS.md`.
 
-### 2026-09-16 — pending: retired the private-chat acknowledgment workflow
+### 2026-09-16 — `a781805`: retired the private-chat acknowledgment workflow
 
 Migrated A-zhu's active source from a direct chat to a conventional private
 Telegram channel. Removed the obsolete Minimalist Chinese Reply guidance and
@@ -310,3 +310,16 @@ direct-chat routing while preserving A-zhu's owner-specific QWEN and replay
 data. Confirmed that the reply skill had remained documentation-only: no Python
 implementation or `skills_api` export existed to remove. Telegram access
 remains retrieval-only with no send capability.
+
+### 2026-09-17 — pending: added deferred QWEN labelling persistence
+
+Replaced the immediate `needs_human_review` output flag with
+`needs_human_labelling` across canonical and frameworkless QWEN contracts.
+Added a typed deferred-labelling record, an application queue, a DynamoDB table
+adapter, and an in-memory repository so flagged message context can be labelled
+offline and curated into later RAG datasets. Updated the active documentation
+to state that ingestion does not wait for human action and that queued model
+outputs require validation before RAG promotion.
+The newly created adapter repository file
+`draft_agentic_perp_trading_bot/src/crewai_app/adapters/aws/persistence/message_labelling.py`
+requires explicit awareness during subsequent human review.

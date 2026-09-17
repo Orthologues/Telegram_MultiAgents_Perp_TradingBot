@@ -3,7 +3,7 @@
 Maintenance rule: **OVERWRITE** this file on every update. It is the current
 state, not a development log. The log is `HISTORY.md`.
 
-Last updated: 2026-09-16
+Last updated: 2026-09-17
 
 ## Phase
 
@@ -21,6 +21,10 @@ Telethon image hydration and authentic serial RAG examples.
   observed/delivered message identity, retryable publication, shared immutable
   QWEN/Ministral context, candidate/review/source validation, and pre-gate
   cursor attachment.
+- QWEN relation, synonym, and position-reduction outputs now use the deferred
+  `needs_human_labelling` flag. A typed queue, DynamoDB table adapter, and local
+  repository preserve flagged prompt context for later RAG curation without
+  blocking ingestion. Production table provisioning and Flow wiring remain.
 - `agent_interfaces/` is the canonical responsibility boundary. `skills_api/`
   now remains a compatibility facade, with typed QWEN relation, synonym, and
   position-reduction capabilities defined separately.
@@ -45,11 +49,21 @@ Telethon image hydration and authentic serial RAG examples.
   observability, deployment, reliability, and acceptance-gate requirements;
   historical prompts and completed scaffold guidance were removed.
 
+## Current Task Series
+
+The primary current task is owner-led human review of every skill in `SKILLS.md`
+that was reviewed by GPT-6 Astra-xhigh and refactored by GPT-5.6 Luna for
+straightforward changes or GPT-5.6 Sol-xhigh for complex changes. Review is
+complete through `## Agentic Deduplication`; the next commit will resume at
+`## QWEN-Agent RAG-loading`.
+
 ## Verification
 
-- The current private-channel routing change passes the focused Telegram
-  ingestion suite (`17 passed`) and compatibility-API suite (`7 passed`), plus
-  targeted Ruff and compilation checks and `git diff --check`.
+- The deferred-labelling contracts, compatibility APIs, and schema checks pass
+  their focused suites (`13 passed` total), plus targeted Ruff, compilation,
+  and whitespace checks.
+- The earlier private-channel routing suite passed (`17 passed`); it was not
+  rerun for this labelling change.
 - The previous wider migration baseline was `123 passed, 4 deselected`; it was
   not rerun for this documentation and route cleanup.
 - The full suite is not certified: CrewAI 1.15.17 Flow integration can stall
@@ -70,6 +84,8 @@ Telethon image hydration and authentic serial RAG examples.
 
 - Add human-reviewed owner/channel text and image sequences, including
   multi-level replies and omitted TP/SL updates.
+- Label queued QWEN records offline, validate their provenance and final labels,
+  and promote only curated records into owner RAG profiles.
 - Store each message ID and URL in JSON with its private S3 archive URI;
   preserve outcomes and redact unnecessary personal data.
 - Add replay fixtures and metrics for all five strategy tiers.

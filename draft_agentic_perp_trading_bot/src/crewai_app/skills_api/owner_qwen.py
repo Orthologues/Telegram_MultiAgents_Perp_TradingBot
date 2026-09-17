@@ -3,7 +3,8 @@
 Canonical CrewAI capability protocols live in agent_interfaces.qwen. RAG
 loading, semantic relation reasoning, synonym inference, and position
 reduction are separate capabilities; this aggregate remains only for legacy
-callers during migration.
+callers during migration. Deferred human-labelling persistence is an
+application adapter rather than an agent skill.
 
 File mappings:
 ``skills_api/owner_qwen.py`` <- ``frameworkless_app/skills_api/owner_qwen.py``;

@@ -71,7 +71,7 @@ def test_message_relation_decision_preserves_chronological_matches() -> None:
         confidence=0.2,
     )
 
-    assert decision.needs_human_review is True
+    assert decision.needs_human_labelling is True
     assert decision.matched_message_ids == ["811", "1002"]
     with pytest.raises(ValueError, match="chronological"):
         TradingMessageRelationDecision.model_validate(
@@ -93,7 +93,7 @@ def _message() -> TelegramMessageEnvelope:
     )
 
 
-def test_synonym_inference_returns_a_reviewable_decision() -> None:
+def test_synonym_inference_returns_a_labelling_aware_decision() -> None:
     message = _message()
     context = TelegramPromptContext.from_message(message)
     decision = asyncio.run(
@@ -105,7 +105,7 @@ def test_synonym_inference_returns_a_reviewable_decision() -> None:
 
     assert decision.telegram_message_id == "123"
     assert decision.confidence == 0.0
-    assert decision.needs_human_review is True
+    assert decision.needs_human_labelling is True
 
 
 def test_owner_qwen_exposes_exactly_five_strategy_candidates() -> None:
@@ -137,7 +137,7 @@ def test_owner_qwen_loads_typed_rag_profile_provenance() -> None:
     assert profile.serial_rag_examples == []
 
 
-def test_position_reduction_skill_returns_bounded_reviewable_hypothesis() -> None:
+def test_position_reduction_skill_returns_bounded_labelling_aware_hypothesis() -> None:
     message = _message()
     context = TelegramPromptContext.from_message(message)
     decision = asyncio.run(
@@ -154,4 +154,4 @@ def test_position_reduction_skill_returns_bounded_reviewable_hypothesis() -> Non
     assert decision.stop_loss_profit_offset_fraction == Decimal("0.0015")
     assert decision.take_profit_labels == ("TP1", "TP2", "TP3")
     assert decision.resize_unfilled_take_profit_orders is True
-    assert decision.needs_human_review is True
+    assert decision.needs_human_labelling is True

@@ -43,6 +43,7 @@ from crewai_app.domain.contracts.telegram import (
     IngestionTransport,
     OwnerId,
     OwnerRagProfile,
+    QwenRagLabellingRecord,
     SerialRagExample,
     TelegramAgentChannelConfig,
     TelegramAgentPollBatch,
