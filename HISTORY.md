@@ -311,7 +311,7 @@ data. Confirmed that the reply skill had remained documentation-only: no Python
 implementation or `skills_api` export existed to remove. Telegram access
 remains retrieval-only with no send capability.
 
-### 2026-09-17 — pending: added deferred QWEN labelling persistence
+### 2026-09-17 — `9f193149`: added deferred QWEN labelling persistence
 
 Replaced the immediate `needs_human_review` output flag with
 `needs_human_labelling` across canonical and frameworkless QWEN contracts.

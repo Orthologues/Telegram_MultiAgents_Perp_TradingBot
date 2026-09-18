@@ -156,6 +156,9 @@ may call an exchange; approved execution remains behind the MCP gateway.
   every variable or field name in backticks, for example `signal_dedup_key`.
   Apply this rule to `COMMENTLOG` and `CHANGELOG` entries as well; preserve
   the native quoting required by JSON, YAML, and other code examples.
+- After each commit, replace the `pending` marker in every `HISTORY.md` entry
+  covered by that commit with the last known commit ID. Never leave a completed
+  entry marked `pending`.
 - For Chinese interpretation, use serial RAG and QWEN reasoning; do not add
   keyword, substring, or regular-expression trading rules.
 - Add focused tests for behavior changes and run:

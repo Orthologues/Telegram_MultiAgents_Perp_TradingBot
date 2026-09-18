@@ -3,7 +3,7 @@
 Maintenance rule: **OVERWRITE** this file on every update. It is the current
 state, not a development log. The log is `HISTORY.md`.
 
-Last updated: 2026-09-17
+Last updated: 2026-09-18
 
 ## Phase
 
@@ -48,6 +48,9 @@ Telethon image hydration and authentic serial RAG examples.
 - `AGENTS.md` now retains only the outstanding CrewAI production-integration,
   observability, deployment, reliability, and acceptance-gate requirements;
   historical prompts and completed scaffold guidance were removed.
+- `AGENTS.md` now requires each commit to replace covered `pending` markers in
+  `HISTORY.md` with the last known commit ID; the latest deferred-labelling
+  record is finalized as `9f193149`.
 
 ## Current Task Series
 
