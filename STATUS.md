@@ -53,6 +53,10 @@ Telethon image hydration and authentic serial RAG examples.
 - `AGENTS.md` now requires each commit to replace covered `pending` markers in
   `HISTORY.md` with the last known commit ID; the latest deferred-labelling
   record is finalized as `9f193149`.
+- Concrete implementations throughout `crewai_app` now explicitly inherit
+  from their local `Protocol` contracts. Shared Flow interfaces live in
+  `flows/interfaces.py`, and `TradeCursorResolver` is defined with the cursor
+  lifecycle contract so reviewers can see each implementation boundary.
 
 ## Current Task Series
 
@@ -67,6 +71,9 @@ complete through `## Agentic Deduplication`; the next commit will resume at
 - The deferred-labelling contracts, compatibility APIs, and schema checks pass
   their focused suites (`13 passed` total), plus targeted Ruff, compilation,
   and whitespace checks.
+- The explicit-protocol-inheritance refactor passes targeted Ruff,
+  compilation, and whitespace checks; runtime imports still require the
+  project dependencies, including `httpx`.
 - The earlier private-channel routing suite passed (`17 passed`); it was not
   rerun for this labelling change.
 - The previous wider migration baseline was `123 passed, 4 deselected`; it was

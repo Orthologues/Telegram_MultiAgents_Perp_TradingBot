@@ -10,15 +10,8 @@ File mappings:
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import List, Protocol
+from typing import List  # noqa: UP035
 
-from crewai_app.domain.contracts.schemas import (
-    TelegramAgentChannelConfig,
-    TelegramIngestionRecord,
-    TelegramMessageEnvelope,
-    TelegramPromptContext,
-    TradeThreadCursor,
-)
 from crewai_app.adapters.telegram.agent_worker import TelegramAgentPoller
 from crewai_app.adapters.telegram.deduplication import (
     InMemoryTelegramDeduplicator,
@@ -31,6 +24,13 @@ from crewai_app.adapters.telegram.storage import (
     DynamoDBMessageMetadataRepository,
     S3RawMediaArchive,
 )
+from crewai_app.domain.contracts.schemas import (
+    TelegramAgentChannelConfig,
+    TelegramIngestionRecord,
+    TelegramMessageEnvelope,
+    TelegramPromptContext,
+)
+from crewai_app.domain.lifecycle.cursor import TradeCursorResolver
 
 
 class BedrockInputPublisher:
@@ -41,13 +41,6 @@ class BedrockInputPublisher:
 
     async def publish(self, context: TelegramPromptContext) -> None:
         await self._publish(context)
-
-
-class TradeCursorResolver(Protocol):
-    async def resolve_for_message(
-        self,
-        message: TelegramMessageEnvelope,
-    ) -> List[TradeThreadCursor]: ...
 
 
 class TelegramIngestionPipeline:

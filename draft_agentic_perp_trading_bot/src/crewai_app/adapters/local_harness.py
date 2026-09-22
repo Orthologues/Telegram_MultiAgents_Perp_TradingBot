@@ -10,8 +10,9 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from decimal import Decimal
-from typing import List
+from typing import List  # noqa: UP035
 
+from crewai_app.agent_interfaces.qwen import SerialRagLoaderAPI
 from crewai_app.domain.contracts.schemas import (
     ExchangeId,
     MarketExecutionSnapshot,
@@ -22,9 +23,14 @@ from crewai_app.domain.contracts.schemas import (
 )
 from crewai_app.domain.policies.execution_gate import validate_market_snapshot
 from crewai_app.domain.policies.rag_curation import validated_serial_rag_examples
+from crewai_app.flows.interfaces import (
+    CursorContextLoader,
+    MarketSnapshotLoader,
+    ParentContextLoader,
+)
 
 
-class StaticParentContextLoader:
+class StaticParentContextLoader(ParentContextLoader):
     """Return parent context supplied by a local replay input file."""
 
     def __init__(self, context: TelegramPromptContext) -> None:
@@ -34,7 +40,7 @@ class StaticParentContextLoader:
         return self.context
 
 
-class StaticCursorContextLoader:
+class StaticCursorContextLoader(CursorContextLoader):
     """Return preloaded cursor state without reading a live repository."""
 
     def __init__(self, cursors: List[TradeThreadCursor]) -> None:
@@ -44,7 +50,7 @@ class StaticCursorContextLoader:
         return list(self.cursors)
 
 
-class StaticSerialRagLoader:
+class StaticSerialRagLoader(SerialRagLoaderAPI):
     """Return manually supplied serial-RAG references for local runs."""
 
     def __init__(self, examples: List[SerialRagExample]) -> None:
@@ -54,7 +60,7 @@ class StaticSerialRagLoader:
         return list(self.examples)
 
 
-class StaticMarketSnapshotLoader:
+class StaticMarketSnapshotLoader(MarketSnapshotLoader):
     """Validate and return preloaded MCP snapshots for a local run."""
 
     def __init__(self, snapshots: Mapping[ExchangeId, MarketExecutionSnapshot]) -> None:

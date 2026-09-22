@@ -3,33 +3,32 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import List, TypeVar
+from typing import List, TypeVar  # noqa: UP035
 
 from crewai.tasks.task_output import TaskOutput
 from pydantic import BaseModel
 
-from crewai_app.crew import CrewModelSettings, TradingSignalCrew
 from crewai_app.agent_interfaces.qwen import (
     QwenMessageRelationAPI,
     SignalEvaluationAPI,
 )
+from crewai_app.crew import CrewModelSettings, TradingSignalCrew
 from crewai_app.domain.contracts.schemas import (
-    SignalEvaluationResult,
     MinistralStrategyReviewSet,
     QwenStrategyCandidateSet,
     SerialRagExample,
+    SignalEvaluationResult,
     TelegramMessageEnvelope,
     TelegramPromptContext,
-    TradingMessageRelationDecision,
     TradeThreadCursor,
+    TradingMessageRelationDecision,
 )
-
 
 SignalEvaluator = SignalEvaluationAPI
 MessageRelationEvaluator = QwenMessageRelationAPI
 
 
-class CrewMessageRelationEvaluator:
+class CrewMessageRelationEvaluator(QwenMessageRelationAPI):
     """Invoke the selected owner-QWEN relation-classification Crew."""
 
     def __init__(self, settings: CrewModelSettings) -> None:
@@ -69,7 +68,7 @@ class CrewMessageRelationEvaluator:
         return decision
 
 
-class CrewSignalEvaluator:
+class CrewSignalEvaluator(SignalEvaluationAPI):
     """Invoke exactly one owner-specific QWEN definition per message."""
 
     def __init__(self, settings: CrewModelSettings) -> None:

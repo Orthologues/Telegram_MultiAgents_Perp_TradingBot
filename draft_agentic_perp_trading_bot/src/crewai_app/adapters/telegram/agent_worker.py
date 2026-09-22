@@ -16,19 +16,19 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Mapping
 from datetime import datetime, timezone
-from typing import Any, Protocol, Self, Set
+from typing import Any, Protocol, Self, Set  # noqa: UP035
 
+from crewai_app.adapters.telegram.normalizer import (
+    normalize_telegram_agent_message,
+)
+from crewai_app.adapters.telegram.storage import TelegramMessageReceiptStore
+from crewai_app.agent_interfaces.telegram import TelegramAgentAPI
 from crewai_app.domain.contracts.schemas import (
     TelegramAgentChannelConfig,
     TelegramAgentPollBatch,
     TelegramAgentRetrievalBatch,
     TelegramMessageEnvelope,
 )
-from crewai_app.agent_interfaces.telegram import TelegramAgentAPI
-from crewai_app.adapters.telegram.normalizer import (
-    normalize_telegram_agent_message,
-)
-from crewai_app.adapters.telegram.storage import TelegramMessageReceiptStore
 
 
 class TelegramRetrieveCallable(Protocol):
@@ -41,7 +41,7 @@ class TelegramRetrieveCallable(Protocol):
     ) -> Awaitable[dict[str, Any] | str]: ...
 
 
-class CallableTelegramAgentRetriever:
+class CallableTelegramAgentRetriever(TelegramAgentAPI):
     """Validate the structured output of an AG2 TelegramAgent retrieve call.
 
     The callable must expose only retrieval. Do not register TelegramSendTool in

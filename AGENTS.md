@@ -162,6 +162,10 @@ may call an exchange; approved execution remains behind the MCP gateway.
 - In Python type annotations, import `List` and `Set` from `typing` and use
   them instead of native `list[...]` and `set[...]` wherever applicable.
   Preserve runtime constructors such as `list()` and `set()`.
+- When concrete classes fulfill a local `Protocol` contract, explicitly inherit
+  from that `Protocol` in the class declaration even though structural typing
+  would otherwise suffice. This makes the contract visible to reviewers;
+  `Protocol` classes are interface contracts, not wrapper implementations.
 - For Chinese interpretation, use serial RAG and QWEN reasoning; do not add
   keyword, substring, or regular-expression trading rules.
 - Add focused tests for behavior changes and run:

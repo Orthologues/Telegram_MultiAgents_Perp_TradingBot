@@ -79,7 +79,7 @@ class DynamoDBTable(Protocol):
     ) -> Mapping[str, Any]: ...
 
 
-class DynamoDBMessageLabellingRepository:
+class DynamoDBMessageLabellingRepository(MessageLabellingRepository):
     """Store deferred labelling records in an injected DynamoDB table."""
 
     def __init__(self, table: DynamoDBTable) -> None:
@@ -119,7 +119,7 @@ class DynamoDBMessageLabellingRepository:
         )
 
 
-class InMemoryMessageLabellingRepository:
+class InMemoryMessageLabellingRepository(MessageLabellingRepository):
     """Process-local adapter for tests and the non-live scaffold."""
 
     def __init__(self) -> None:

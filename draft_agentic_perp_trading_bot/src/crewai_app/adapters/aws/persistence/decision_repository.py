@@ -1,9 +1,10 @@
 """Decision persistence adapters for preliminary Flow testing."""
 
 from crewai_app.domain.contracts.schemas import DecisionRecord
+from crewai_app.flows.interfaces import DecisionRepository
 
 
-class InMemoryDecisionRepository:
+class InMemoryDecisionRepository(DecisionRepository):
     """Idempotent test adapter keyed by message/execution identity."""
 
     def __init__(self) -> None:

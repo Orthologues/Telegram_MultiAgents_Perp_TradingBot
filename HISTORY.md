@@ -323,3 +323,12 @@ outputs require validation before RAG promotion.
 The newly created adapter repository file
 `draft_agentic_perp_trading_bot/src/crewai_app/adapters/aws/persistence/message_labelling.py`
 requires explicit awareness during subsequent human review.
+
+### 2026-09-22 — pending: made protocol inheritance explicit across `crewai_app`
+
+Applied the explicit-inheritance rule to concrete Telegram, persistence,
+cursor, Flow, QWEN, Ministral, and Aster implementations. Added shared Flow
+interfaces in `flows/interfaces.py` and moved `TradeCursorResolver` into the
+cursor lifecycle boundary so interface ownership is visible to reviewers.
+Preserved marker classes and protocols without concrete implementations. The
+refactor passed targeted Ruff, compilation, and whitespace checks.

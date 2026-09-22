@@ -9,7 +9,7 @@ File mappings:
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import List, Protocol, Set
+from typing import List, Protocol, Set  # noqa: UP035
 
 from crewai_app.domain.contracts.schemas import (
     OwnerId,
@@ -119,7 +119,7 @@ class ReplyTreeStore(Protocol):
     ) -> TelegramPromptContext: ...
 
 
-class InMemoryReplyTreeStore:
+class InMemoryReplyTreeStore(ReplyTreeStore):
     """Process-local test adapter matching the shared ElastiCache contract."""
 
     def __init__(
@@ -158,7 +158,7 @@ class ElastiCacheClient(Protocol):
     async def smembers(self, key: str) -> Set[str] | Set[bytes]: ...
 
 
-class ElastiCacheReplyTreeStore:
+class ElastiCacheReplyTreeStore(ReplyTreeStore):
     """Redis-compatible owner reply trees shared across Lightsail workers."""
 
     def __init__(

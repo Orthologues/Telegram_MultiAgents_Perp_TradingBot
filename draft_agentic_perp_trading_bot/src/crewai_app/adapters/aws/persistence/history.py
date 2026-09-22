@@ -9,7 +9,7 @@ File mappings:
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import List, Protocol
+from typing import List, Protocol  # noqa: UP035
 
 from crewai_app.domain.contracts.schemas import (
     ExchangeId,
@@ -30,7 +30,7 @@ class DynamoDBExecutionHistoryRepository(Protocol):
     ) -> List[PositionLifecycleEvent]: ...
 
 
-class InMemoryExecutionHistoryRepository:
+class InMemoryExecutionHistoryRepository(DynamoDBExecutionHistoryRepository):
     """Test adapter preserving the append-only lifecycle contract."""
 
     def __init__(self, events: Iterable[PositionLifecycleEvent] = ()) -> None:

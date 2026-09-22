@@ -8,7 +8,7 @@ File mappings:
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from typing import List, Protocol
+from typing import List, Protocol  # noqa: UP035
 
 from crewai_app.domain.contracts.schemas import (
     TelegramIngestionRecord,
@@ -32,14 +32,14 @@ class TelegramMessageReceiptStore(Protocol):
     async def record(self, channel_id: str, telegram_message_id: str) -> None: ...
 
 
-class InMemoryRawMediaArchive:
+class InMemoryRawMediaArchive(S3RawMediaArchive):
     """Test adapter; production code should archive media in S3."""
 
     async def archive(self, message: TelegramMessageEnvelope) -> TelegramMessageEnvelope:
         return message
 
 
-class InMemoryMessageMetadataRepository:
+class InMemoryMessageMetadataRepository(DynamoDBMessageMetadataRepository):
     """Test adapter; production code should persist records in DynamoDB."""
 
     def __init__(self) -> None:
@@ -49,7 +49,7 @@ class InMemoryMessageMetadataRepository:
         self.records.append(record)
 
 
-class InMemoryTelegramMessageReceiptStore:
+class InMemoryTelegramMessageReceiptStore(TelegramMessageReceiptStore):
     """Process-local receipt store used by tests and local scaffold runs."""
 
     def __init__(self, receipts: Mapping[str, Iterable[str]] | None = None) -> None:

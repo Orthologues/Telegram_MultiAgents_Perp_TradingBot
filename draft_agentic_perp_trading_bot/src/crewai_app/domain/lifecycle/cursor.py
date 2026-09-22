@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import hashlib
 from asyncio import Lock
-from typing import List, Protocol
+from typing import List, Protocol  # noqa: UP035
 
 from crewai_app.domain.contracts.schemas import (
     CanonicalTradeIntent,
@@ -17,13 +17,22 @@ from crewai_app.domain.contracts.schemas import (
     IntentType,
     LifecycleStrategySource,
     OwnerId,
-    PositionLifecycleStrategy,
     PositionDirection,
+    PositionLifecycleStrategy,
     TelegramMessageEnvelope,
     TradeAction,
     TradeCursorStatus,
     TradeThreadCursor,
 )
+
+
+class TradeCursorResolver(Protocol):
+    """Resolve active cursors for one normalized Telegram message."""
+
+    async def resolve_for_message(
+        self,
+        message: TelegramMessageEnvelope,
+    ) -> List[TradeThreadCursor]: ...
 
 
 class TradeCursorConflictError(RuntimeError):
@@ -57,7 +66,7 @@ class DynamoDBTradeCursorRepository(Protocol):
     ) -> None: ...
 
 
-class InMemoryTradeCursorRepository:
+class InMemoryTradeCursorRepository(DynamoDBTradeCursorRepository):
     """Concurrent test adapter matching the DynamoDB conditional-write contract."""
 
     def __init__(self, cursors: List[TradeThreadCursor] | None = None) -> None:
@@ -123,7 +132,7 @@ class InMemoryTradeCursorRepository:
             self._cursors[cursor.cursor_id] = cursor.model_copy(deep=True)
 
 
-class ConcurrentTradeCursorManager:
+class ConcurrentTradeCursorManager(TradeCursorResolver):
     """Resolve and maintain independent live cursors from Telegram parent chains."""
 
     def __init__(self, repository: DynamoDBTradeCursorRepository) -> None:

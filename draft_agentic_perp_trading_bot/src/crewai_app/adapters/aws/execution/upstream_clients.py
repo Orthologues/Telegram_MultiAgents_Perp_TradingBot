@@ -7,11 +7,11 @@ File mappings:
 
 from __future__ import annotations
 
+import hmac
+import time
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from hashlib import sha256
-import hmac
-import time
 from typing import Any, Protocol, Self
 from urllib.parse import urlencode
 
@@ -59,7 +59,7 @@ class AsterV1Credentials:
 
 
 @dataclass(slots=True)
-class AsterV1RestClient:
+class AsterV1RestClient(AsterV1Client):
     credentials: AsterV1Credentials
     base_url: str
     timeout_seconds: float = 15.0

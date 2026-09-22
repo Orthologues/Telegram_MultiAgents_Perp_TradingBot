@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import List
+from typing import List  # noqa: UP035
 
+from crewai_app.adapters.telegram import ReplyTreeStore
+from crewai_app.agent_interfaces.qwen import SerialRagLoaderAPI
 from crewai_app.domain.contracts.schemas import (
     OwnerRagProfile,
     SerialRagExample,
@@ -14,11 +16,11 @@ from crewai_app.domain.contracts.schemas import (
     TradeThreadCursor,
 )
 from crewai_app.domain.lifecycle.cursor import ConcurrentTradeCursorManager
-from crewai_app.adapters.telegram import ReplyTreeStore
 from crewai_app.domain.policies.rag_curation import validated_serial_rag_examples
+from crewai_app.flows.interfaces import CursorContextLoader, ParentContextLoader
 
 
-class ReplyTreeParentContextLoader:
+class ReplyTreeParentContextLoader(ParentContextLoader):
     def __init__(self, store: ReplyTreeStore) -> None:
         self.store = store
 
@@ -26,7 +28,7 @@ class ReplyTreeParentContextLoader:
         return await self.store.prompt_context_for(message)
 
 
-class TradeCursorContextLoader:
+class TradeCursorContextLoader(CursorContextLoader):
     def __init__(self, manager: ConcurrentTradeCursorManager) -> None:
         self.manager = manager
 
@@ -34,7 +36,7 @@ class TradeCursorContextLoader:
         return await self.manager.resolve_for_message(message)
 
 
-class LocalOwnerProfileRagLoader:
+class LocalOwnerProfileRagLoader(SerialRagLoaderAPI):
     """Local development adapter; production retrieval belongs behind private S3."""
 
     def __init__(self, profiles_root: Path) -> None:
