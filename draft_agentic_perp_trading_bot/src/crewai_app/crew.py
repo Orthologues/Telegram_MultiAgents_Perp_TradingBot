@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from typing import List
 
 from crewai import LLM, Agent, Crew, Process, Task
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -16,6 +17,7 @@ from crewai_app.domain.contracts.schemas import (
     MinistralStrategyReviewSet,
     OwnerId,
     QwenStrategyCandidateSet,
+    TradingMessageRelationDecision,
 )
 _OWNER_AGENT_CONFIG = {
     OwnerId.OWNER_A_SHU_QIN: "owner_a_qwen",
@@ -108,8 +110,8 @@ def build_bedrock_llm(model_id: str, settings: CrewModelSettings) -> LLM:
 class TradingSignalCrew:
     """Sequential Crew containing one selected QWEN and shared Ministral."""
 
-    agents: list[BaseAgent]
-    tasks: list[Task]
+    agents: List[BaseAgent]
+    tasks: List[Task]
     agents_config = "config/agents.yaml"
     tasks_config = "config/tasks.yaml"
 
@@ -118,8 +120,8 @@ class TradingSignalCrew:
         owner_id: OwnerId,
         settings: CrewModelSettings,
         *,
-        qwen_tools: list[BaseTool] | None = None,
-        ministral_tools: list[BaseTool] | None = None,
+        qwen_tools: List[BaseTool] | None = None,
+        ministral_tools: List[BaseTool] | None = None,
     ) -> None:
         self.owner_id = owner_id
         self.settings = settings
@@ -158,6 +160,14 @@ class TradingSignalCrew:
         )
 
     @task
+    def qwen_relation_task(self) -> Task:
+        return Task(
+            config=self.tasks_config["qwen_relation_task"],
+            agent=self.owner_qwen(),
+            output_pydantic=TradingMessageRelationDecision,
+        )
+
+    @task
     def ministral_review_task(self) -> Task:
         return Task(
             config=self.tasks_config["ministral_review_task"],
@@ -178,8 +188,19 @@ class TradingSignalCrew:
             tracing=os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true",
         )
 
+    def relation_crew(self) -> Crew:
+        return Crew(
+            agents=[self.owner_qwen()],
+            tasks=[self.qwen_relation_task()],
+            process=Process.sequential,
+            memory=False,
+            cache=False,
+            verbose=False,
+            tracing=os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true",
+        )
 
-def _validate_agent_tools(tools: list[BaseTool]) -> list[BaseTool]:
+
+def _validate_agent_tools(tools: List[BaseTool]) -> List[BaseTool]:
     forbidden = [tool.name for tool in tools if not getattr(tool, "agent_accessible", False)]
     if forbidden:
         raise ValueError(

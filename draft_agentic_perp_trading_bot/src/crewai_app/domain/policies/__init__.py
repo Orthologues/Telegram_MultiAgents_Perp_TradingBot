@@ -17,13 +17,19 @@ from crewai_app.domain.policies.execution_gate import (
     validate_market_snapshot,
 )
 from crewai_app.domain.policies.stop_loss import MinistralStopLossPolicy
+from crewai_app.domain.policies.rag_curation import (
+    RagCurationPolicy,
+    validated_serial_rag_examples,
+)
 
 __all__ = [
     "MinistralStopLossPolicy",
     "PairBlacklistPolicy",
+    "RagCurationPolicy",
     "evaluate_confidence",
     "evaluate_deterministic_risk",
     "instant_price_deviation_threshold",
     "normalize_symbol_family",
     "validate_market_snapshot",
+    "validated_serial_rag_examples",
 ]

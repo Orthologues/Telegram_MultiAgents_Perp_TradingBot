@@ -9,7 +9,7 @@ File mappings:
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Protocol
+from typing import List, Protocol
 
 from crewai_app.domain.contracts.schemas import (
     ExchangeId,
@@ -27,7 +27,7 @@ class DynamoDBExecutionHistoryRepository(Protocol):
         exchange_id: ExchangeId,
         network: ExchangeNetwork,
         position_id: str,
-    ) -> list[PositionLifecycleEvent]: ...
+    ) -> List[PositionLifecycleEvent]: ...
 
 
 class InMemoryExecutionHistoryRepository:
@@ -49,7 +49,7 @@ class InMemoryExecutionHistoryRepository:
         exchange_id: ExchangeId,
         network: ExchangeNetwork,
         position_id: str,
-    ) -> list[PositionLifecycleEvent]:
+    ) -> List[PositionLifecycleEvent]:
         return sorted(
             (
                 event

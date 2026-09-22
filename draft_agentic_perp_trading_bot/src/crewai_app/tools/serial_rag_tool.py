@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import List
 
 from pydantic import BaseModel, Field
 
 from crewai_app.domain.contracts.schemas import OwnerId, OwnerRagProfile
+from crewai_app.domain.policies.rag_curation import validated_serial_rag_examples
 from crewai_app.tools._base import TradingBotTool
 
 
@@ -23,13 +25,15 @@ class SerialRagTool(TradingBotTool):
     agent_accessible: bool = True
     profiles_root: Path
 
-    def _run(self, owner_id: OwnerId | str, limit: int = 10) -> list[dict]:
+    def _run(self, owner_id: OwnerId | str, limit: int = 10) -> List[dict]:
         owner = OwnerId(owner_id)
         profile_path = self.profiles_root / owner.value / "shared_style.json"
         profile = OwnerRagProfile.model_validate(
             json.loads(profile_path.read_text(encoding="utf-8"))
         )
+        if profile.owner_id != owner:
+            raise ValueError("owner RAG profile does not match the requested owner")
         return [
             example.model_dump(mode="json")
-            for example in profile.serial_rag_examples[:limit]
+            for example in validated_serial_rag_examples(profile.serial_rag_examples)[:limit]
         ]

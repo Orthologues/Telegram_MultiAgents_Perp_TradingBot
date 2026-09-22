@@ -15,7 +15,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Protocol
+from typing import List, Protocol
 
 from crewai.flow.flow import Flow, listen, start
 
@@ -23,7 +23,13 @@ from crewai_app.flows.orchestration import (
     process_message,
     select_strategy_tier_for_market,
 )
-from crewai_app.agent_interfaces.qwen import SerialRagLoaderAPI
+from crewai_app.agent_interfaces.qwen import (
+    QwenMessageRelationAPI,
+    SerialRagLoaderAPI,
+)
+from crewai_app.adapters.aws.persistence.message_labelling import (
+    DeferredQwenLabellingQueue,
+)
 from crewai_app.adapters.telegram.deduplication import (
     InMemoryTelegramDeduplicator,
 )
@@ -41,6 +47,7 @@ from crewai_app.domain.contracts.schemas import (
     SerialRagExample,
     TelegramMessageEnvelope,
     TelegramPromptContext,
+    TradingMessageRelationDecision,
     TradeThreadCursor,
 )
 from crewai_app.domain.lifecycle.cursor import ConcurrentTradeCursorManager
@@ -60,7 +67,7 @@ class ParentContextLoader(Protocol):
 
 
 class CursorContextLoader(Protocol):
-    async def load(self, message: TelegramMessageEnvelope) -> list[TradeThreadCursor]: ...
+    async def load(self, message: TelegramMessageEnvelope) -> List[TradeThreadCursor]: ...
 
 
 class MarketSnapshotLoader(Protocol):
@@ -175,6 +182,8 @@ class TelegramSignalFlow(Flow[TelegramSignalState]):
         market_snapshot_loader: MarketSnapshotLoader,
         deterministic_decision_service: DeterministicDecisionService,
         decision_repository: DecisionRepository,
+        relation_evaluator: QwenMessageRelationAPI | None = None,
+        labelling_queue: DeferredQwenLabellingQueue | None = None,
         execution_intent_publisher: ExecutionIntentPublisher | None = None,
         execution_mode: ExecutionMode | None = None,
         tracing: bool = False,
@@ -183,6 +192,8 @@ class TelegramSignalFlow(Flow[TelegramSignalState]):
         self.parent_context_loader = parent_context_loader
         self.cursor_context_loader = cursor_context_loader
         self.serial_rag_loader = serial_rag_loader
+        self.relation_evaluator = relation_evaluator
+        self.labelling_queue = labelling_queue
         self.signal_evaluator = signal_evaluator
         self.market_snapshot_loader = market_snapshot_loader
         self.deterministic_decision_service = deterministic_decision_service
@@ -204,7 +215,7 @@ class TelegramSignalFlow(Flow[TelegramSignalState]):
         return self.state.prompt_context
 
     @listen(load_parent_messages)
-    async def load_active_trade_cursors(self) -> list[TradeThreadCursor]:
+    async def load_active_trade_cursors(self) -> List[TradeThreadCursor]:
         message = self._message()
         cursors = await self.cursor_context_loader.load(message)
         self.state.active_trade_cursors = cursors
@@ -216,13 +227,38 @@ class TelegramSignalFlow(Flow[TelegramSignalState]):
         return cursors
 
     @listen(load_active_trade_cursors)
-    async def retrieve_owner_rag_examples(self) -> list[SerialRagExample]:
+    async def retrieve_owner_rag_examples(self) -> List[SerialRagExample]:
         examples = await self.serial_rag_loader.load(self._message())
         self.state.serial_rag_examples = examples
         self.state.trace_steps.append("retrieve_owner_rag_examples")
         return examples
 
     @listen(retrieve_owner_rag_examples)
+    async def classify_message_relation(self) -> TradingMessageRelationDecision | None:
+        if self.relation_evaluator is None:
+            return None
+        decision = await self.relation_evaluator.classify_message_relation(
+            self._message(),
+            self._prompt_context(),
+            self.state.serial_rag_examples,
+        )
+        self.state.relation_decision = decision
+        self.state.trace_steps.append("message_relation")
+        if decision.needs_human_labelling and self.labelling_queue is None:
+            raise RuntimeError(
+                "a labelling queue is required for flagged QWEN relation decisions"
+            )
+        if self.labelling_queue is not None:
+            record = await self.labelling_queue.enqueue_if_needed(
+                self._prompt_context(),
+                decision,
+            )
+            if record is not None:
+                self.state.labelling_record = record
+                self.state.trace_steps.append("deferred_labelling")
+        return decision
+
+    @listen(classify_message_relation)
     async def run_signal_evaluation_crew(self) -> QwenStrategyCandidateSet:
         message = self._message()
         if self.state.selected_owner_id != message.owner_id:

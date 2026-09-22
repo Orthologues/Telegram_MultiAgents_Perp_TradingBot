@@ -159,6 +159,9 @@ may call an exchange; approved execution remains behind the MCP gateway.
 - After each commit, replace the `pending` marker in every `HISTORY.md` entry
   covered by that commit with the last known commit ID. Never leave a completed
   entry marked `pending`.
+- In Python type annotations, import `List` and `Set` from `typing` and use
+  them instead of native `list[...]` and `set[...]` wherever applicable.
+  Preserve runtime constructors such as `list()` and `set()`.
 - For Chinese interpretation, use serial RAG and QWEN reasoning; do not add
   keyword, substring, or regular-expression trading rules.
 - Add focused tests for behavior changes and run:
@@ -185,9 +188,10 @@ AWS state, deterministic policy, and exchange execution remain outside agents.
   hydration and private S3 archival, durable DynamoDB/ElastiCache adapters, and
   bounded semantic message-relation/RAG retrieval with lifecycle filtering and
   image delivery.
-- Provision the deferred-labelling DynamoDB table, wire the relation stage to
-  its repository, and add the offline curation path that validates completed
-  labels before promotion into owner RAG profiles.
+- Provision the deferred-labelling DynamoDB table and inject its durable
+  repository into the already-wired relation stage. Add the offline curation
+  path that validates completed labels before promotion into owner RAG
+  profiles.
 - Ensure the production Flow passes identical ID-labelled source context and
   provenance to QWEN and Ministral, and that decision persistence and execution
   intents are durable and idempotent.

@@ -11,6 +11,8 @@ File mappings:
 
 from __future__ import annotations
 
+from typing import Set
+
 from crewai_app.domain.contracts.schemas import (
     DeduplicationDecision,
     DeduplicationScope,
@@ -38,7 +40,7 @@ class InMemoryTelegramDeduplicator:
     """
 
     def __init__(self) -> None:
-        self._seen_keys: set[str] = set()
+        self._seen_keys: Set[str] = set()
 
     def inspect(self, message: TelegramMessageEnvelope) -> DeduplicationDecision:
         dedup_key = message.dedup_key or build_input_dedup_key(message)

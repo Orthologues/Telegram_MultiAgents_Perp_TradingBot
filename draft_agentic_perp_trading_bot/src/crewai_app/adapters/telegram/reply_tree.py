@@ -9,7 +9,7 @@ File mappings:
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Protocol
+from typing import List, Protocol, Set
 
 from crewai_app.domain.contracts.schemas import (
     OwnerId,
@@ -24,7 +24,7 @@ class InMemoryReplyTreeIndex:
 
     def __init__(self) -> None:
         self._messages: dict[tuple[str, str], TelegramMessageEnvelope] = {}
-        self._children: dict[tuple[str, str], set[str]] = {}
+        self._children: dict[tuple[str, str], Set[str]] = {}
 
     def add(self, message: TelegramMessageEnvelope) -> None:
         key = (message.channel_id, message.telegram_message_id)
@@ -40,7 +40,7 @@ class InMemoryReplyTreeIndex:
                 (message.channel_id, message.reply_to_message_id), set()
             ).add(message.telegram_message_id)
 
-    def parent_messages_for(self, message: TelegramMessageEnvelope) -> list[str]:
+    def parent_messages_for(self, message: TelegramMessageEnvelope) -> List[str]:
         """Return all earlier nodes in the reply tree, oldest first."""
         direct_parent_id = message.reply_to_message_id
         if direct_parent_id is None:
@@ -48,8 +48,8 @@ class InMemoryReplyTreeIndex:
 
         root_id = self._find_root(message.channel_id, direct_parent_id)
         current_id = int(message.telegram_message_id)
-        traversed: set[str] = set()
-        visited: set[str] = set()
+        traversed: Set[str] = set()
+        visited: Set[str] = set()
 
         def traverse(message_id: str) -> None:
             if message_id in visited:
@@ -80,7 +80,7 @@ class InMemoryReplyTreeIndex:
 
     def _find_root(self, channel_id: str, message_id: str) -> str:
         root_id = message_id
-        visited: set[str] = set()
+        visited: Set[str] = set()
         while root_id not in visited:
             visited.add(root_id)
             parent = self._messages.get((channel_id, root_id))
@@ -111,7 +111,7 @@ class ReplyTreeStore(Protocol):
     async def parent_messages_for(
         self,
         message: TelegramMessageEnvelope,
-    ) -> list[str]: ...
+    ) -> List[str]: ...
 
     async def prompt_context_for(
         self,
@@ -134,7 +134,7 @@ class InMemoryReplyTreeStore:
     async def parent_messages_for(
         self,
         message: TelegramMessageEnvelope,
-    ) -> list[str]:
+    ) -> List[str]:
         return self.registry.for_owner(message.owner_id).parent_messages_for(message)
 
     async def prompt_context_for(
@@ -155,7 +155,7 @@ class ElastiCacheClient(Protocol):
 
     async def srem(self, key: str, *values: str) -> object: ...
 
-    async def smembers(self, key: str) -> set[str] | set[bytes]: ...
+    async def smembers(self, key: str) -> Set[str] | Set[bytes]: ...
 
 
 class ElastiCacheReplyTreeStore:
@@ -214,7 +214,7 @@ class ElastiCacheReplyTreeStore:
     async def parent_messages_for(
         self,
         message: TelegramMessageEnvelope,
-    ) -> list[str]:
+    ) -> List[str]:
         direct_parent_id = message.reply_to_message_id
         if direct_parent_id is None:
             return []
@@ -231,7 +231,7 @@ class ElastiCacheReplyTreeStore:
             return loaded[message_id]
 
         root_id = direct_parent_id
-        visited_roots: set[str] = set()
+        visited_roots: Set[str] = set()
         while root_id not in visited_roots:
             visited_roots.add(root_id)
             parent = await load(root_id)
@@ -240,8 +240,8 @@ class ElastiCacheReplyTreeStore:
             root_id = parent.reply_to_message_id
 
         current_id = int(message.telegram_message_id)
-        traversed: set[str] = set()
-        visited: set[str] = set()
+        traversed: Set[str] = set()
+        visited: Set[str] = set()
 
         async def traverse(message_id: str) -> None:
             if message_id in visited:

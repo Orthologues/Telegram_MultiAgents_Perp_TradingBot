@@ -10,7 +10,7 @@ File mappings:
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import Protocol
+from typing import List, Protocol
 
 from crewai_app.domain.contracts.schemas import (
     TelegramAgentChannelConfig,
@@ -47,7 +47,7 @@ class TradeCursorResolver(Protocol):
     async def resolve_for_message(
         self,
         message: TelegramMessageEnvelope,
-    ) -> list[TradeThreadCursor]: ...
+    ) -> List[TradeThreadCursor]: ...
 
 
 class TelegramIngestionPipeline:
@@ -72,9 +72,9 @@ class TelegramIngestionPipeline:
         self._reply_tree_store = reply_tree_store or InMemoryReplyTreeStore()
         self._trade_cursor_resolver = trade_cursor_resolver
 
-    async def process_once(self, config: TelegramAgentChannelConfig) -> list[TelegramMessageEnvelope]:
+    async def process_once(self, config: TelegramAgentChannelConfig) -> List[TelegramMessageEnvelope]:
         batch = await self._poller.poll_once(config)
-        published: list[TelegramMessageEnvelope] = []
+        published: List[TelegramMessageEnvelope] = []
 
         for message in batch.messages:
             contextualized_message = await self._resolve_parent_messages(message)

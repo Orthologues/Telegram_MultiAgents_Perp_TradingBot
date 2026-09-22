@@ -3,7 +3,7 @@
 Maintenance rule: **OVERWRITE** this file on every update. It is the current
 state, not a development log. The log is `HISTORY.md`.
 
-Last updated: 2026-09-18
+Last updated: 2026-09-22
 
 ## Phase
 
@@ -24,7 +24,9 @@ Telethon image hydration and authentic serial RAG examples.
 - QWEN relation, synonym, and position-reduction outputs now use the deferred
   `needs_human_labelling` flag. A typed queue, DynamoDB table adapter, and local
   repository preserve flagged prompt context for later RAG curation without
-  blocking ingestion. Production table provisioning and Flow wiring remain.
+  blocking ingestion. The canonical Flow now runs relation classification and
+  invokes the queue; production table provisioning and durable DynamoDB
+  injection remain.
 - `agent_interfaces/` is the canonical responsibility boundary. `skills_api/`
   now remains a compatibility facade, with typed QWEN relation, synonym, and
   position-reduction capabilities defined separately.
@@ -97,8 +99,9 @@ complete through `## Agentic Deduplication`; the next commit will resume at
 
 - Replace remaining compatibility re-exports with reviewed native CrewAI
   implementations and production AWS adapters.
-- Integrate the typed QWEN message-relation stage with chronological parent
-  context and authenticated serial-RAG retrieval.
+- Complete production typed QWEN relation retrieval with chronological parent
+  context, authenticated serial-RAG retrieval, table provisioning, and durable
+  repository injection.
 - Implement `draft_agentic_perp_trading_bot/src/langgraph_app/` after the fast
   CrewAI implementation.
 - Rebuild owner reply-tree indexes after worker restarts and add production

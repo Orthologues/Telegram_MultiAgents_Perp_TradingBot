@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import List
 from crewai.flow.flow import FlowState
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -16,6 +17,7 @@ from crewai_app.domain.contracts.schemas import (
     MarketExecutionSnapshot,
     MinistralStrategyReviewSet,
     OwnerId,
+    QwenRagLabellingRecord,
     QwenStrategyCandidateSet,
     SerialRagExample,
     SignalEvaluationResult,
@@ -26,6 +28,7 @@ from crewai_app.domain.contracts.schemas import (
     TelegramPromptContext,
     TestnetVenuePerformanceComparison,
     TradeThreadCursor,
+    TradingMessageRelationDecision,
 )
 
 
@@ -35,7 +38,7 @@ ExecutionLiquiditySnapshot = MarketExecutionSnapshot
 
 class DeterministicDecisionOutcome(BaseModel):
     approved_execution_request: ApprovedExecutionRequest | None = None
-    rejection_reasons: list[str] = Field(default_factory=list)
+    rejection_reasons: List[str] = Field(default_factory=list)
 
 
 class TelegramSignalState(FlowState):
@@ -44,19 +47,21 @@ class TelegramSignalState(FlowState):
     message: TelegramMessageEnvelope | None = None
     selected_owner_id: OwnerId | None = None
     prompt_context: TelegramPromptContext | None = None
-    serial_rag_examples: list[SerialRagExample] = Field(default_factory=list)
-    active_trade_cursors: list[TradeThreadCursor] = Field(default_factory=list)
+    serial_rag_examples: List[SerialRagExample] = Field(default_factory=list)
+    active_trade_cursors: List[TradeThreadCursor] = Field(default_factory=list)
+    relation_decision: TradingMessageRelationDecision | None = None
+    labelling_record: QwenRagLabellingRecord | None = None
     candidate_set: QwenStrategyCandidateSet | None = None
     ministral_review_set: MinistralStrategyReviewSet | None = None
     market_snapshots: dict[ExchangeId, ExecutionLiquiditySnapshot] = Field(
         default_factory=dict
     )
     approved_execution_request: ApprovedExecutionRequest | None = None
-    rejection_reasons: list[str] = Field(default_factory=list)
+    rejection_reasons: List[str] = Field(default_factory=list)
     decision_record: DecisionRecord | None = None
     decision_persisted: bool = False
     execution_intent_emitted: bool = False
-    trace_steps: list[str] = Field(default_factory=list)
+    trace_steps: List[str] = Field(default_factory=list)
 
 
 class PositionLifecycleState(FlowState):
@@ -70,13 +75,13 @@ class PositionLifecycleState(FlowState):
 class PerformanceEvaluationState(FlowState):
     """State for matched-venue and five-tier performance evaluation."""
 
-    closed_outcomes: list[ClosedTradeOutcome] = Field(default_factory=list)
-    strategy_outcomes: list[StrategyOutcome] = Field(default_factory=list)
+    closed_outcomes: List[ClosedTradeOutcome] = Field(default_factory=list)
+    strategy_outcomes: List[StrategyOutcome] = Field(default_factory=list)
     venue_comparison: TestnetVenuePerformanceComparison | None = None
     strategy_summaries: dict[StrategyTier, StrategyTierPerformanceSummary] = Field(
         default_factory=dict
     )
-    strategy_dimension_summaries: list[StrategyTierPerformanceSummary] = Field(
+    strategy_dimension_summaries: List[StrategyTierPerformanceSummary] = Field(
         default_factory=list
     )
     computed_at: datetime | None = None

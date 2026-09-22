@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TypeVar
+from typing import List, TypeVar
 
 from crewai.tasks.task_output import TaskOutput
 from pydantic import BaseModel
 
 from crewai_app.crew import CrewModelSettings, TradingSignalCrew
-from crewai_app.agent_interfaces.qwen import SignalEvaluationAPI
+from crewai_app.agent_interfaces.qwen import (
+    QwenMessageRelationAPI,
+    SignalEvaluationAPI,
+)
 from crewai_app.domain.contracts.schemas import (
     SignalEvaluationResult,
     MinistralStrategyReviewSet,
@@ -17,11 +20,53 @@ from crewai_app.domain.contracts.schemas import (
     SerialRagExample,
     TelegramMessageEnvelope,
     TelegramPromptContext,
+    TradingMessageRelationDecision,
     TradeThreadCursor,
 )
 
 
 SignalEvaluator = SignalEvaluationAPI
+MessageRelationEvaluator = QwenMessageRelationAPI
+
+
+class CrewMessageRelationEvaluator:
+    """Invoke the selected owner-QWEN relation-classification Crew."""
+
+    def __init__(self, settings: CrewModelSettings) -> None:
+        self.settings = settings
+
+    async def classify_message_relation(
+        self,
+        message: TelegramMessageEnvelope,
+        prompt_context: TelegramPromptContext,
+        serial_rag_examples: List[SerialRagExample],
+    ) -> TradingMessageRelationDecision:
+        selected_crew = TradingSignalCrew(message.owner_id, self.settings).relation_crew()
+        output = await selected_crew.kickoff_async(
+            inputs={
+                "owner_id": message.owner_id.value,
+                "telegram_prompt_context_json": prompt_context.model_dump_json(),
+                "serial_rag_examples_json": _models_json(serial_rag_examples),
+            }
+        )
+        if len(output.tasks_output) != 1:
+            raise RuntimeError("message-relation Crew must return exactly one task output")
+        decision = _parse_task_output(
+            output.tasks_output[0],
+            TradingMessageRelationDecision,
+        )
+        if (
+            decision.owner_id != message.owner_id
+            or decision.channel_id != message.channel_id
+            or decision.telegram_message_id != message.telegram_message_id
+        ):
+            raise ValueError("QWEN relation decision does not match the source message")
+        parent_message_ids = {
+            parent.telegram_message_id for parent in prompt_context.parent_messages
+        }
+        if not set(decision.matched_message_ids).issubset(parent_message_ids):
+            raise ValueError("QWEN relation decision references an unavailable parent message")
+        return decision
 
 
 class CrewSignalEvaluator:
@@ -34,8 +79,8 @@ class CrewSignalEvaluator:
         self,
         message: TelegramMessageEnvelope,
         prompt_context: TelegramPromptContext,
-        serial_rag_examples: list[SerialRagExample],
-        active_trade_cursors: list[TradeThreadCursor],
+        serial_rag_examples: List[SerialRagExample],
+        active_trade_cursors: List[TradeThreadCursor],
     ) -> SignalEvaluationResult:
         selected_crew = TradingSignalCrew(message.owner_id, self.settings).crew()
         output = await selected_crew.kickoff_async(

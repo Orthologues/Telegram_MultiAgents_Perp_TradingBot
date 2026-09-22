@@ -44,6 +44,8 @@ from crewai_app.domain.contracts.telegram import (
     OwnerId,
     OwnerRagProfile,
     QwenRagLabellingRecord,
+    RagCurationSubmission,
+    RagValidationMetadata,
     SerialRagExample,
     TelegramAgentChannelConfig,
     TelegramAgentPollBatch,

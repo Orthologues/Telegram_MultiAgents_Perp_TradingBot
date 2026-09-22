@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import hashlib
 from asyncio import Lock
-from typing import Protocol
+from typing import List, Protocol
 
 from crewai_app.domain.contracts.schemas import (
     CanonicalTradeIntent,
@@ -42,8 +42,8 @@ class DynamoDBTradeCursorRepository(Protocol):
         *,
         owner_id: OwnerId,
         channel_id: str,
-        parent_message_ids: list[str],
-    ) -> list[TradeThreadCursor]: ...
+        parent_message_ids: List[str],
+    ) -> List[TradeThreadCursor]: ...
 
     async def get(self, cursor_id: str) -> TradeThreadCursor | None: ...
 
@@ -60,7 +60,7 @@ class DynamoDBTradeCursorRepository(Protocol):
 class InMemoryTradeCursorRepository:
     """Concurrent test adapter matching the DynamoDB conditional-write contract."""
 
-    def __init__(self, cursors: list[TradeThreadCursor] | None = None) -> None:
+    def __init__(self, cursors: List[TradeThreadCursor] | None = None) -> None:
         self._cursors = {
             cursor.cursor_id: cursor.model_copy(deep=True)
             for cursor in (cursors or [])
@@ -72,8 +72,8 @@ class InMemoryTradeCursorRepository:
         *,
         owner_id: OwnerId,
         channel_id: str,
-        parent_message_ids: list[str],
-    ) -> list[TradeThreadCursor]:
+        parent_message_ids: List[str],
+    ) -> List[TradeThreadCursor]:
         parent_ids = set(parent_message_ids)
         if not parent_ids:
             return []
@@ -132,7 +132,7 @@ class ConcurrentTradeCursorManager:
     async def resolve_for_message(
         self,
         message: TelegramMessageEnvelope,
-    ) -> list[TradeThreadCursor]:
+    ) -> List[TradeThreadCursor]:
         return await self._repository.list_active_by_parent_messages(
             owner_id=message.owner_id,
             channel_id=message.channel_id,
@@ -144,9 +144,9 @@ class ConcurrentTradeCursorManager:
         message: TelegramMessageEnvelope,
         intent: CanonicalTradeIntent,
         intent_type: IntentType,
-        candidates: list[TradeThreadCursor] | None = None,
+        candidates: List[TradeThreadCursor] | None = None,
         lifecycle_strategy: PositionLifecycleStrategy | None = None,
-    ) -> list[TradeThreadCursor]:
+    ) -> List[TradeThreadCursor]:
         """Attach a continuation to matching active pair/exchange cursors."""
         if intent_type == IntentType.NEW_ORDER:
             return []
@@ -154,7 +154,7 @@ class ConcurrentTradeCursorManager:
         if candidates is None:
             candidates = await self.resolve_for_message(message)
         direction = _direction_for_action(intent.action)
-        attached: list[TradeThreadCursor] = []
+        attached: List[TradeThreadCursor] = []
         for exchange_id in dict.fromkeys(intent.target_exchanges):
             matches = [
                 cursor

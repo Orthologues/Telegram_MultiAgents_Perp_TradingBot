@@ -20,11 +20,16 @@ import asyncio
 import json
 import os
 from pathlib import Path
+from typing import List
 
 from pydantic import BaseModel, Field
 
 from crewai_app.adapters.aws.persistence.decision_repository import (
     InMemoryDecisionRepository,
+)
+from crewai_app.adapters.aws.persistence.message_labelling import (
+    DeferredQwenLabellingQueue,
+    InMemoryMessageLabellingRepository,
 )
 from crewai_app.adapters.local_harness import (
     StaticCursorContextLoader,
@@ -33,7 +38,10 @@ from crewai_app.adapters.local_harness import (
     StaticSerialRagLoader,
 )
 from crewai_app.crew import CrewModelSettings
-from crewai_app.crews.signal_evaluation_crew import CrewSignalEvaluator
+from crewai_app.crews.signal_evaluation_crew import (
+    CrewMessageRelationEvaluator,
+    CrewSignalEvaluator,
+)
 from crewai_app.domain.contracts.schemas import (
     ExchangeId,
     SerialRagExample,
@@ -53,8 +61,8 @@ class PreliminaryRunInput(BaseModel):
 
     message: TelegramMessageEnvelope
     prompt_context: TelegramPromptContext
-    serial_rag_examples: list[SerialRagExample] = Field(default_factory=list)
-    active_trade_cursors: list[TradeThreadCursor] = Field(default_factory=list)
+    serial_rag_examples: List[SerialRagExample] = Field(default_factory=list)
+    active_trade_cursors: List[TradeThreadCursor] = Field(default_factory=list)
     market_snapshots: dict[ExchangeId, ExecutionLiquiditySnapshot]
 
 
@@ -82,6 +90,10 @@ def run() -> None:
             payload.active_trade_cursors
         ),
         serial_rag_loader=_StaticSerialRagLoader(payload.serial_rag_examples),
+        relation_evaluator=CrewMessageRelationEvaluator(settings),
+        labelling_queue=DeferredQwenLabellingQueue(
+            InMemoryMessageLabellingRepository()
+        ),
         signal_evaluator=CrewSignalEvaluator(settings),
         market_snapshot_loader=_StaticMarketSnapshotLoader(payload.market_snapshots),
         deterministic_decision_service=CompatibilityDeterministicDecisionService(),

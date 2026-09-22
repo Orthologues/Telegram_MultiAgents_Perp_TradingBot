@@ -11,6 +11,7 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import datetime, timezone
 from decimal import Decimal
+from typing import List, Set
 
 from crewai_app.domain.contracts.schemas import (
     ClosedTradeOutcome,
@@ -23,7 +24,7 @@ from crewai_app.domain.contracts.schemas import (
 
 
 def compare_testnet_venue_performance(
-    outcomes: list[ClosedTradeOutcome],
+    outcomes: List[ClosedTradeOutcome],
     *,
     computed_at: datetime | None = None,
 ) -> TestnetVenuePerformanceComparison:
@@ -31,7 +32,7 @@ def compare_testnet_venue_performance(
     totals: dict[tuple[str, ExchangeId], tuple[Decimal, Decimal]] = defaultdict(
         lambda: (Decimal("0"), Decimal("0"))
     )
-    seen_outcomes: set[tuple[str, ExchangeId, str]] = set()
+    seen_outcomes: Set[tuple[str, ExchangeId, str]] = set()
     for outcome in outcomes:
         if (
             outcome.network != ExchangeNetwork.TESTNET
@@ -99,7 +100,7 @@ def _comparison_key(outcome: ClosedTradeOutcome) -> str:
 def _summarize(
     exchange_id: ExchangeId,
     settlement_asset: SettlementAsset,
-    matched_signal_keys: list[str],
+    matched_signal_keys: List[str],
     totals: dict[tuple[str, ExchangeId], tuple[Decimal, Decimal]],
 ) -> VenuePerformanceSummary:
     percentages = [

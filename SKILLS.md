@@ -121,8 +121,9 @@ approval gate. Ambiguous relations set it automatically, and other low-confidenc
 outputs may set it explicitly. `DeferredQwenLabellingQueue` stores the complete
 ID-labelled prompt context and relation decision through
 `DynamoDBMessageLabellingRepository`, keyed by owner/channel and Telegram
-message ID. The queue and repository adapter are implemented; the production
-table and Flow call are still integration work.
+message ID. The relation stage and queue call are wired into the canonical Flow;
+the local entrypoint uses the in-memory adapter, while production table
+provisioning and durable DynamoDB injection remain deployment work.
 
 An illustrative serial RAG object preserves the complete message sequence and
 the execution result associated with it:
@@ -165,19 +166,20 @@ lifecycle filtering, and image-byte delivery are planned.
 Load the owner profile and serial examples separately from QWEN inference.
 Provide the same immutable TelegramPromptContext, parent IDs/media hashes,
 active cursor snapshots, and RAG records to QWEN and Ministral. Each QWEN run
-must return all five strategy tiers. Every hypothesis is a proposal, never an
-order.
+must return all five strategy tiers. Every hypothesis is an order proposal, never a streamlined order execution.
 
 The output boundary requires `owner_id`, `channel_id`, `asset_group`,
 `strategy_tier`, `intent_type`, `symbol`/`direction` when known, `entries`,
-`confidence`, `evidence`, and `source_dedup_key`. Omitted stop-losses remain
-unset for deterministic derivation. Curated serial-RAG objects contain
-chronological message
-references, an S3 archive URI, strategy tier, and execution label. Do not
-invent message IDs, URLs, media, or outcomes; current profile examples are
-empty until manually populated. Curators may promote completed records from the
-deferred DynamoDB labelling table only after validating their labels and
-provenance.
+`confidence`, `evidence`, and `source_dedup_key`. If the source message omits a
+stop-loss, leave `stop_loss` unset so the deterministic policy at the Ministral
+boundary can derive it later.
+
+Keep serial-RAG curation separate from stop-loss handling. Each curated object
+must preserve chronological message references, `s3_archive_uri`,
+`strategy_tier`, and a verified `execution_label`. Do not invent message IDs,
+URLs, media, or outcomes; current profile examples are empty until manually
+populated. Curators may promote completed records from the deferred DynamoDB
+labelling table only after validating their labels and provenance.
 
 ## Confidence Calculation
 

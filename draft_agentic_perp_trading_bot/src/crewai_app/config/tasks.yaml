@@ -1,3 +1,18 @@
+qwen_relation_task:
+  description: >
+    Classify the semantic relation of owner {owner_id}'s current normalized
+    Telegram message against its chronological context and serial-RAG examples.
+    Telegram context JSON: {telegram_prompt_context_json}
+    Serial-RAG JSON: {serial_rag_examples_json}
+    Return duplicate, continuation, new_signal, or ambiguous. Preserve the
+    oldest-to-newest matched Telegram message IDs, use only the supplied
+    context, set needs_human_labelling for ambiguity or low confidence, and
+    emit no order.
+  expected_output: >
+    A TradingMessageRelationDecision containing the source owner, channel,
+    Telegram message ID, relation, chronological matched IDs, confidence,
+    reason codes, and labelling flag.
+
 qwen_strategy_task:
   description: >
     Analyze owner {owner_id}'s normalized Telegram message and chronological
