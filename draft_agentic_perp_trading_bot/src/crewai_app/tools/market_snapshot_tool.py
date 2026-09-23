@@ -6,8 +6,8 @@ from collections.abc import Callable
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from crewai_app.domain.contracts.schemas import ExchangeId
-from crewai_app.domain.contracts.schemas import MarketExecutionSnapshot
+from crewai_app.domain.contracts import ExchangeId
+from crewai_app.domain.contracts import MarketExecutionSnapshot
 from crewai_app.tools._base import TradingBotTool
 
 

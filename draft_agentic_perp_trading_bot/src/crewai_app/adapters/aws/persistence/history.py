@@ -3,7 +3,7 @@
 File mappings:
 ``adapters/aws/persistence/history.py`` <-
 ``frameworkless_app/performance_engine/history.py``;
-``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+``domain/contracts/__init__.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Protocol
 
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     ExchangeId,
     ExchangeNetwork,
     PositionLifecycleEvent,

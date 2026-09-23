@@ -6,13 +6,13 @@ store so TelegramAgent workers deduplicate across processes and restarts.
 File mappings:
 ``adapters/telegram/deduplication.py`` <-
 ``frameworkless_app/telegram_ingestion/deduplication.py``;
-``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+``domain/contracts/__init__.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from __future__ import annotations
 
 
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     DeduplicationDecision,
     DeduplicationScope,
     TelegramMessageEnvelope,

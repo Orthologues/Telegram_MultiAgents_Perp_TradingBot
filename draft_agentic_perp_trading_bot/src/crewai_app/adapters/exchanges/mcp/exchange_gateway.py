@@ -9,7 +9,7 @@ File mappings:
 ``frameworkless_app/mcp_gateway/exchange_gateway.py``;
 ``adapters/exchanges/mcp/venue_contracts.py`` <-
 ``frameworkless_app/mcp_gateway/venue_contracts.py``;
-``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+``domain/contracts/__init__.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from crewai_app.adapters.exchanges.mcp.venue_contracts import (
     ExchangeEndpointProfile,
     get_exchange_profile,
 )
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     ApprovedExecutionRequest,
     ExchangeId,
     ExchangeNetwork,

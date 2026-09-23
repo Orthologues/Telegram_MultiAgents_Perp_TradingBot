@@ -7,7 +7,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-from crewai_app.domain.contracts.schemas import OwnerId, OwnerRagProfile
+from crewai_app.domain.contracts import OwnerId, OwnerRagProfile
 from crewai_app.domain.policies.rag_curation import validated_serial_rag_examples
 from crewai_app.tools._base import TradingBotTool
 

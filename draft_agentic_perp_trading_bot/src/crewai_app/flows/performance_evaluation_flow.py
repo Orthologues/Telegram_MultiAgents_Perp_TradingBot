@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from crewai.flow.flow import Flow, listen, start
 
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     StrategyTier,
     TestnetVenuePerformanceComparison,
 )

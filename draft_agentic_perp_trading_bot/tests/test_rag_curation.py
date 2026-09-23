@@ -7,7 +7,7 @@ from crewai_app.adapters.aws.persistence.message_labelling import (
     DeferredQwenLabellingQueue,
     InMemoryMessageLabellingRepository,
 )
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     AssetGroup,
     OwnerId,
     QwenRagLabellingRecord,

@@ -3,7 +3,7 @@
 File mappings:
 ``adapters/telegram/{__init__,agent_worker,deduplication,normalizer,pipeline,reply_tree,storage}.py``
 <- ``frameworkless_app/telegram_ingestion/{__init__,agent_worker,deduplication,normalizer,pipeline,reply_tree,storage}.py``;
-``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+``domain/contracts/__init__.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from crewai_app.adapters.telegram.agent_worker import (

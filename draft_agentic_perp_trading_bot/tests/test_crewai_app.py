@@ -10,7 +10,7 @@ from crewai_app.adapters.aws.persistence.decision_repository import (
     InMemoryDecisionRepository,
 )
 from crewai_app.crew import CrewModelSettings, TradingSignalCrew
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     ACCEPTABLE_ALTERNATIVE_OWNER_MODEL_IDS,
     AssetGroup,
     BedrockModelId,

@@ -10,7 +10,7 @@ from crewai.project import CrewBase, agent, crew, task
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field, field_validator
 
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     ACCEPTABLE_ALTERNATIVE_OWNER_MODEL_IDS,
     BedrockModelId,
     MinistralStrategyReviewSet,

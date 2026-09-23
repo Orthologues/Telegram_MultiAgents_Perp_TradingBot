@@ -3,7 +3,7 @@
 File mappings:
 ``adapters/local_harness.py`` <- ``main.py`` static loader classes;
 ``domain/policies/execution_gate.py`` <- ``frameworkless_app/risk_engine/policy.py``;
-``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+``domain/contracts/__init__.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from collections.abc import Mapping
 from decimal import Decimal
 
 from crewai_app.agent_interfaces.qwen import SerialRagLoaderAPI
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     ExchangeId,
     MarketExecutionSnapshot,
     SerialRagExample,

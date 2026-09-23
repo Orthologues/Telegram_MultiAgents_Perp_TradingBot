@@ -2,7 +2,7 @@
 
 File mappings:
 ``adapters/telegram/storage.py`` <- ``frameworkless_app/telegram_ingestion/storage.py``;
-``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+``domain/contracts/__init__.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Protocol
 
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     TelegramIngestionRecord,
     TelegramMessageEnvelope,
 )

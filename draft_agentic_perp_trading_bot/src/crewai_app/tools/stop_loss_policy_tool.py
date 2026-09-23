@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel
 
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     MarketAnalysisSnapshot,
     QwenSignalHypothesis,
 )

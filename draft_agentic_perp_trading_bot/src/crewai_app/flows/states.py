@@ -6,7 +6,7 @@ from datetime import datetime
 from crewai.flow.flow import FlowState
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     ApprovedExecutionRequest,
     ClosedTradeOutcome,
     ExchangeId,

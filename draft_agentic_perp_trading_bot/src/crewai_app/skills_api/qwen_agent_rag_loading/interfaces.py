@@ -5,9 +5,9 @@ returns message-scoped examples; this older API returns an owner profile and
 remains only for frameworkless comparison callers.
 
 File mappings:
-``skills_api/qwen_agent_rag_loading.py`` <-
+``skills_api/qwen_agent_rag_loading/interfaces.py`` <-
 ``frameworkless_app/skills_api/qwen_agent_rag_loading.py``;
-``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+``domain/contracts/__init__.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import Protocol
 
 from crewai_app.agent_interfaces.qwen import SerialRagLoaderAPI
-from crewai_app.domain.contracts.schemas import OwnerRagProfile
+from crewai_app.domain.contracts import OwnerRagProfile
 
 
 class QwenAgentRagLoadingAPI(Protocol):

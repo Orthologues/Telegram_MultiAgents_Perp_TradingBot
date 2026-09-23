@@ -3,7 +3,7 @@
 Maintenance rule: **OVERWRITE** this file on every update. It is the current
 state, not a development log. The log is `HISTORY.md`.
 
-Last updated: 2026-09-22
+Last updated: 2026-09-23
 
 ## Phase
 
@@ -27,9 +27,18 @@ Telethon image hydration and authentic serial RAG examples.
   blocking ingestion. The canonical Flow now runs relation classification and
   invokes the queue; production table provisioning and durable DynamoDB
   injection remain.
-- `agent_interfaces/` is the canonical responsibility boundary. `skills_api/`
-  now remains a compatibility facade, with typed QWEN relation, synonym, and
-  position-reduction capabilities defined separately.
+- `agent_interfaces/` is the canonical responsibility boundary. Pure protocol
+  declarations now live in capability-specific `interfaces.py` modules, with
+  package `__init__.py` files preserving the public import surface.
+- `skills_api/` now remains a compatibility facade, with typed QWEN relation,
+  synonym, and position-reduction capabilities defined separately. Its pure
+  protocol declarations follow the same `interfaces.py` and `__init__.py`
+  package layout.
+- Export-only canonical contract modules were consolidated into
+  `domain/contracts/__init__.py`. Redundant `schemas.py`, `performance.py`,
+  `telegram.py`, `trading.py`, and `skills_api/telegram_agent.py` modules were
+  removed while the package-level exports and the retained
+  `frameworkless_app` compatibility import were preserved.
 - A-zhu's active source is a conventional private Telegram channel. The former
   direct-chat acknowledgment workflow has been retired; neither `SKILLS.md`
   nor `skills_api/` defines a reply skill, and Telegram ingestion remains
@@ -57,6 +66,9 @@ Telethon image hydration and authentic serial RAG examples.
   from their local `Protocol` contracts. Shared Flow interfaces live in
   `flows/interfaces.py`, and `TradeCursorResolver` is defined with the cursor
   lifecycle contract so reviewers can see each implementation boundary.
+- The protocol-module and export-only-module restructuring is staged and has
+  passed Ruff, source compilation, runtime package-export checks,
+  stale-reference checks, and staged whitespace checks.
 
 ## Current Task Series
 
@@ -74,6 +86,9 @@ complete through `## Agentic Deduplication`; the next commit will resume at
 - The explicit-protocol-inheritance refactor passes targeted Ruff,
   compilation, and whitespace checks; runtime imports still require the
   project dependencies, including `httpx`.
+- The `interfaces.py` and package `__init__.py` consolidation passes targeted
+  Ruff, compilation, runtime export checks, stale-reference checks, and
+  whitespace validation.
 - The earlier private-channel routing suite passed (`17 passed`); it was not
   rerun for this labelling change.
 - The previous wider migration baseline was `123 passed, 4 deselected`; it was

@@ -25,7 +25,7 @@ from crewai_app.agent_interfaces import (
     QwenPositionReductionAPI,
     QwenSynonymInferenceAPI,
 )
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     TradingMessageRelation,
     TradingMessageRelationDecision,
 )

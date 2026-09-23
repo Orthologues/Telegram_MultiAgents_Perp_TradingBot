@@ -6,9 +6,9 @@ retained frameworkless_app comparison path; deterministic policies are
 implemented under domain.policies and tools.
 
 File mappings:
-``skills_api/{__init__,ministral_filter,omitted_stop_loss_inference,owner_qwen,qwen_agent_rag_loading,telegram_agent}.py``
+``skills_api/{__init__,ministral_filter/interfaces,omitted_stop_loss_inference/interfaces,owner_qwen/interfaces,qwen_agent_rag_loading/interfaces}.py``
 <- ``frameworkless_app/skills_api/{__init__,ministral_filter,omitted_stop_loss_inference,owner_qwen,qwen_agent_rag_loading,telegram_agent}.py``;
-``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+``domain/contracts/__init__.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from crewai_app.skills_api.ministral_filter import MinistralFilterAPI
@@ -17,7 +17,7 @@ from crewai_app.skills_api.omitted_stop_loss_inference import (
 )
 from crewai_app.skills_api.owner_qwen import OwnerQwenAPI
 from crewai_app.skills_api.qwen_agent_rag_loading import QwenAgentRagLoadingAPI
-from crewai_app.skills_api.telegram_agent import TelegramAgentAPI
+from crewai_app.agent_interfaces.telegram import TelegramAgentAPI
 
 __all__ = [
     "MinistralFilterAPI",

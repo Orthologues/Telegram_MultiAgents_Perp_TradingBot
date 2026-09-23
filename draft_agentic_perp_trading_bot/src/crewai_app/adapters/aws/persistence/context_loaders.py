@@ -7,7 +7,7 @@ from pathlib import Path
 
 from crewai_app.adapters.telegram import ReplyTreeStore
 from crewai_app.agent_interfaces.qwen import SerialRagLoaderAPI
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     OwnerRagProfile,
     SerialRagExample,
     TelegramMessageEnvelope,

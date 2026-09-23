@@ -1,14 +1,13 @@
 """Retrieval-only TelegramAgent interface.
 
 File mappings:
-``agent_interfaces/telegram.py`` <- ``frameworkless_app/skills_api/telegram_agent.py``;
-``skills_api/telegram_agent.py`` <- ``frameworkless_app/skills_api/telegram_agent.py``;
-``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+``agent_interfaces/telegram/interfaces.py`` <- ``frameworkless_app/skills_api/telegram_agent.py``;
+``domain/contracts/__init__.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from typing import Protocol
 
-from crewai_app.domain.contracts.schemas import TelegramAgentRetrievalBatch
+from crewai_app.domain.contracts import TelegramAgentRetrievalBatch
 
 
 class TelegramAgentAPI(Protocol):

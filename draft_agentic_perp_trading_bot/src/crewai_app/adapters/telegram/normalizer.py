@@ -5,7 +5,7 @@ File mappings:
 ``frameworkless_app/telegram_ingestion/normalizer.py``;
 ``adapters/telegram/deduplication.py`` <-
 ``frameworkless_app/telegram_ingestion/deduplication.py``;
-``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+``domain/contracts/__init__.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from collections.abc import Iterable
 from datetime import datetime, timezone
 from typing import Any
 
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     AssetGroup,
     OwnerId,
     TelegramAgentRetrievedMessage,

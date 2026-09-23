@@ -21,7 +21,7 @@ from crewai_app.adapters.exchanges.mcp.upstream_contracts import (
     ASTER_V1_TARGET,
     aster_v1_order_invocation,
 )
-from crewai_app.domain.contracts.schemas import ExchangeId, ExchangeNetwork
+from crewai_app.domain.contracts import ExchangeId, ExchangeNetwork
 
 SUPPORTED_CANDLE_INTERVALS = frozenset({"5m", "15m", "1h", "4h"})
 

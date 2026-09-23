@@ -3,14 +3,14 @@
 File mappings:
 ``domain/policies/stop_loss.py`` <-
 ``frameworkless_app/ministral_filter/stop_loss_policy.py``;
-``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+``domain/contracts/__init__.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from __future__ import annotations
 
 from decimal import Decimal
 
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     IndicatorTimeframe,
     IntentType,
     MarketAnalysisSnapshot,

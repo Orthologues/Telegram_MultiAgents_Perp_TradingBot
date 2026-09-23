@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     AssetGroup,
     ClosedTradeOutcome,
     ExchangeId,

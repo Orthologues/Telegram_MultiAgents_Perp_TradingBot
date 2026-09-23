@@ -6,7 +6,7 @@ from collections.abc import Callable
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     TelegramMessageEnvelope,
     TelegramPromptContext,
 )

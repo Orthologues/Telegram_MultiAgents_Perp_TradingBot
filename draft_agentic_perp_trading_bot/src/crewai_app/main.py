@@ -41,7 +41,7 @@ from crewai_app.crews.signal_evaluation_crew import (
     CrewMessageRelationEvaluator,
     CrewSignalEvaluator,
 )
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     ExchangeId,
     SerialRagExample,
     TelegramMessageEnvelope,

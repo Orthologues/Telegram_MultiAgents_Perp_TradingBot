@@ -6,7 +6,7 @@ from collections.abc import Callable
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from crewai_app.domain.contracts.schemas import DecisionRecord
+from crewai_app.domain.contracts import DecisionRecord
 from crewai_app.tools._base import TradingBotTool
 
 

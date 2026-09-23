@@ -1,6 +1,6 @@
 """Decision persistence adapters for preliminary Flow testing."""
 
-from crewai_app.domain.contracts.schemas import DecisionRecord
+from crewai_app.domain.contracts import DecisionRecord
 from crewai_app.flows.interfaces import DecisionRepository
 
 

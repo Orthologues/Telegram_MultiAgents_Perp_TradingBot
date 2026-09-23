@@ -3,7 +3,7 @@
 File mappings:
 ``adapters/telegram/reply_tree.py`` <-
 ``frameworkless_app/telegram_ingestion/reply_tree.py``;
-``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+``domain/contracts/__init__.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Protocol
 
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     OwnerId,
     TelegramMessageEnvelope,
     TelegramPromptContext,

@@ -5,7 +5,7 @@ import pytest
 
 from crewai_app.domain.policies.confidence import evaluate_confidence
 from crewai_app.domain.policies.execution_gate import evaluate_deterministic_risk
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     AssetGroup,
     ExchangeId,
     OwnerId,

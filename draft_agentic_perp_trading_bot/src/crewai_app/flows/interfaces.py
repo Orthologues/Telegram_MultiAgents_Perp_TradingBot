@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from decimal import Decimal
 from typing import Protocol
 
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     ApprovedExecutionRequest,
     ExchangeId,
     QwenStrategyCandidateSet,

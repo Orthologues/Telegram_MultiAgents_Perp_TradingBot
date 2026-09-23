@@ -3,7 +3,7 @@
 File mappings:
 ``adapters/exchanges/mcp/{__init__,exchange_gateway,upstream_contracts,venue_contracts}.py``
 <- ``frameworkless_app/mcp_gateway/{__init__,exchange_gateway,upstream_contracts,venue_contracts}.py``;
-``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+``domain/contracts/__init__.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from crewai_app.adapters.exchanges.mcp.exchange_gateway import (

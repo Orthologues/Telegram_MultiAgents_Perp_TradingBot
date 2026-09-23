@@ -342,7 +342,7 @@ def test_pipeline_retries_publication_after_failure() -> None:
         InMemoryRawMediaArchive as CanonicalArchive,
         InMemoryTelegramMessageReceiptStore as CanonicalReceipts,
     )
-    from crewai_app.domain.contracts.schemas import (
+    from crewai_app.domain.contracts import (
         TelegramAgentChannelConfig as CanonicalConfig,
     )
 

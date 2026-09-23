@@ -3,7 +3,7 @@
 File mappings:
 ``adapters/aws/execution/lambda_handler.py`` <-
 ``frameworkless_app/aws_execution/lambda_handler.py``;
-``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+``domain/contracts/__init__.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     ApprovedExecutionRequest,
     ExchangeNetwork,
 )

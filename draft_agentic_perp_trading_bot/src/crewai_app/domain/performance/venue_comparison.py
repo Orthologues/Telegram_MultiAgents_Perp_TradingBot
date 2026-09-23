@@ -3,7 +3,7 @@
 File mappings:
 ``domain/performance/venue_comparison.py`` <-
 ``frameworkless_app/performance_engine/venue_comparison.py``;
-``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+``domain/contracts/__init__.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     ClosedTradeOutcome,
     ExchangeId,
     ExchangeNetwork,

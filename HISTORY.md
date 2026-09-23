@@ -332,3 +332,14 @@ interfaces in `flows/interfaces.py` and moved `TradeCursorResolver` into the
 cursor lifecycle boundary so interface ownership is visible to reviewers.
 Preserved marker classes and protocols without concrete implementations. The
 refactor passed targeted Ruff, compilation, and whitespace checks.
+
+### 2026-09-23 — `pending`: organized protocol and export-only modules
+
+Renamed pure `Protocol` declaration modules to capability-specific
+`interfaces.py` paths and added package `__init__.py` re-export surfaces.
+Unified the canonical domain contract exports in
+`domain/contracts/__init__.py`, removed redundant export-only modules, and
+preserved the public package imports and retained `frameworkless_app`
+compatibility path. Updated canonical and test imports, including the retained
+`frameworkless_app` Telegram compatibility import. Ruff, compilation, runtime
+package-export, stale-reference, and whitespace checks pass.

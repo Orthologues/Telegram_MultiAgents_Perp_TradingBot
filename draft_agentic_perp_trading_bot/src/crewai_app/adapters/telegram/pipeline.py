@@ -4,7 +4,7 @@ File mappings:
 ``adapters/telegram/pipeline.py`` <- ``frameworkless_app/telegram_ingestion/pipeline.py``;
 ``adapters/telegram/{agent_worker,deduplication,reply_tree,storage}.py`` <-
 ``frameworkless_app/telegram_ingestion/{agent_worker,deduplication,reply_tree,storage}.py``;
-``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+``domain/contracts/__init__.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ from crewai_app.adapters.telegram.storage import (
     DynamoDBMessageMetadataRepository,
     S3RawMediaArchive,
 )
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     TelegramAgentChannelConfig,
     TelegramIngestionRecord,
     TelegramMessageEnvelope,

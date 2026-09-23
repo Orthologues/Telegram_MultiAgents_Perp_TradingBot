@@ -68,6 +68,11 @@ TelegramAgent retrieval
 application. Retain
 `draft_agentic_perp_trading_bot/src/frameworkless_app/` as a legacy comparison
 implementation during the migration; it is not a second production runtime.
+Pure interface-only modules that define parent `Protocol` classes with method
+declarations and no implementation must be named `interfaces.py`.
+Modules that only re-export classes, methods, interfaces, or modules and have
+no implementation must be merged into the owning package's `__init__.py`; do
+not retain a standalone export-only module.
 Canonical agent responsibility protocols live in
 `draft_agentic_perp_trading_bot/src/crewai_app/agent_interfaces/`. Retain
 `draft_agentic_perp_trading_bot/src/crewai_app/skills_api/` only for

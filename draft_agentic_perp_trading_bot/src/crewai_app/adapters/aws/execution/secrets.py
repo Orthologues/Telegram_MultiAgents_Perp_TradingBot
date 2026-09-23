@@ -2,14 +2,14 @@
 
 File mappings:
 ``adapters/aws/execution/secrets.py`` <- ``frameworkless_app/aws_execution/secrets.py``;
-``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+``domain/contracts/__init__.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from __future__ import annotations
 
 from enum import StrEnum
 
-from crewai_app.domain.contracts.schemas import ExchangeId
+from crewai_app.domain.contracts import ExchangeId
 
 
 class SecretName(StrEnum):

@@ -4,7 +4,7 @@ File mappings:
 ``flows/telegram_signal_flow.py`` <- ``frameworkless_app/orchestrator.py``;
 ``adapters/telegram/deduplication.py`` <-
 ``frameworkless_app/telegram_ingestion/deduplication.py``;
-``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``;
+``domain/contracts/__init__.py`` <- ``frameworkless_app/schemas.py``;
 ``domain/lifecycle/cursor.py`` <- ``frameworkless_app/trade_cursor.py``;
 ``domain/policies/stop_loss.py`` <-
 ``frameworkless_app/ministral_filter/stop_loss_policy.py``.
@@ -31,7 +31,7 @@ from crewai_app.agent_interfaces.qwen import (
     SerialRagLoaderAPI,
 )
 from crewai_app.crews.signal_evaluation_crew import SignalEvaluator
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     ApprovedExecutionRequest,
     ExchangeId,
     ExchangeNetwork,

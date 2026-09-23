@@ -8,8 +8,7 @@ message.
 File mappings:
 ``adapters/telegram/agent_worker.py`` <-
 ``frameworkless_app/telegram_ingestion/agent_worker.py``;
-``skills_api/telegram_agent.py`` <- ``frameworkless_app/skills_api/telegram_agent.py``;
-``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+``domain/contracts/__init__.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from __future__ import annotations
@@ -23,7 +22,7 @@ from crewai_app.adapters.telegram.normalizer import (
 )
 from crewai_app.adapters.telegram.storage import TelegramMessageReceiptStore
 from crewai_app.agent_interfaces.telegram import TelegramAgentAPI
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     TelegramAgentChannelConfig,
     TelegramAgentPollBatch,
     TelegramAgentRetrievalBatch,

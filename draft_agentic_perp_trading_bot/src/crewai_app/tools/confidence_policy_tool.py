@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, Field
 
-from crewai_app.domain.contracts.schemas import PerformanceMetricsSnapshot
+from crewai_app.domain.contracts import PerformanceMetricsSnapshot
 from crewai_app.domain.policies.confidence import evaluate_confidence
 from crewai_app.tools._base import TradingBotTool
 

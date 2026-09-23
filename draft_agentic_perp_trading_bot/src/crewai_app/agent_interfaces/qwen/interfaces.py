@@ -5,17 +5,17 @@ reasoning and retrieval boundaries only; deterministic policies remain outside
 the agent interfaces.
 
 File mappings:
-``agent_interfaces/qwen.py`` <- ``frameworkless_app/skills_api/owner_qwen.py``;
-``skills_api/owner_qwen.py`` <- ``frameworkless_app/skills_api/owner_qwen.py``;
-``skills_api/qwen_agent_rag_loading.py`` <-
+``agent_interfaces/qwen/interfaces.py`` <- ``frameworkless_app/skills_api/owner_qwen.py``;
+``skills_api/owner_qwen/interfaces.py`` <- ``frameworkless_app/skills_api/owner_qwen.py``;
+``skills_api/qwen_agent_rag_loading/interfaces.py`` <-
 ``frameworkless_app/skills_api/qwen_agent_rag_loading.py``;
-``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+``domain/contracts/__init__.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from collections.abc import Awaitable
 from typing import Protocol
 
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     QwenStrategyCandidateSet,
     QwenSignalHypothesis,
     SerialRagExample,

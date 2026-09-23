@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from crewai.flow.flow import Flow, start
 
-from crewai_app.domain.contracts.schemas import TradeThreadCursor
+from crewai_app.domain.contracts import TradeThreadCursor
 from crewai_app.domain.lifecycle.cursor import ConcurrentTradeCursorManager
 from crewai_app.flows.states import PositionLifecycleState
 

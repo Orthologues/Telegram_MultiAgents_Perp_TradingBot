@@ -3,14 +3,14 @@
 File mappings:
 ``adapters/exchanges/mcp/venue_contracts.py`` <-
 ``frameworkless_app/mcp_gateway/venue_contracts.py``;
-``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+``domain/contracts/__init__.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     ExchangeId,
     ExchangeNetwork,
     SettlementAsset,

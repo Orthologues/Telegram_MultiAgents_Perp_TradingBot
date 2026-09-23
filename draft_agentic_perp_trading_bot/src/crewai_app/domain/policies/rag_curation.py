@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     QwenRagLabellingRecord,
     RagCurationSubmission,
     RagValidationMetadata,

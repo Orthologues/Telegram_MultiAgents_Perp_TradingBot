@@ -13,7 +13,7 @@ from crewai_app.agent_interfaces.qwen import (
     SignalEvaluationAPI,
 )
 from crewai_app.crew import CrewModelSettings, TradingSignalCrew
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     MinistralStrategyReviewSet,
     QwenStrategyCandidateSet,
     SerialRagExample,

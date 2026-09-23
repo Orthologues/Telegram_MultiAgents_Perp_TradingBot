@@ -8,7 +8,7 @@ File mappings:
 ``adapters/telegram/deduplication.py`` <-
 ``frameworkless_app/telegram_ingestion/deduplication.py``;
 ``domain/lifecycle/cursor.py`` <- ``frameworkless_app/trade_cursor.py``;
-``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+``domain/contracts/__init__.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ from crewai_app.domain.policies.execution_gate import (
     evaluate_deterministic_risk,
     validate_market_snapshot,
 )
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     ApprovedExecutionRequest,
     CanonicalTradeIntent,
     ConfidenceDecision,

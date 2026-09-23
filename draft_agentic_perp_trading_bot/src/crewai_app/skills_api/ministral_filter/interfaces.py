@@ -5,18 +5,18 @@ Stop-loss derivation and take-profit protection are deterministic policies or
 lifecycle services, not agent-owned mutation capabilities.
 
 File mappings:
-``skills_api/ministral_filter.py`` <- ``frameworkless_app/skills_api/ministral_filter.py``;
-``agent_interfaces/ministral.py`` <- ``frameworkless_app/skills_api/ministral_filter.py``;
-``skills_api/omitted_stop_loss_inference.py`` <-
+``skills_api/ministral_filter/interfaces.py`` <- ``frameworkless_app/skills_api/ministral_filter.py``;
+``agent_interfaces/ministral/interfaces.py`` <- ``frameworkless_app/skills_api/ministral_filter.py``;
+``skills_api/omitted_stop_loss_inference/interfaces.py`` <-
 ``frameworkless_app/skills_api/omitted_stop_loss_inference.py``;
-``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
+``domain/contracts/__init__.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from __future__ import annotations
 
 from typing import Protocol
 
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     FilterDecision,
     MarketAnalysisSnapshot,
     OmittedStopLossDecision,

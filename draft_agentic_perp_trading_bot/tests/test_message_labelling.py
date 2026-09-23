@@ -8,7 +8,7 @@ from crewai_app.adapters.aws.persistence.message_labelling import (
     DynamoDBMessageLabellingRepository,
     InMemoryMessageLabellingRepository,
 )
-from crewai_app.domain.contracts.schemas import (
+from crewai_app.domain.contracts import (
     AssetGroup,
     OwnerId,
     TelegramMessageEnvelope,
