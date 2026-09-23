@@ -13,7 +13,7 @@ File mappings:
 """
 
 from collections.abc import Awaitable
-from typing import List, Protocol
+from typing import Protocol
 
 from crewai_app.domain.contracts.schemas import (
     QwenStrategyCandidateSet,
@@ -35,7 +35,7 @@ class SerialRagLoaderAPI(Protocol):
     async def load(
         self,
         message: TelegramMessageEnvelope,
-    ) -> List[SerialRagExample]: ...
+    ) -> list[SerialRagExample]: ...
 
 
 class QwenCandidateInferenceAPI(Protocol):
@@ -53,7 +53,7 @@ class QwenMessageRelationAPI(Protocol):
         self,
         message: TelegramMessageEnvelope,
         prompt_context: TelegramPromptContext,
-        serial_rag_examples: List[SerialRagExample],
+        serial_rag_examples: list[SerialRagExample],
     ) -> TradingMessageRelationDecision: ...
 
 
@@ -82,8 +82,8 @@ class SignalEvaluationAPI(Protocol):
         self,
         message: TelegramMessageEnvelope,
         prompt_context: TelegramPromptContext,
-        serial_rag_examples: List[SerialRagExample],
-        active_trade_cursors: List[TradeThreadCursor],
+        serial_rag_examples: list[SerialRagExample],
+        active_trade_cursors: list[TradeThreadCursor],
     ) -> Awaitable[SignalEvaluationResult]: ...
 
 

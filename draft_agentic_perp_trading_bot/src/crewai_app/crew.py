@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-from typing import List
 
 from crewai import LLM, Agent, Crew, Process, Task
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -110,8 +109,8 @@ def build_bedrock_llm(model_id: str, settings: CrewModelSettings) -> LLM:
 class TradingSignalCrew:
     """Sequential Crew containing one selected QWEN and shared Ministral."""
 
-    agents: List[BaseAgent]
-    tasks: List[Task]
+    agents: list[BaseAgent]
+    tasks: list[Task]
     agents_config = "config/agents.yaml"
     tasks_config = "config/tasks.yaml"
 
@@ -120,8 +119,8 @@ class TradingSignalCrew:
         owner_id: OwnerId,
         settings: CrewModelSettings,
         *,
-        qwen_tools: List[BaseTool] | None = None,
-        ministral_tools: List[BaseTool] | None = None,
+        qwen_tools: list[BaseTool] | None = None,
+        ministral_tools: list[BaseTool] | None = None,
     ) -> None:
         self.owner_id = owner_id
         self.settings = settings
@@ -200,7 +199,7 @@ class TradingSignalCrew:
         )
 
 
-def _validate_agent_tools(tools: List[BaseTool]) -> List[BaseTool]:
+def _validate_agent_tools(tools: list[BaseTool]) -> list[BaseTool]:
     forbidden = [tool.name for tool in tools if not getattr(tool, "agent_accessible", False)]
     if forbidden:
         raise ValueError(

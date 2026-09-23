@@ -159,9 +159,6 @@ may call an exchange; approved execution remains behind the MCP gateway.
 - After each commit, replace the `pending` marker in every `HISTORY.md` entry
   covered by that commit with the last known commit ID. Never leave a completed
   entry marked `pending`.
-- In Python type annotations, import `List` and `Set` from `typing` and use
-  them instead of native `list[...]` and `set[...]` wherever applicable.
-  Preserve runtime constructors such as `list()` and `set()`.
 - When concrete classes fulfill a local `Protocol` contract, explicitly inherit
   from that `Protocol` in the class declaration even though structural typing
   would otherwise suffice. This makes the contract visible to reviewers;

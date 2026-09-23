@@ -10,7 +10,6 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from typing import List
 
 from pydantic import BaseModel
 
@@ -57,7 +56,7 @@ def evaluate_deterministic_risk(
     cumulative_notional = (
         existing_position_notional_usd + sizing.final_position_notional_usd
     )
-    reasons: List[str] = []
+    reasons: list[str] = []
     deviation: Decimal | None = None
     maximum_deviation: Decimal | None = None
 
@@ -186,7 +185,7 @@ class PairBlacklistPolicy:
         exchange_id: ExchangeId,
         network: ExchangeNetwork = ExchangeNetwork.TESTNET,
         symbol: str,
-        outcomes: List[ClosedTradeOutcome],
+        outcomes: list[ClosedTradeOutcome],
         computed_at: datetime | None = None,
     ) -> PairBlacklistDecision:
         evaluated_at = computed_at or datetime.now(timezone.utc)
@@ -215,7 +214,7 @@ class PairBlacklistPolicy:
             len(matching) >= self.minimum_closed_trades
             and losses >= self.minimum_losses
         )
-        reasons: List[str] = []
+        reasons: list[str] = []
         if enough_observations and ratio is not None:
             if ratio < self.minimum_win_loss_ratio:
                 reasons.append("win_loss_ratio_below_threshold")

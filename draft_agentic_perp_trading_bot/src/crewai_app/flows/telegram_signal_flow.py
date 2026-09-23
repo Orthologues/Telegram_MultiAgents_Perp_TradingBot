@@ -15,7 +15,6 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import List  # noqa: UP035
 
 from crewai.flow.flow import Flow, listen, start
 
@@ -188,7 +187,7 @@ class TelegramSignalFlow(Flow[TelegramSignalState]):
         return self.state.prompt_context
 
     @listen(load_parent_messages)
-    async def load_active_trade_cursors(self) -> List[TradeThreadCursor]:
+    async def load_active_trade_cursors(self) -> list[TradeThreadCursor]:
         message = self._message()
         cursors = await self.cursor_context_loader.load(message)
         self.state.active_trade_cursors = cursors
@@ -200,7 +199,7 @@ class TelegramSignalFlow(Flow[TelegramSignalState]):
         return cursors
 
     @listen(load_active_trade_cursors)
-    async def retrieve_owner_rag_examples(self) -> List[SerialRagExample]:
+    async def retrieve_owner_rag_examples(self) -> list[SerialRagExample]:
         examples = await self.serial_rag_loader.load(self._message())
         self.state.serial_rag_examples = examples
         self.state.trace_steps.append("retrieve_owner_rag_examples")

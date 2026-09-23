@@ -7,7 +7,6 @@ File mappings:
 """
 
 from decimal import Decimal
-from typing import List, Set
 
 from crewai_app.domain.contracts.schemas import (
     AssetGroup,
@@ -20,7 +19,7 @@ from crewai_app.domain.performance.position_sizing import compute_position_size
 
 
 def summarize_strategy_tiers(
-    outcomes: List[StrategyOutcome],
+    outcomes: list[StrategyOutcome],
 ) -> dict[StrategyTier, StrategyTierPerformanceSummary]:
     """Return a summary for every tier, including counterfactual replays."""
     unique_outcomes = _closed_unique_outcomes(outcomes)
@@ -34,12 +33,12 @@ def summarize_strategy_tiers(
 
 
 def summarize_strategy_dimensions(
-    outcomes: List[StrategyOutcome],
-) -> List[StrategyTierPerformanceSummary]:
+    outcomes: list[StrategyOutcome],
+) -> list[StrategyTierPerformanceSummary]:
     """Summarize each tier by owner, channel, asset group, and lifecycle stage."""
     grouped: dict[
         tuple[OwnerId | None, str | None, AssetGroup | None, str | None, StrategyTier],
-        List[StrategyOutcome],
+        list[StrategyOutcome],
     ] = {}
     for item in _closed_unique_outcomes(outcomes):
         outcome = item.outcome
@@ -80,10 +79,10 @@ def summarize_strategy_dimensions(
 
 
 def _closed_unique_outcomes(
-    outcomes: List[StrategyOutcome],
-) -> List[StrategyOutcome]:
-    seen: Set[tuple[StrategyTier, str]] = set()
-    unique: List[StrategyOutcome] = []
+    outcomes: list[StrategyOutcome],
+) -> list[StrategyOutcome]:
+    seen: set[tuple[StrategyTier, str]] = set()
+    unique: list[StrategyOutcome] = []
     for item in outcomes:
         if not item.outcome.fully_closed:
             continue
@@ -100,7 +99,7 @@ def _closed_unique_outcomes(
 
 def _build_summary(
     tier: StrategyTier,
-    matching: List[StrategyOutcome],
+    matching: list[StrategyOutcome],
     *,
     owner_id: OwnerId | None = None,
     channel_id: str | None = None,

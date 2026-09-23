@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import List  # noqa: UP035
 
 from crewai_app.adapters.telegram import ReplyTreeStore
 from crewai_app.agent_interfaces.qwen import SerialRagLoaderAPI
@@ -32,7 +31,7 @@ class TradeCursorContextLoader(CursorContextLoader):
     def __init__(self, manager: ConcurrentTradeCursorManager) -> None:
         self.manager = manager
 
-    async def load(self, message: TelegramMessageEnvelope) -> List[TradeThreadCursor]:
+    async def load(self, message: TelegramMessageEnvelope) -> list[TradeThreadCursor]:
         return await self.manager.resolve_for_message(message)
 
 
@@ -42,7 +41,7 @@ class LocalOwnerProfileRagLoader(SerialRagLoaderAPI):
     def __init__(self, profiles_root: Path) -> None:
         self.profiles_root = profiles_root
 
-    async def load(self, message: TelegramMessageEnvelope) -> List[SerialRagExample]:
+    async def load(self, message: TelegramMessageEnvelope) -> list[SerialRagExample]:
         profile_path = (
             self.profiles_root / message.owner_id.value / "shared_style.json"
         )

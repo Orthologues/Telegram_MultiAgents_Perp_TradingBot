@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import List
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -20,10 +19,10 @@ class CursorContextTool(TradingBotTool):
     description: str = "Load active parent-linked trade cursors without mutating them."
     args_schema: type[BaseModel] = CursorContextInput
     agent_accessible: bool = True
-    loader: Callable[[TelegramMessageEnvelope], List[TradeThreadCursor]] = Field(exclude=True)
+    loader: Callable[[TelegramMessageEnvelope], list[TradeThreadCursor]] = Field(exclude=True)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def _run(self, message: TelegramMessageEnvelope | dict) -> List[dict]:
+    def _run(self, message: TelegramMessageEnvelope | dict) -> list[dict]:
         envelope = TelegramMessageEnvelope.model_validate(message)
         return [cursor.model_dump(mode="json") for cursor in self.loader(envelope)]

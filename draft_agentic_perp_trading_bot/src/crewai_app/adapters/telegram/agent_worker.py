@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Mapping
 from datetime import datetime, timezone
-from typing import Any, Protocol, Self, Set  # noqa: UP035
+from typing import Any, Protocol, Self
 
 from crewai_app.adapters.telegram.normalizer import (
     normalize_telegram_agent_message,
@@ -115,7 +115,7 @@ class TelegramAgentPoller:
         )
         messages = sorted(retrieved.messages, key=lambda message: _message_id_value(message.id))
         unacknowledged_messages = []
-        observed_message_ids: Set[str] = set()
+        observed_message_ids: set[str] = set()
         for message in messages:
             if message.id in observed_message_ids:
                 continue

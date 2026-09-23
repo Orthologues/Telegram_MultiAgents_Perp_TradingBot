@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import List, TypeVar  # noqa: UP035
+from typing import TypeVar
 
 from crewai.tasks.task_output import TaskOutput
 from pydantic import BaseModel
@@ -38,7 +38,7 @@ class CrewMessageRelationEvaluator(QwenMessageRelationAPI):
         self,
         message: TelegramMessageEnvelope,
         prompt_context: TelegramPromptContext,
-        serial_rag_examples: List[SerialRagExample],
+        serial_rag_examples: list[SerialRagExample],
     ) -> TradingMessageRelationDecision:
         selected_crew = TradingSignalCrew(message.owner_id, self.settings).relation_crew()
         output = await selected_crew.kickoff_async(
@@ -78,8 +78,8 @@ class CrewSignalEvaluator(SignalEvaluationAPI):
         self,
         message: TelegramMessageEnvelope,
         prompt_context: TelegramPromptContext,
-        serial_rag_examples: List[SerialRagExample],
-        active_trade_cursors: List[TradeThreadCursor],
+        serial_rag_examples: list[SerialRagExample],
+        active_trade_cursors: list[TradeThreadCursor],
     ) -> SignalEvaluationResult:
         selected_crew = TradingSignalCrew(message.owner_id, self.settings).crew()
         output = await selected_crew.kickoff_async(

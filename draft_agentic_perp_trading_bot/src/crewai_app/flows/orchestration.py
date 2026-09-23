@@ -15,7 +15,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from decimal import Decimal
-from typing import List
 
 from crewai_app.agent_interfaces.ministral import MinistralReviewAPI
 from crewai_app.agent_interfaces.qwen import (
@@ -270,7 +269,7 @@ def select_strategy_tier_for_market(
     message: TelegramMessageEnvelope,
     candidates: QwenStrategyCandidateSet,
     reviews: Mapping[StrategyTier, FilterDecision],
-    active_trade_cursors: List[TradeThreadCursor],
+    active_trade_cursors: list[TradeThreadCursor],
     *,
     performance_snapshot: PerformanceMetricsSnapshot | None = None,
 ) -> StrategyTier | None:
@@ -303,7 +302,7 @@ def _select_confidence(
         StrategyTier,
         tuple[QwenSignalHypothesis, FilterDecision],
     ],
-    lifecycle_cursors: List[TradeThreadCursor],
+    lifecycle_cursors: list[TradeThreadCursor],
     performance_snapshot: PerformanceMetricsSnapshot | None,
 ) -> ConfidenceDecision:
     inherited_strategy = _shared_lifecycle_strategy(lifecycle_cursors)
@@ -343,7 +342,7 @@ def _snapshot_rejection_reasons(
     network: ExchangeNetwork,
     symbol: str,
     reference_price: Decimal,
-) -> List[str]:
+) -> list[str]:
     reasons = list(snapshot.rejection_reasons)
     if snapshot.market.exchange_id != exchange_id:
         reasons.append("market_snapshot_exchange_mismatch")
@@ -366,7 +365,7 @@ async def _infer_hypotheses(
     qwen_agent: QwenCandidateInferenceAPI | LegacySignalInferenceAPI,
     message: TelegramMessageEnvelope,
     context: TelegramPromptContext,
-) -> tuple[List[QwenSignalHypothesis], float, bool]:
+) -> tuple[list[QwenSignalHypothesis], float, bool]:
     infer_candidates = getattr(qwen_agent, "infer_strategy_candidates", None)
     if callable(infer_candidates):
         candidate_set = await infer_candidates(message, context)
@@ -385,8 +384,8 @@ def _matching_lifecycle_cursors(
         StrategyTier,
         tuple[QwenSignalHypothesis, FilterDecision],
     ],
-    cursors: List[TradeThreadCursor],
-) -> List[TradeThreadCursor]:
+    cursors: list[TradeThreadCursor],
+) -> list[TradeThreadCursor]:
     matches: dict[str, TradeThreadCursor] = {}
     for hypothesis, decision in decisions.values():
         intent = decision.canonical_intent
@@ -399,7 +398,7 @@ def _matching_lifecycle_cursors(
 
 
 def _shared_lifecycle_strategy(
-    cursors: List[TradeThreadCursor],
+    cursors: list[TradeThreadCursor],
 ) -> PositionLifecycleStrategy | None:
     if not cursors:
         return None

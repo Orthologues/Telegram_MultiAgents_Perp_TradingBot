@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from decimal import Decimal
-from typing import List  # noqa: UP035
 
 from crewai_app.agent_interfaces.qwen import SerialRagLoaderAPI
 from crewai_app.domain.contracts.schemas import (
@@ -43,20 +42,20 @@ class StaticParentContextLoader(ParentContextLoader):
 class StaticCursorContextLoader(CursorContextLoader):
     """Return preloaded cursor state without reading a live repository."""
 
-    def __init__(self, cursors: List[TradeThreadCursor]) -> None:
+    def __init__(self, cursors: list[TradeThreadCursor]) -> None:
         self.cursors = cursors
 
-    async def load(self, message: TelegramMessageEnvelope) -> List[TradeThreadCursor]:
+    async def load(self, message: TelegramMessageEnvelope) -> list[TradeThreadCursor]:
         return list(self.cursors)
 
 
 class StaticSerialRagLoader(SerialRagLoaderAPI):
     """Return manually supplied serial-RAG references for local runs."""
 
-    def __init__(self, examples: List[SerialRagExample]) -> None:
+    def __init__(self, examples: list[SerialRagExample]) -> None:
         self.examples = validated_serial_rag_examples(examples)
 
-    async def load(self, message: TelegramMessageEnvelope) -> List[SerialRagExample]:
+    async def load(self, message: TelegramMessageEnvelope) -> list[SerialRagExample]:
         return list(self.examples)
 
 

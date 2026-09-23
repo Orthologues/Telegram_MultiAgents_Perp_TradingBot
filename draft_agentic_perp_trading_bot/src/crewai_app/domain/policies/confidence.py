@@ -7,7 +7,6 @@ File mappings:
 
 from __future__ import annotations
 
-from typing import List
 
 from crewai_app.domain.contracts.schemas import (
     ConfidenceDecision,
@@ -37,7 +36,7 @@ def evaluate_confidence(
     total_weight = sum(weight for _, weight in weighted_components)
     confidence = sum(score * weight for score, weight in weighted_components) / total_weight
 
-    reasons: List[str] = []
+    reasons: list[str] = []
     if quality is None:
         reasons.append("ministral_quality_score_unavailable")
     if performance_score is None:

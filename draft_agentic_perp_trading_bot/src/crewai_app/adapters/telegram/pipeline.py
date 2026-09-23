@@ -10,7 +10,6 @@ File mappings:
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import List  # noqa: UP035
 
 from crewai_app.adapters.telegram.agent_worker import TelegramAgentPoller
 from crewai_app.adapters.telegram.deduplication import (
@@ -65,9 +64,9 @@ class TelegramIngestionPipeline:
         self._reply_tree_store = reply_tree_store or InMemoryReplyTreeStore()
         self._trade_cursor_resolver = trade_cursor_resolver
 
-    async def process_once(self, config: TelegramAgentChannelConfig) -> List[TelegramMessageEnvelope]:
+    async def process_once(self, config: TelegramAgentChannelConfig) -> list[TelegramMessageEnvelope]:
         batch = await self._poller.poll_once(config)
-        published: List[TelegramMessageEnvelope] = []
+        published: list[TelegramMessageEnvelope] = []
 
         for message in batch.messages:
             contextualized_message = await self._resolve_parent_messages(message)

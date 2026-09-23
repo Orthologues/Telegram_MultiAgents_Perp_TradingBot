@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
-from typing import Any, List, Literal, Self, Set
+from typing import Any, Literal, Self
 
 from pydantic import AnyHttpUrl, BaseModel, Field, field_validator, model_validator
 
@@ -78,7 +78,7 @@ class SerialRagExample(BaseModel):
 
     example_id: str = Field(min_length=1)
     strategy_tier: StrategyTier
-    messages: List[TelegramRagMessageReference] = Field(min_length=1)
+    messages: list[TelegramRagMessageReference] = Field(min_length=1)
     s3_archive_uri: str = Field(pattern=r"^s3://[^/]+/.+")
     execution_label: Literal["correct", "incorrect", "ambiguous"]
     error_reason: str | None = None
@@ -88,8 +88,8 @@ class SerialRagExample(BaseModel):
     @classmethod
     def validate_message_order(
         cls,
-        messages: List[TelegramRagMessageReference],
-    ) -> List[TelegramRagMessageReference]:
+        messages: list[TelegramRagMessageReference],
+    ) -> list[TelegramRagMessageReference]:
         message_ids = [message.telegram_message_id for message in messages]
         if len(message_ids) != len(set(message_ids)):
             raise ValueError("serial RAG message IDs must not repeat")
@@ -115,12 +115,12 @@ class OwnerRagProfile(BaseModel):
 
     owner_id: OwnerId
     display_name: str = Field(min_length=1)
-    channels: List[str] = Field(min_length=1)
-    asset_groups: List[AssetGroup] = Field(min_length=1)
-    trading_horizons: List[str] = Field(min_length=1)
+    channels: list[str] = Field(min_length=1)
+    asset_groups: list[AssetGroup] = Field(min_length=1)
+    trading_horizons: list[str] = Field(min_length=1)
     s3_archive_prefix: str = Field(pattern=r"^s3://[^/]+/.+")
-    serial_rag_examples: List[SerialRagExample] = Field(default_factory=list)
-    notes: List[str] = Field(default_factory=list)
+    serial_rag_examples: list[SerialRagExample] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
 
 
 class LifecycleStrategySource(StrEnum):
@@ -227,7 +227,7 @@ class DeduplicationDecision(BaseModel):
     is_duplicate: bool
     dedup_key: str
     matched_key: str | None = None
-    reasons: List[str] = Field(default_factory=list)
+    reasons: list[str] = Field(default_factory=list)
 
 
 class TradingMessageRelation(StrEnum):
@@ -246,14 +246,14 @@ class TradingMessageRelationDecision(BaseModel):
     channel_id: str
     telegram_message_id: str = Field(pattern=r"^[0-9]+$")
     relation: TradingMessageRelation
-    matched_message_ids: List[str] = Field(default_factory=list)
+    matched_message_ids: list[str] = Field(default_factory=list)
     confidence: float = Field(ge=0.0, le=1.0)
-    reason_codes: List[str] = Field(default_factory=list)
+    reason_codes: list[str] = Field(default_factory=list)
     needs_human_labelling: bool = False
 
     @field_validator("matched_message_ids")
     @classmethod
-    def validate_matched_message_ids(cls, message_ids: List[str]) -> List[str]:
+    def validate_matched_message_ids(cls, message_ids: list[str]) -> list[str]:
         if any(not message_id.isdigit() for message_id in message_ids):
             raise ValueError("matched message IDs must be numeric Telegram message IDs")
         if len(message_ids) != len(set(message_ids)):
@@ -280,13 +280,13 @@ class TelegramAgentRetrievedMessage(BaseModel):
     forward_from: str | None = None
     edit_date: datetime | None = None
     media: bool = False
-    entities: List[dict[str, Any]] | None = None
+    entities: list[dict[str, Any]] | None = None
 
 
 class TelegramAgentRetrievalBatch(BaseModel):
     telegram_chat_id: str
     message_count: int = Field(ge=0)
-    messages: List[TelegramAgentRetrievedMessage] = Field(default_factory=list)
+    messages: list[TelegramAgentRetrievedMessage] = Field(default_factory=list)
     start_time: str
 
     @model_validator(mode="after")
@@ -317,21 +317,21 @@ class TelegramMessageEnvelope(BaseModel):
     source_timestamp: datetime | None = None
     sender_id: str | None = None
     reply_to_message_id: str | None = None
-    parent_messages: List[str] = Field(default_factory=list)
+    parent_messages: list[str] = Field(default_factory=list)
     forwarded_from_id: str | None = None
     edited_at: datetime | None = None
     raw_text: str | None = None
     raw_media_present: bool = False
     media_s3_uri: str | None = None
     content_hash: str | None = None
-    media_hashes: List[str] = Field(default_factory=list)
+    media_hashes: list[str] = Field(default_factory=list)
     dedup_key: str | None = None
     language_hint: str = "zh"
     strategy_tier_hint: StrategyTier | None = None
 
     @field_validator("parent_messages")
     @classmethod
-    def validate_parent_messages(cls, message_ids: List[str]) -> List[str]:
+    def validate_parent_messages(cls, message_ids: list[str]) -> list[str]:
         if any(not message_id.isdigit() for message_id in message_ids):
             raise ValueError("parent_messages must contain numeric Telegram message IDs")
         if len(message_ids) != len(set(message_ids)):
@@ -349,13 +349,13 @@ class ExchangeTradeState(BaseModel):
     settlement_asset: SettlementAsset
     symbol: str = Field(min_length=1)
     direction: PositionDirection
-    active_order_ids: Set[str] = Field(default_factory=set)
-    open_position_ids: Set[str] = Field(default_factory=set)
+    active_order_ids: set[str] = Field(default_factory=set)
+    open_position_ids: set[str] = Field(default_factory=set)
     observed_at: datetime
 
     @field_validator("active_order_ids", "open_position_ids")
     @classmethod
-    def validate_exchange_ids(cls, identifiers: Set[str]) -> Set[str]:
+    def validate_exchange_ids(cls, identifiers: set[str]) -> set[str]:
         if any(not identifier.strip() for identifier in identifiers):
             raise ValueError("exchange order and position IDs must not be blank")
         return identifiers
@@ -382,7 +382,7 @@ class PositionLifecycleStrategy(BaseModel):
     source_telegram_message_id: str = Field(pattern=r"^[0-9]+$")
     selected_at: datetime
     revision: int = Field(default=0, ge=0)
-    reasons: List[str] = Field(default_factory=list)
+    reasons: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_revision_source(self) -> Self:
@@ -406,14 +406,14 @@ class TradeThreadCursor(BaseModel):
     owner_id: OwnerId
     channel_id: str
     origin_message_id: str = Field(pattern=r"^[0-9]+$")
-    message_ids: List[str] = Field(min_length=1)
+    message_ids: list[str] = Field(min_length=1)
     exchange_id: ExchangeId
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     settlement_asset: SettlementAsset
     symbol: str = Field(min_length=1)
     direction: PositionDirection
-    active_order_ids: Set[str] = Field(default_factory=set)
-    open_position_ids: Set[str] = Field(default_factory=set)
+    active_order_ids: set[str] = Field(default_factory=set)
+    open_position_ids: set[str] = Field(default_factory=set)
     lifecycle_strategy: PositionLifecycleStrategy
     position_was_opened: bool = False
     status: TradeCursorStatus = TradeCursorStatus.ACTIVE
@@ -424,7 +424,7 @@ class TradeThreadCursor(BaseModel):
 
     @field_validator("message_ids")
     @classmethod
-    def validate_cursor_message_ids(cls, message_ids: List[str]) -> List[str]:
+    def validate_cursor_message_ids(cls, message_ids: list[str]) -> list[str]:
         if any(not message_id.isdigit() for message_id in message_ids):
             raise ValueError("trade cursor message_ids must be numeric")
         if len(message_ids) != len(set(message_ids)):
@@ -472,7 +472,7 @@ class TelegramPromptMessage(BaseModel):
     raw_text: str | None = None
     raw_media_present: bool = False
     media_s3_uri: str | None = None
-    media_hashes: List[str] = Field(default_factory=list)
+    media_hashes: list[str] = Field(default_factory=list)
 
     @classmethod
     def from_envelope(cls, message: TelegramMessageEnvelope) -> Self:
@@ -492,14 +492,14 @@ class TelegramPromptContext(BaseModel):
     """Current Telegram input plus ordered parent messages for model context."""
 
     current_message: TelegramMessageEnvelope
-    parent_messages: List[TelegramPromptMessage] = Field(default_factory=list)
-    active_trade_cursors: List[TradeThreadCursor] = Field(default_factory=list)
+    parent_messages: list[TelegramPromptMessage] = Field(default_factory=list)
+    active_trade_cursors: list[TradeThreadCursor] = Field(default_factory=list)
 
     @classmethod
     def from_message(
         cls,
         message: TelegramMessageEnvelope,
-        parent_messages: List[TelegramPromptMessage] | None = None,
+        parent_messages: list[TelegramPromptMessage] | None = None,
     ) -> Self:
         if parent_messages is None:
             parent_messages = [
@@ -511,7 +511,7 @@ class TelegramPromptContext(BaseModel):
             parent_messages=list(parent_messages),
         )
 
-    def to_prompt_messages(self) -> List[dict[str, Any]]:
+    def to_prompt_messages(self) -> list[dict[str, Any]]:
         """Serialize parent and current messages with explicit Telegram IDs."""
         prompt_messages = [
             {"role": "parent", **parent.model_dump(mode="json")}
@@ -570,7 +570,7 @@ class QwenRagLabellingRecord(BaseModel):
 class TelegramAgentPollBatch(BaseModel):
     channel_id: str
     telegram_chat_id: str
-    messages: List[TelegramMessageEnvelope] = Field(default_factory=list)
+    messages: list[TelegramMessageEnvelope] = Field(default_factory=list)
 
 
 class TelegramIngestionRecord(BaseModel):
@@ -589,12 +589,12 @@ class QwenSignalHypothesis(BaseModel):
     intent_type: IntentType
     symbol: str | None = None
     direction: str | None = None
-    entries: List[Decimal] = Field(default_factory=list)
+    entries: list[Decimal] = Field(default_factory=list)
     stop_loss: Decimal | None = None
-    take_profit: List[Decimal] = Field(default_factory=list)
+    take_profit: list[Decimal] = Field(default_factory=list)
     confidence: float = Field(ge=0.0, le=1.0)
-    evidence: List[str] = Field(default_factory=list)
-    ambiguities: List[str] = Field(default_factory=list)
+    evidence: list[str] = Field(default_factory=list)
+    ambiguities: list[str] = Field(default_factory=list)
     source_dedup_key: str | None = None
 
 
@@ -715,8 +715,8 @@ class MarketExecutionSnapshot(BaseModel):
     maximum_expected_slippage_fraction: Decimal = Field(ge=Decimal("0"))
 
     @property
-    def rejection_reasons(self) -> List[str]:
-        reasons: List[str] = []
+    def rejection_reasons(self) -> list[str]:
+        reasons: list[str] = []
         if self.order_book_depth_usd < self.minimum_order_book_depth_usd:
             reasons.append("insufficient_order_book_depth")
         if self.expected_slippage_fraction > self.maximum_expected_slippage_fraction:
@@ -741,7 +741,7 @@ class OmittedStopLossDecision(BaseModel):
     market_snapshot: MarketAnalysisSnapshot
     policy_version: str
     reasoning_budget_ms: int = Field(default=1000, ge=1, le=1000)
-    evidence: List[str] = Field(default_factory=list)
+    evidence: list[str] = Field(default_factory=list)
 
 
 class TradingMessageSynonymDecision(BaseModel):
@@ -754,8 +754,8 @@ class TradingMessageSynonymDecision(BaseModel):
     matched_synonym: str | None = None
     conditional_strategy_id: str | None = None
     confidence: float = Field(ge=0.0, le=1.0)
-    evidence: List[str] = Field(default_factory=list)
-    reasons: List[str] = Field(default_factory=list)
+    evidence: list[str] = Field(default_factory=list)
+    reasons: list[str] = Field(default_factory=list)
     needs_human_labelling: bool = True
 
 
@@ -797,8 +797,8 @@ class PositionReductionHypothesis(BaseModel):
         Literal["TP3"],
     ] = ("TP1", "TP2", "TP3")
     confidence: float = Field(ge=0.0, le=1.0)
-    evidence: List[str] = Field(default_factory=list)
-    ambiguities: List[str] = Field(default_factory=list)
+    evidence: list[str] = Field(default_factory=list)
+    ambiguities: list[str] = Field(default_factory=list)
     needs_human_labelling: bool = True
 
 
@@ -813,8 +813,8 @@ class TakeProfitFillEvent(BaseModel):
     position_id: str = Field(min_length=1)
     direction: PositionDirection
     triggered_level: TakeProfitLevel
-    configured_levels: List[TakeProfitLevel]
-    filled_levels: List[TakeProfitLevel]
+    configured_levels: list[TakeProfitLevel]
+    filled_levels: list[TakeProfitLevel]
     average_entry_price: Decimal = Field(gt=Decimal("0"))
     tp1_price: Decimal = Field(gt=Decimal("0"))
     current_stop_loss: Decimal | None = Field(default=None, gt=Decimal("0"))
@@ -871,7 +871,7 @@ class TakeProfitProtectionDecision(BaseModel):
     trigger_level: TakeProfitLevel
     policy_version: str
     idempotency_key: str
-    reasons: List[str] = Field(default_factory=list)
+    reasons: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_venue(self) -> Self:
@@ -887,10 +887,10 @@ class CanonicalTradeIntent(BaseModel):
     symbol: str
     action: TradeAction
     order_type: str
-    entries: List[Decimal]
+    entries: list[Decimal]
     stop_loss: Decimal | None = None
-    take_profit: List[Decimal] = Field(default_factory=list)
-    target_exchanges: List[ExchangeId]
+    take_profit: list[Decimal] = Field(default_factory=list)
+    target_exchanges: list[ExchangeId]
     execution_network: ExchangeNetwork = ExchangeNetwork.TESTNET
     signal_dedup_key: str | None = None
 
@@ -898,8 +898,8 @@ class CanonicalTradeIntent(BaseModel):
     @classmethod
     def validate_target_exchanges(
         cls,
-        exchange_ids: List[ExchangeId],
-    ) -> List[ExchangeId]:
+        exchange_ids: list[ExchangeId],
+    ) -> list[ExchangeId]:
         if not exchange_ids:
             raise ValueError("target_exchanges must not be empty")
         if len(exchange_ids) != len(set(exchange_ids)):
@@ -911,7 +911,7 @@ class FilterDecision(BaseModel):
     status: Literal["approved", "rejected", "needs_review"]
     quality_score: float = Field(ge=0.0, le=1.0)
     canonical_intent: CanonicalTradeIntent | None = None
-    rejection_reasons: List[str] = Field(default_factory=list)
+    rejection_reasons: list[str] = Field(default_factory=list)
     reviewer_model: str
     deduplication: DeduplicationDecision | None = None
     omitted_stop_loss: OmittedStopLossDecision | None = None
@@ -1054,7 +1054,7 @@ class ConfidenceDecision(BaseModel):
     quality_score: float | None = Field(default=None, ge=0.0, le=1.0)
     performance_score: float | None = Field(default=None, ge=0.0, le=1.0)
     formula_version: str
-    reasons: List[str] = Field(default_factory=list)
+    reasons: list[str] = Field(default_factory=list)
 
 
 class PerformanceMetricsSnapshot(BaseModel):
@@ -1096,7 +1096,7 @@ class DeterministicRiskDecision(BaseModel):
     cumulative_position_notional_usd: Decimal = Field(ge=Decimal("0"))
     requested_leverage: int = Field(ge=1, le=125)
     limits: PairRiskLimit
-    reasons: List[str] = Field(default_factory=list)
+    reasons: list[str] = Field(default_factory=list)
     instant_price_deviation: Decimal | None = Field(
         default=None,
         ge=Decimal("0"),
@@ -1211,7 +1211,7 @@ class VenuePerformanceSummary(BaseModel):
 class TestnetVenuePerformanceComparison(BaseModel):
     """Paired Aster/Hyperliquid performance over shared executed signals."""
 
-    matched_signal_keys: List[str]
+    matched_signal_keys: list[str]
     aster: VenuePerformanceSummary
     hyperliquid: VenuePerformanceSummary
     higher_net_pnl_exchange: ExchangeId | None = None
@@ -1247,7 +1247,7 @@ class PairBlacklistDecision(BaseModel):
         ge=Decimal("0"),
         le=Decimal("1"),
     )
-    reasons: List[str] = Field(default_factory=list)
+    reasons: list[str] = Field(default_factory=list)
     policy_version: str
     computed_at: datetime
 
@@ -1275,7 +1275,7 @@ class PositionLifecycleEvent(BaseModel):
     ]
     realized_pnl_quote: Decimal | None = None
     occurred_at: datetime
-    source_telegram_message_ids: List[str] = Field(default_factory=list)
+    source_telegram_message_ids: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_venue(self) -> Self:
@@ -1288,11 +1288,11 @@ class ApprovedExecutionRequest(BaseModel):
     sizing: PositionSizingDecision
     confidence: ConfidenceDecision
     lifecycle_strategy: PositionLifecycleStrategy
-    risk_decisions: List[DeterministicRiskDecision] = Field(min_length=1)
+    risk_decisions: list[DeterministicRiskDecision] = Field(min_length=1)
     idempotency_key: str
     source_telegram_message_id: str | None = None
-    parent_message_ids: List[str] = Field(default_factory=list)
-    trade_cursor_ids: List[str] = Field(default_factory=list)
+    parent_message_ids: list[str] = Field(default_factory=list)
+    trade_cursor_ids: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_execution_approval(self) -> Self:
@@ -1352,15 +1352,15 @@ class DecisionRecord(BaseModel):
     channel_id: str
     telegram_message_id: str
     prompt_context: TelegramPromptContext | None = None
-    serial_rag_examples: List[SerialRagExample] = Field(default_factory=list)
+    serial_rag_examples: list[SerialRagExample] = Field(default_factory=list)
     candidate_set: QwenStrategyCandidateSet | None = None
     ministral_review_set: MinistralStrategyReviewSet | None = None
     market_snapshots: dict[ExchangeId, MarketExecutionSnapshot] = Field(
         default_factory=dict
     )
-    trace_steps: List[str] = Field(default_factory=list)
+    trace_steps: list[str] = Field(default_factory=list)
     approved_execution_request: ApprovedExecutionRequest | None = None
-    rejection_reasons: List[str] = Field(default_factory=list)
+    rejection_reasons: list[str] = Field(default_factory=list)
     recorded_at: datetime
 
 

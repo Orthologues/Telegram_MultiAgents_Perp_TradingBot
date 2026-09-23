@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import List
 
 from pydantic import BaseModel, Field
 
@@ -25,7 +24,7 @@ class SerialRagTool(TradingBotTool):
     agent_accessible: bool = True
     profiles_root: Path
 
-    def _run(self, owner_id: OwnerId | str, limit: int = 10) -> List[dict]:
+    def _run(self, owner_id: OwnerId | str, limit: int = 10) -> list[dict]:
         owner = OwnerId(owner_id)
         profile_path = self.profiles_root / owner.value / "shared_style.json"
         profile = OwnerRagProfile.model_validate(

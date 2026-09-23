@@ -20,7 +20,6 @@ import asyncio
 import json
 import os
 from pathlib import Path
-from typing import List
 
 from pydantic import BaseModel, Field
 
@@ -61,8 +60,8 @@ class PreliminaryRunInput(BaseModel):
 
     message: TelegramMessageEnvelope
     prompt_context: TelegramPromptContext
-    serial_rag_examples: List[SerialRagExample] = Field(default_factory=list)
-    active_trade_cursors: List[TradeThreadCursor] = Field(default_factory=list)
+    serial_rag_examples: list[SerialRagExample] = Field(default_factory=list)
+    active_trade_cursors: list[TradeThreadCursor] = Field(default_factory=list)
     market_snapshots: dict[ExchangeId, ExecutionLiquiditySnapshot]
 
 

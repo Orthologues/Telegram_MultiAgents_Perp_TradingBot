@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from decimal import Decimal
-from typing import List, Protocol  # noqa: UP035
+from typing import Protocol
 
 from crewai_app.domain.contracts.schemas import (
     ApprovedExecutionRequest,
@@ -27,7 +27,7 @@ class ParentContextLoader(Protocol):
 
 
 class CursorContextLoader(Protocol):
-    async def load(self, message: TelegramMessageEnvelope) -> List[TradeThreadCursor]: ...
+    async def load(self, message: TelegramMessageEnvelope) -> list[TradeThreadCursor]: ...
 
 
 class MarketSnapshotLoader(Protocol):

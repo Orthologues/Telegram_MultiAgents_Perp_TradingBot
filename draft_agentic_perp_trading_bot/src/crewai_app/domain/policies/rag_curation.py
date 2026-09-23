@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import List  # noqa: UP035
 
 from crewai_app.domain.contracts.schemas import (
     QwenRagLabellingRecord,
@@ -79,7 +78,7 @@ class RagCurationPolicy:
 
 def validated_serial_rag_examples(
     examples: Iterable[SerialRagExample],
-) -> List[SerialRagExample]:
+) -> list[SerialRagExample]:
     """Return only examples carrying explicit human validation metadata."""
 
     return [example for example in examples if example.validation is not None]

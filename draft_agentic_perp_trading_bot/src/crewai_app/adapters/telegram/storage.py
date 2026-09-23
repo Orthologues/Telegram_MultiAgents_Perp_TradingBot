@@ -8,7 +8,7 @@ File mappings:
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from typing import List, Protocol  # noqa: UP035
+from typing import Protocol
 
 from crewai_app.domain.contracts.schemas import (
     TelegramIngestionRecord,
@@ -43,7 +43,7 @@ class InMemoryMessageMetadataRepository(DynamoDBMessageMetadataRepository):
     """Test adapter; production code should persist records in DynamoDB."""
 
     def __init__(self) -> None:
-        self.records: List[TelegramIngestionRecord] = []
+        self.records: list[TelegramIngestionRecord] = []
 
     async def put(self, record: TelegramIngestionRecord) -> None:
         self.records.append(record)
