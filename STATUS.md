@@ -3,7 +3,7 @@
 Maintenance rule: **OVERWRITE** this file on every update. It is the current
 state, not a development log. The log is `HISTORY.md`.
 
-Last updated: 2026-09-23
+Last updated: 2026-09-24
 
 ## Phase
 
@@ -46,6 +46,17 @@ Telethon image hydration and authentic serial RAG examples.
 - Aster uses the V1 REST/HMAC boundary; Hyperliquid remains behind its approved
   upstream boundary. Both remain testnet-first, with Lambda order submission
   guarded and not production-complete.
+- Aster and Hyperliquid MCP configuration defaults, canonical and legacy schema
+  fields, adapter defaults, policy method parameters, and the test helper remain
+  `ExchangeNetwork.TESTNET`. All 34 default declarations now carry a nearby
+  `TODO` marker to switch to `ExchangeNetwork.MAINNET` only after testing and
+  deployment are complete.
+- New-cycle initiation now has a deterministic per-venue funding-rate filter.
+  The default `baseline_binance_value` is `0.125` and the strict maximum is
+  `10` times that baseline, or `1.25` (125% annualized). Rates at the boundary
+  pass; either sign above it rejects the entire new cycle. Existing-cycle
+  intents bypass this filter. Production MCP snapshots must still supply the
+  signed live rate.
 - Each owner QWEN run produces five strategy candidates. Confidence selects the
   lifecycle tier; continuations inherit it unless a reviewed update advances
   the revision. All five tiers remain available for performance evaluation,
@@ -66,9 +77,9 @@ Telethon image hydration and authentic serial RAG examples.
   from their local `Protocol` contracts. Shared Flow interfaces live in
   `flows/interfaces.py`, and `TradeCursorResolver` is defined with the cursor
   lifecycle contract so reviewers can see each implementation boundary.
-- The protocol-module and export-only-module restructuring is staged and has
-  passed Ruff, source compilation, runtime package-export checks,
-  stale-reference checks, and staged whitespace checks.
+- The protocol-module and export-only-module restructuring is committed as
+  `da86f1a` and passed Ruff, source compilation, runtime package-export checks,
+  stale-reference checks, and whitespace checks.
 
 ## Current Task Series
 
@@ -80,22 +91,19 @@ complete through `## Agentic Deduplication`; the next commit will resume at
 
 ## Verification
 
-- The deferred-labelling contracts, compatibility APIs, and schema checks pass
-  their focused suites (`13 passed` total), plus targeted Ruff, compilation,
-  and whitespace checks.
-- The explicit-protocol-inheritance refactor passes targeted Ruff,
-  compilation, and whitespace checks; runtime imports still require the
-  project dependencies, including `httpx`.
-- The `interfaces.py` and package `__init__.py` consolidation passes targeted
-  Ruff, compilation, runtime export checks, stale-reference checks, and
+- The complete deterministic and Flow suite passes (`145 passed`), with `15`
+  third-party deprecation warnings and no test failures.
+- The funding-rate policy and CrewAI application files pass their focused
+  policy, boundary, rejection, persistence, and successful-execution checks
+  (`27 passed`).
+- Project-wide Ruff checks and compilation of `src/` and `tests/` pass.
+- The Aster and Hyperliquid MCP server Ruff and `py_compile` checks pass after
+  the deferred-mainnet TODO annotations.
+- The complete default-network annotation sweep passes Ruff, compilation, and
   whitespace validation.
-- The earlier private-channel routing suite passed (`17 passed`); it was not
-  rerun for this labelling change.
-- The previous wider migration baseline was `123 passed, 4 deselected`; it was
-  not rerun for this documentation and route cleanup.
-- The full suite is not certified: CrewAI 1.15.17 Flow integration can stall
-  in the installed Python 3.11 runtime's executor/event shutdown path. This is
-  an environment/runtime limitation, not evidence of full Flow correctness.
+- The full-suite result validates the local scaffold only; production MCP
+  funding data, AWS integrations, and guarded testnet acceptance remain
+  incomplete.
 
 ## Next Actions
 
@@ -128,8 +136,9 @@ complete through `## Agentic Deduplication`; the next commit will resume at
   CrewAI implementation.
 - Rebuild owner reply-tree indexes after worker restarts and add production
   cursor/receipt repositories.
-- Complete typed Aster/Hyperliquid market snapshots, observability, and guarded
-  testnet acceptance before any authorized mainnet enablement.
+- Complete typed Aster/Hyperliquid market snapshots, including live signed
+  annualized funding rates, observability, and guarded testnet acceptance
+  before any authorized mainnet enablement.
 
 ## Document Map
 

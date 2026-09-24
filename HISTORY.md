@@ -324,7 +324,7 @@ The newly created adapter repository file
 `draft_agentic_perp_trading_bot/src/crewai_app/adapters/aws/persistence/message_labelling.py`
 requires explicit awareness during subsequent human review.
 
-### 2026-09-22 — pending: made protocol inheritance explicit across `crewai_app`
+### 2026-09-22 — `fc0b9b6`: made protocol inheritance explicit across `crewai_app`
 
 Applied the explicit-inheritance rule to concrete Telegram, persistence,
 cursor, Flow, QWEN, Ministral, and Aster implementations. Added shared Flow
@@ -333,7 +333,7 @@ cursor lifecycle boundary so interface ownership is visible to reviewers.
 Preserved marker classes and protocols without concrete implementations. The
 refactor passed targeted Ruff, compilation, and whitespace checks.
 
-### 2026-09-23 — `pending`: organized protocol and export-only modules
+### 2026-09-23 — `da86f1a`: organized protocol and export-only modules
 
 Renamed pure `Protocol` declaration modules to capability-specific
 `interfaces.py` paths and added package `__init__.py` re-export surfaces.
@@ -343,3 +343,33 @@ preserved the public package imports and retained `frameworkless_app`
 compatibility path. Updated canonical and test imports, including the retained
 `frameworkless_app` Telegram compatibility import. Ruff, compilation, runtime
 package-export, stale-reference, and whitespace checks pass.
+
+### 2026-09-24 — `pending`: added new-cycle funding-rate filtering
+
+Added a deterministic per-venue funding-rate decision and required signed
+`annualized_funding_rate_fraction` values in execution snapshots. New
+`IntentType.NEW_ORDER` cycles are rejected when any target venue's absolute
+annualized rate is strictly greater than
+`maximum_baseline_multiplier * baseline_binance_value`; the defaults are `10`
+and `0.125`, producing a `1.25` (125%) threshold. Existing-cycle intents remain
+eligible. The canonical Flow persists the decisions and precise rejection
+reason together with the market observation timestamp. The full suite passes
+(`145 passed`), Ruff and compilation pass, and a duplicate `persist_decision`
+trace append exposed by the checks was removed.
+
+### 2026-09-24 — `pending`: documented deferred MCP mainnet switching
+
+Replaced the completed `CHANGELOG` instruction in the Aster MCP server with
+explicit `TODO` comments for the Aster and Hyperliquid `network` defaults and
+their `ASTER_NETWORK` and `HYPERLIQUID_NETWORK` fallbacks. The comments defer
+switching from `ExchangeNetwork.TESTNET` to `ExchangeNetwork.MAINNET` until
+testing and deployment are complete. Both MCP servers pass Ruff and
+`py_compile` checks.
+
+### 2026-09-24 — `pending`: annotated all deferred-mainnet network defaults
+
+Extended the deferred-mainnet `TODO` annotations from the MCP server configs to
+all 34 defaulted `network` and `execution_network` declarations in canonical
+and legacy contracts, exchange gateways, profile helpers, deterministic policy
+parameters, and the venue-comparison test helper. Each remains
+`ExchangeNetwork.TESTNET` until testing and deployment are complete.

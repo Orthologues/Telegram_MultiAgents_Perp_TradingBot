@@ -103,8 +103,9 @@ source of truth when responsibilities move.
   its recommended size and leverage. Parent-linked updates inherit that policy;
   only an explicit `strategy_tier_hint` whose target candidate passes Ministral
   review may increment its revision. Deterministic risk separately enforces
-  pair blacklisting, instant-order price deviation, leverage, and cumulative
-  owner/pair position-value limits. QWEN must leave an omitted stop-loss unset.
+  pair blacklisting, new-cycle annualized-funding limits, instant-order price
+  deviation, leverage, and cumulative owner/pair position-value limits. QWEN
+  must leave an omitted stop-loss unset.
 
 ## Agent API Interfaces
 
@@ -145,11 +146,26 @@ may call an exchange; approved execution remains behind the MCP gateway.
   flagged result after schema validation and does not wait for a person to
   label it.
 - Keep exchange-specific behavior behind MCP; agents must not call exchanges.
+- Require each venue market snapshot to provide the signed
+  `annualized_funding_rate_fraction`. For `IntentType.NEW_ORDER`, reject the
+  entire new cycle when its absolute value is strictly greater than
+  `maximum_baseline_multiplier * baseline_binance_value`; existing-cycle
+  updates do not apply this filter. Persist the per-venue deterministic
+  decision and never permit an agent or confidence score to override it.
+- Every defaulted `network` or `execution_network` declaration set to
+  `ExchangeNetwork.TESTNET` must carry a nearby `# TODO` comment stating that
+  it may switch to `ExchangeNetwork.MAINNET` only after testing and deployment
+  are complete. Apply this to method parameters, schema fields, adapter
+  defaults, and retained legacy comparison code.
 - Default both venues to testnet. Keep both API credentials inside Secrets
   Manager and Lambda; use the canonical Aster V1 REST/HMAC and Hyperliquid
-  upstream boundaries for signing and submission.
+  upstream boundaries for signing and submission. The default value of
+  `baseline_binance_value` is `0.125` (12.5% annualized), and the default
+  value of `maximum_baseline_multiplier` is `10`; together they produce a
+  strict maximum absolute annualized funding rate of `1.25` (125%).
 - Preserve owner, channel, Telegram message ID, timestamps, parent IDs, media
-  hashes, deduplication key, model ID, confidence, and strategy tier.
+  hashes, deduplication key, model ID, confidence, strategy tier, and the
+  funding-rate filter inputs and decision.
 
 ## Repository Rules
 

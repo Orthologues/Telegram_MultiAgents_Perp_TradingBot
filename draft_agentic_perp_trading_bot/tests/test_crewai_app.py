@@ -5,6 +5,7 @@ from decimal import Decimal
 import pytest
 
 from crewai import Process
+from pydantic import ValidationError
 
 from crewai_app.adapters.aws.persistence.decision_repository import (
     InMemoryDecisionRepository,
@@ -305,11 +306,20 @@ def _market_snapshot(exchange_id: ExchangeId) -> ExecutionLiquiditySnapshot:
             observed_at=NOW,
         ),
         reference_price=Decimal("100"),
+        annualized_funding_rate_fraction=Decimal("0.10"),
         order_book_depth_usd=Decimal("50000"),
         minimum_order_book_depth_usd=Decimal("10000"),
         expected_slippage_fraction=Decimal("0.0005"),
         maximum_expected_slippage_fraction=Decimal("0.001"),
     )
+
+
+def test_market_snapshot_requires_annualized_funding_rate() -> None:
+    payload = _market_snapshot(ExchangeId.ASTER).model_dump(mode="python")
+    payload.pop("annualized_funding_rate_fraction")
+
+    with pytest.raises(ValidationError, match="annualized_funding_rate_fraction"):
+        ExecutionLiquiditySnapshot.model_validate(payload)
 
 
 @pytest.mark.parametrize(
@@ -510,6 +520,67 @@ def test_telegram_signal_flow_rejects_insufficient_order_book_depth() -> None:
     assert flow.state.approved_execution_request is None
     assert flow.state.execution_intent_emitted is False
     assert flow.state.rejection_reasons == ["insufficient_order_book_depth"]
+    assert flow.state.decision_persisted is True
+
+
+def test_telegram_signal_flow_rejects_excessive_cycle_initiation_funding() -> None:
+    message = _message()
+    evaluation = _evaluation(message)
+    repository = InMemoryDecisionRepository()
+
+    class ParentLoader:
+        async def load(self, incoming):
+            return _prompt_context(incoming)
+
+    class EmptyLoader:
+        async def load(self, incoming):
+            return []
+
+    class Evaluator:
+        async def evaluate(self, incoming, context, examples, cursors):
+            return evaluation
+
+    class MarketLoader:
+        async def load(self, exchange_id, symbol, reference_price):
+            snapshot = _market_snapshot(exchange_id)
+            if exchange_id == ExchangeId.ASTER:
+                return snapshot.model_copy(
+                    update={
+                        "annualized_funding_rate_fraction": Decimal("-1.250001")
+                    }
+                )
+            return snapshot
+
+    flow = TelegramSignalFlow(
+        parent_context_loader=ParentLoader(),
+        cursor_context_loader=EmptyLoader(),
+        serial_rag_loader=EmptyLoader(),
+        signal_evaluator=Evaluator(),
+        market_snapshot_loader=MarketLoader(),
+        deterministic_decision_service=CompatibilityDeterministicDecisionService(),
+        decision_repository=repository,
+        execution_mode=ExecutionMode(testnet_enabled=True),
+    )
+
+    asyncio.run(
+        flow.kickoff_async(inputs={"message": message.model_dump(mode="json")})
+    )
+
+    assert flow.state.approved_execution_request is None
+    assert flow.state.execution_intent_emitted is False
+    assert flow.state.rejection_reasons == [
+        "annualized_funding_rate_exceeds_cycle_initiation_threshold"
+    ]
+    assert flow.state.funding_rate_filter_decisions[ExchangeId.ASTER].allowed is False
+    assert (
+        flow.state.funding_rate_filter_decisions[ExchangeId.HYPERLIQUID].allowed
+        is True
+    )
+    assert flow.state.decision_record is not None
+    assert (
+        flow.state.decision_record.funding_rate_filter_decisions
+        == flow.state.funding_rate_filter_decisions
+    )
     assert flow.state.decision_persisted is True
 
 

@@ -19,6 +19,8 @@ def _outcome(
     signal: str,
     exchange_id: ExchangeId,
     pnl: str,
+    # TODO: Switch the default `network` to `ExchangeNetwork.MAINNET` after
+    # testing and deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET,
 ) -> ClosedTradeOutcome:
     return ClosedTradeOutcome(

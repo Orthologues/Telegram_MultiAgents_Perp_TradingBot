@@ -41,6 +41,8 @@ def _env_list(name: str, default: list[str] | None = None) -> list[str]:
 
 
 class AsterConfig(BaseModel):
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     enable_execution_handoff: bool = False
     allow_mainnet_handoff: bool = False
@@ -52,6 +54,9 @@ class AsterConfig(BaseModel):
     @classmethod
     def from_env(cls) -> AsterConfig:
         return cls(
+            # TODO: Switch the `ASTER_NETWORK` fallback to
+            # `ExchangeNetwork.MAINNET` after testing and deployment are
+            # complete.
             network=ExchangeNetwork(
                 os.getenv("ASTER_NETWORK", ExchangeNetwork.TESTNET.value).lower()
             ),

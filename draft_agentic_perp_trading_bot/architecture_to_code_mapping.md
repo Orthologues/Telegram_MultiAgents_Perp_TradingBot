@@ -22,7 +22,8 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 - CrewAI BaseTool wrappers for read-only context and Flow-only services:
   `src/crewai_app/tools/`
 - Stable Pydantic contracts: `src/crewai_app/domain/contracts/`
-- Confidence, omitted-stop-loss, execution gates, and position sizing:
+- Confidence, funding-rate initiation filtering, omitted-stop-loss, execution
+  gates, and position sizing:
   `src/crewai_app/domain/{policies,performance}/`
 - Parent-linked concurrent cursors:
   `src/crewai_app/domain/lifecycle/cursor.py`
@@ -64,8 +65,11 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 - Each QWEN run returns all five strategy tiers. Confidence selects the
   lifecycle policy; continuations inherit it unless an explicit reviewed update
   advances the revision.
-- Deterministic price, depth, slippage, blacklist, and lifecycle checks run
-  outside agents and before cursor mutation or execution intent persistence.
+- Deterministic funding-rate, price, depth, slippage, blacklist, and lifecycle
+  checks run outside agents and before cursor mutation or execution intent
+  persistence. The funding-rate check applies only to new-cycle initiation and
+  rejects the cycle when any target venue's absolute annualized rate is above
+  the configured Binance-baseline multiple.
 - Performance evaluates all five tiers, including counterfactual tiers, by
   owner, channel, asset group, and lifecycle stage. Venue comparison uses only
   deduplicated, fully closed positions with matching signal key and tier.

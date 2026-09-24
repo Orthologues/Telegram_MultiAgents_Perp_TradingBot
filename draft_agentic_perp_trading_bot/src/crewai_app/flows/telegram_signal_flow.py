@@ -36,6 +36,8 @@ from crewai_app.domain.contracts import (
     ExchangeId,
     ExchangeNetwork,
     FilterDecision,
+    FundingRateCycleFilterDecision,
+    IntentType,
     MarketAnalysisSnapshot,
     PairRiskLimit,
     QwenSignalHypothesis,
@@ -49,6 +51,9 @@ from crewai_app.domain.contracts import (
 )
 from crewai_app.domain.lifecycle.cursor import ConcurrentTradeCursorManager
 from crewai_app.domain.policies.stop_loss import MinistralStopLossPolicy
+from crewai_app.domain.policies.funding_rate import (
+    evaluate_funding_rate_cycle_filter,
+)
 from crewai_app.flows.interfaces import (
     CursorContextLoader,
     DecisionRepository,
@@ -260,11 +265,13 @@ class TelegramSignalFlow(Flow[TelegramSignalState]):
             self.state.active_trade_cursors,
         )
         requested: dict[ExchangeId, tuple[str, Decimal]] = {}
+        selected_intent_type: IntentType | None = None
         if selected_tier is not None:
             review = reviews.reviews[selected_tier]
             intent = review.canonical_intent
             hypothesis = candidates.candidates[selected_tier]
             if review.status == "approved" and intent is not None and hypothesis.entries:
+                selected_intent_type = hypothesis.intent_type
                 requested = {
                     exchange_id: (intent.symbol.upper(), hypothesis.entries[0])
                     for exchange_id in intent.target_exchanges
@@ -279,6 +286,35 @@ class TelegramSignalFlow(Flow[TelegramSignalState]):
             for exchange_id, (symbol, reference_price) in requested.items()
         }
         self.state.market_snapshots = snapshots
+        self.state.rejection_reasons.extend(
+            reason
+            for snapshot in snapshots.values()
+            for reason in snapshot.rejection_reasons
+        )
+        funding_rate_decisions: dict[
+            ExchangeId,
+            FundingRateCycleFilterDecision,
+        ] = {}
+        if selected_intent_type is not None:
+            funding_rate_decisions = {
+                exchange_id: evaluate_funding_rate_cycle_filter(
+                    exchange_id=exchange_id,
+                    network=snapshot.market.network,
+                    symbol=snapshot.market.symbol,
+                    intent_type=selected_intent_type,
+                    observed_at=snapshot.market.observed_at,
+                    annualized_funding_rate_fraction=(
+                        snapshot.annualized_funding_rate_fraction
+                    ),
+                )
+                for exchange_id, snapshot in snapshots.items()
+            }
+        self.state.funding_rate_filter_decisions = funding_rate_decisions
+        self.state.rejection_reasons.extend(
+            reason
+            for decision in funding_rate_decisions.values()
+            for reason in decision.reasons
+        )
         self.state.trace_steps.append("load_market_snapshot")
         return snapshots
 
@@ -330,6 +366,9 @@ class TelegramSignalFlow(Flow[TelegramSignalState]):
             candidate_set=self.state.candidate_set,
             ministral_review_set=self.state.ministral_review_set,
             market_snapshots=dict(self.state.market_snapshots),
+            funding_rate_filter_decisions=dict(
+                self.state.funding_rate_filter_decisions
+            ),
             trace_steps=list(self.state.trace_steps),
             approved_execution_request=request,
             rejection_reasons=list(self.state.rejection_reasons),
@@ -338,7 +377,6 @@ class TelegramSignalFlow(Flow[TelegramSignalState]):
         await self.decision_repository.save(decision)
         self.state.decision_record = decision
         self.state.decision_persisted = True
-        self.state.trace_steps.append("persist_decision")
         return decision
 
     @listen(persist_decision)

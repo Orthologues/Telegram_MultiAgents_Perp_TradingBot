@@ -84,6 +84,8 @@ _PROFILES = {
 
 def get_exchange_profile(
     exchange_id: ExchangeId,
+    # TODO: Switch the default `network` to `ExchangeNetwork.MAINNET` after
+    # testing and deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET,
 ) -> ExchangeEndpointProfile:
     profile = _PROFILES[(exchange_id, network)]

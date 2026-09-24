@@ -41,6 +41,8 @@ def _env_list(name: str, default: list[str] | None = None) -> list[str]:
 
 
 class HyperliquidConfig(BaseModel):
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     account_address: str | None = None
     enable_execution_handoff: bool = False
@@ -53,6 +55,9 @@ class HyperliquidConfig(BaseModel):
     @classmethod
     def from_env(cls) -> HyperliquidConfig:
         return cls(
+            # TODO: Switch the `HYPERLIQUID_NETWORK` fallback to
+            # `ExchangeNetwork.MAINNET` after testing and deployment are
+            # complete.
             network=ExchangeNetwork(
                 os.getenv(
                     "HYPERLIQUID_NETWORK",

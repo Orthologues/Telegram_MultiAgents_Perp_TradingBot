@@ -38,6 +38,8 @@ def evaluate_deterministic_risk(
     exchange_id: ExchangeId,
     symbol: str,
     limits: PairRiskLimit | BaseModel | Mapping[str, object],
+    # TODO: Switch the default `network` to `ExchangeNetwork.MAINNET` after
+    # testing and deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET,
     existing_position_notional_usd: Decimal = Decimal("0"),
     pair_blacklisted: bool = False,
@@ -183,6 +185,8 @@ class PairBlacklistPolicy:
         self,
         *,
         exchange_id: ExchangeId,
+        # TODO: Switch the default `network` to `ExchangeNetwork.MAINNET` after
+        # testing and deployment are complete.
         network: ExchangeNetwork = ExchangeNetwork.TESTNET,
         symbol: str,
         outcomes: list[ClosedTradeOutcome],

@@ -16,6 +16,12 @@ from crewai_app.domain.policies.execution_gate import (
     normalize_symbol_family,
     validate_market_snapshot,
 )
+from crewai_app.domain.policies.funding_rate import (
+    DEFAULT_BASELINE_BINANCE_VALUE,
+    DEFAULT_MAXIMUM_BASELINE_MULTIPLIER,
+    FUNDING_RATE_FILTER_POLICY_VERSION,
+    evaluate_funding_rate_cycle_filter,
+)
 from crewai_app.domain.policies.stop_loss import MinistralStopLossPolicy
 from crewai_app.domain.policies.rag_curation import (
     RagCurationPolicy,
@@ -23,11 +29,15 @@ from crewai_app.domain.policies.rag_curation import (
 )
 
 __all__ = [
+    "DEFAULT_BASELINE_BINANCE_VALUE",
+    "DEFAULT_MAXIMUM_BASELINE_MULTIPLIER",
+    "FUNDING_RATE_FILTER_POLICY_VERSION",
     "MinistralStopLossPolicy",
     "PairBlacklistPolicy",
     "RagCurationPolicy",
     "evaluate_confidence",
     "evaluate_deterministic_risk",
+    "evaluate_funding_rate_cycle_filter",
     "instant_price_deviation_threshold",
     "normalize_symbol_family",
     "validate_market_snapshot",

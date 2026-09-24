@@ -345,6 +345,8 @@ class ExchangeTradeState(BaseModel):
     """MCP-observed live orders and positions for one exchange trading pair."""
 
     exchange_id: ExchangeId
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     settlement_asset: SettlementAsset
     symbol: str = Field(min_length=1)
@@ -408,6 +410,8 @@ class TradeThreadCursor(BaseModel):
     origin_message_id: str = Field(pattern=r"^[0-9]+$")
     message_ids: list[str] = Field(min_length=1)
     exchange_id: ExchangeId
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     settlement_asset: SettlementAsset
     symbol: str = Field(min_length=1)
@@ -671,6 +675,8 @@ class MarketAnalysisSnapshot(BaseModel):
     """Typed Aster/Hyperliquid MCP input for Ministral validation."""
 
     exchange_id: ExchangeId
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     settlement_asset: SettlementAsset
     symbol: str = Field(min_length=1)
@@ -709,10 +715,18 @@ class MarketExecutionSnapshot(BaseModel):
 
     market: MarketAnalysisSnapshot
     reference_price: Decimal = Field(gt=Decimal("0"))
+    annualized_funding_rate_fraction: Decimal
     order_book_depth_usd: Decimal = Field(ge=Decimal("0"))
     minimum_order_book_depth_usd: Decimal = Field(gt=Decimal("0"))
     expected_slippage_fraction: Decimal = Field(ge=Decimal("0"))
     maximum_expected_slippage_fraction: Decimal = Field(ge=Decimal("0"))
+
+    @field_validator("annualized_funding_rate_fraction")
+    @classmethod
+    def validate_annualized_funding_rate_fraction(cls, value: Decimal) -> Decimal:
+        if not value.is_finite():
+            raise ValueError("annualized_funding_rate_fraction must be finite")
+        return value
 
     @property
     def rejection_reasons(self) -> list[str]:
@@ -722,6 +736,62 @@ class MarketExecutionSnapshot(BaseModel):
         if self.expected_slippage_fraction > self.maximum_expected_slippage_fraction:
             reasons.append("excessive_expected_slippage")
         return reasons
+
+
+class FundingRateCycleFilterDecision(BaseModel):
+    """Auditable funding-rate gate for one venue and trading intent."""
+
+    exchange_id: ExchangeId
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
+    network: ExchangeNetwork = ExchangeNetwork.TESTNET
+    symbol: str = Field(min_length=1)
+    intent_type: IntentType
+    observed_at: datetime
+    applied: bool
+    allowed: bool
+    annualized_funding_rate_fraction: Decimal
+    baseline_binance_value: Decimal = Field(gt=Decimal("0"))
+    maximum_baseline_multiplier: Decimal = Field(gt=Decimal("0"))
+    maximum_absolute_annualized_funding_rate_fraction: Decimal = Field(
+        gt=Decimal("0")
+    )
+    reasons: list[str] = Field(default_factory=list)
+    policy_version: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_decision(self) -> Self:
+        decimal_fields = {
+            "annualized_funding_rate_fraction": (
+                self.annualized_funding_rate_fraction
+            ),
+            "baseline_binance_value": self.baseline_binance_value,
+            "maximum_baseline_multiplier": self.maximum_baseline_multiplier,
+            "maximum_absolute_annualized_funding_rate_fraction": (
+                self.maximum_absolute_annualized_funding_rate_fraction
+            ),
+        }
+        if any(not value.is_finite() for value in decimal_fields.values()):
+            raise ValueError("funding-rate decision decimal fields must be finite")
+        expected_maximum = (
+            self.baseline_binance_value * self.maximum_baseline_multiplier
+        )
+        if self.maximum_absolute_annualized_funding_rate_fraction != expected_maximum:
+            raise ValueError("maximum annualized funding rate must equal the baseline multiple")
+        if self.applied != (self.intent_type == IntentType.NEW_ORDER):
+            raise ValueError("funding-rate filtering applies only to new orders")
+        exceeds_threshold = (
+            self.applied
+            and abs(self.annualized_funding_rate_fraction) > expected_maximum
+        )
+        expected_reasons = (
+            ["annualized_funding_rate_exceeds_cycle_initiation_threshold"]
+            if exceeds_threshold
+            else []
+        )
+        if self.allowed == exceeds_threshold or self.reasons != expected_reasons:
+            raise ValueError("funding-rate decision must agree with the policy threshold")
+        return self
 
 
 class OmittedStopLossDecision(BaseModel):
@@ -807,6 +877,8 @@ class TakeProfitFillEvent(BaseModel):
 
     event_id: str = Field(min_length=1)
     exchange_id: ExchangeId
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     settlement_asset: SettlementAsset
     symbol: str = Field(min_length=1)
@@ -862,6 +934,8 @@ class TakeProfitProtectionDecision(BaseModel):
 
     event_id: str
     exchange_id: ExchangeId
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     settlement_asset: SettlementAsset
     symbol: str
@@ -891,6 +965,8 @@ class CanonicalTradeIntent(BaseModel):
     stop_loss: Decimal | None = None
     take_profit: list[Decimal] = Field(default_factory=list)
     target_exchanges: list[ExchangeId]
+    # TODO: Switch `execution_network` to `ExchangeNetwork.MAINNET` after
+    # testing and deployment are complete.
     execution_network: ExchangeNetwork = ExchangeNetwork.TESTNET
     signal_dedup_key: str | None = None
 
@@ -1078,6 +1154,8 @@ class PairRiskLimit(BaseModel):
 
     owner_id: OwnerId
     exchange_id: ExchangeId
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     symbol: str = Field(min_length=1)
     maximum_cumulative_position_notional_usd: Decimal = Field(gt=Decimal("0"))
@@ -1089,6 +1167,8 @@ class DeterministicRiskDecision(BaseModel):
     approved: bool
     owner_id: OwnerId
     exchange_id: ExchangeId
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     symbol: str
     requested_position_notional_usd: Decimal = Field(ge=Decimal("0"))
@@ -1111,6 +1191,8 @@ class ClosedTradeOutcome(BaseModel):
     """Net closed-trade result used by deterministic pair blacklisting."""
 
     exchange_id: ExchangeId
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     settlement_asset: SettlementAsset
     symbol: str = Field(min_length=1)
@@ -1234,6 +1316,8 @@ class TestnetVenuePerformanceComparison(BaseModel):
 
 class PairBlacklistDecision(BaseModel):
     exchange_id: ExchangeId
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     symbol: str
     blacklisted: bool
@@ -1260,6 +1344,8 @@ class PositionLifecycleEvent(BaseModel):
     channel_id: str
     strategy_tier: StrategyTier
     exchange_id: ExchangeId
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     settlement_asset: SettlementAsset
     symbol: str = Field(min_length=1)
@@ -1358,6 +1444,10 @@ class DecisionRecord(BaseModel):
     market_snapshots: dict[ExchangeId, MarketExecutionSnapshot] = Field(
         default_factory=dict
     )
+    funding_rate_filter_decisions: dict[
+        ExchangeId,
+        FundingRateCycleFilterDecision,
+    ] = Field(default_factory=dict)
     trace_steps: list[str] = Field(default_factory=list)
     approved_execution_request: ApprovedExecutionRequest | None = None
     rejection_reasons: list[str] = Field(default_factory=list)

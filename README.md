@@ -34,7 +34,8 @@ incoming trading signal, primarily for continuations of an existing perpetual
 position lifecycle.
 Ministral validates them; confidence selects and persists one position-lifecycle
 strategy, including recommended size and leverage, while deterministic risk
-enforces pair, price, leverage, and cumulative position-value limits.
+enforces pair, new-cycle annualized-funding, price, leverage, and cumulative
+position-value limits.
 Paired testnet P/L summaries compare only identical, fully closed signal-tier
 outcomes executed on both Aster-USDT and Hyperliquid-USDC. The canonical Aster
 boundary uses V1 REST/HMAC; guarded local MCP proxies remain non-executing and

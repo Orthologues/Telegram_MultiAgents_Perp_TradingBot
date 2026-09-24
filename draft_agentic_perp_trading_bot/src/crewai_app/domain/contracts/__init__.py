@@ -32,6 +32,7 @@ from crewai_app.domain.contracts.definitions import (
     DeduplicationScope,
     ExchangeTradeState,
     FilterDecision,
+    FundingRateCycleFilterDecision,
     IngestionTransport,
     IntentType,
     LifecycleStrategySource,

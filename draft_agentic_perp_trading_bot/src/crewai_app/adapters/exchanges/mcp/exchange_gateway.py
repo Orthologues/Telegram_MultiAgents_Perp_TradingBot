@@ -68,6 +68,8 @@ class ExchangeGateway(Protocol):
 class AsterGateway:
     """Aster USDT-perpetual adapter marker; testnet is the default."""
 
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     exchange_id: ExchangeId = ExchangeId.ASTER
     settlement_asset: SettlementAsset = SettlementAsset.USDT
@@ -84,6 +86,8 @@ __all__ = ["AsterGateway", "ExchangeGateway", "HyperliquidGateway"]
 class HyperliquidGateway:
     """Hyperliquid USDC-perpetual adapter marker; testnet is the default."""
 
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     exchange_id: ExchangeId = ExchangeId.HYPERLIQUID
     settlement_asset: SettlementAsset = SettlementAsset.USDC

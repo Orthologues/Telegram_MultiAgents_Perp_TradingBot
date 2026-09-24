@@ -13,6 +13,7 @@ from crewai_app.domain.contracts import (
     ExchangeNetwork,
     ExchangeTradeState,
     DecisionRecord,
+    FundingRateCycleFilterDecision,
     MarketExecutionSnapshot,
     MinistralStrategyReviewSet,
     OwnerId,
@@ -55,6 +56,10 @@ class TelegramSignalState(FlowState):
     market_snapshots: dict[ExchangeId, ExecutionLiquiditySnapshot] = Field(
         default_factory=dict
     )
+    funding_rate_filter_decisions: dict[
+        ExchangeId,
+        FundingRateCycleFilterDecision,
+    ] = Field(default_factory=dict)
     approved_execution_request: ApprovedExecutionRequest | None = None
     rejection_reasons: list[str] = Field(default_factory=list)
     decision_record: DecisionRecord | None = None

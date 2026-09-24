@@ -27,6 +27,9 @@ from crewai_app.domain.policies.execution_gate import (
     evaluate_deterministic_risk,
     validate_market_snapshot,
 )
+from crewai_app.domain.policies.funding_rate import (
+    evaluate_funding_rate_cycle_filter,
+)
 from crewai_app.domain.contracts import (
     ApprovedExecutionRequest,
     CanonicalTradeIntent,
@@ -185,6 +188,7 @@ async def process_message(
                 network=intent.execution_network,
                 symbol=intent.symbol,
                 reference_price=expected_reference_price,
+                intent_type=hypothesis.intent_type,
             )
             for exchange_id in intent.target_exchanges
         ):
@@ -342,6 +346,7 @@ def _snapshot_rejection_reasons(
     network: ExchangeNetwork,
     symbol: str,
     reference_price: Decimal,
+    intent_type: IntentType,
 ) -> list[str]:
     reasons = list(snapshot.rejection_reasons)
     if snapshot.market.exchange_id != exchange_id:
@@ -358,6 +363,17 @@ def _snapshot_rejection_reasons(
         )
     except ValueError as exc:
         reasons.append(str(exc))
+    funding_rate_decision = evaluate_funding_rate_cycle_filter(
+        exchange_id=exchange_id,
+        network=network,
+        symbol=symbol,
+        intent_type=intent_type,
+        observed_at=snapshot.market.observed_at,
+        annualized_funding_rate_fraction=(
+            snapshot.annualized_funding_rate_fraction
+        ),
+    )
+    reasons.extend(funding_rate_decision.reasons)
     return reasons
 
 

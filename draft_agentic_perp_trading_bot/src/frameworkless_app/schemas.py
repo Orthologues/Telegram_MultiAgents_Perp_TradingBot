@@ -268,6 +268,8 @@ class ExchangeTradeState(BaseModel):
     """MCP-observed live orders and positions for one exchange trading pair."""
 
     exchange_id: ExchangeId
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     settlement_asset: SettlementAsset
     symbol: str = Field(min_length=1)
@@ -332,6 +334,8 @@ class TradeThreadCursor(BaseModel):
     origin_message_id: str = Field(pattern=r"^[0-9]+$")
     message_ids: list[str] = Field(min_length=1)
     exchange_id: ExchangeId
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     settlement_asset: SettlementAsset
     symbol: str = Field(min_length=1)
@@ -556,6 +560,8 @@ class MarketAnalysisSnapshot(BaseModel):
     """Typed Aster/Hyperliquid MCP input for Ministral validation."""
 
     exchange_id: ExchangeId
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     settlement_asset: SettlementAsset
     symbol: str = Field(min_length=1)
@@ -672,6 +678,8 @@ class TakeProfitFillEvent(BaseModel):
 
     event_id: str = Field(min_length=1)
     exchange_id: ExchangeId
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     settlement_asset: SettlementAsset
     symbol: str = Field(min_length=1)
@@ -727,6 +735,8 @@ class TakeProfitProtectionDecision(BaseModel):
 
     event_id: str
     exchange_id: ExchangeId
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     settlement_asset: SettlementAsset
     symbol: str
@@ -756,6 +766,8 @@ class CanonicalTradeIntent(BaseModel):
     stop_loss: Decimal | None = None
     take_profit: list[Decimal] = Field(default_factory=list)
     target_exchanges: list[ExchangeId]
+    # TODO: Switch `execution_network` to `ExchangeNetwork.MAINNET` after
+    # testing and deployment are complete.
     execution_network: ExchangeNetwork = ExchangeNetwork.TESTNET
     signal_dedup_key: str | None = None
 
@@ -824,6 +836,8 @@ class PairRiskLimit(BaseModel):
 
     owner_id: OwnerId
     exchange_id: ExchangeId
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     symbol: str = Field(min_length=1)
     maximum_cumulative_position_notional_usd: Decimal = Field(gt=Decimal("0"))
@@ -835,6 +849,8 @@ class DeterministicRiskDecision(BaseModel):
     approved: bool
     owner_id: OwnerId
     exchange_id: ExchangeId
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     symbol: str
     requested_position_notional_usd: Decimal = Field(ge=Decimal("0"))
@@ -857,6 +873,8 @@ class ClosedTradeOutcome(BaseModel):
     """Net closed-trade result used by deterministic pair blacklisting."""
 
     exchange_id: ExchangeId
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     settlement_asset: SettlementAsset
     symbol: str = Field(min_length=1)
@@ -937,6 +955,8 @@ class TestnetVenuePerformanceComparison(BaseModel):
 
 class PairBlacklistDecision(BaseModel):
     exchange_id: ExchangeId
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     symbol: str
     blacklisted: bool
@@ -963,6 +983,8 @@ class PositionLifecycleEvent(BaseModel):
     channel_id: str
     strategy_tier: StrategyTier
     exchange_id: ExchangeId
+    # TODO: Switch `network` to `ExchangeNetwork.MAINNET` after testing and
+    # deployment are complete.
     network: ExchangeNetwork = ExchangeNetwork.TESTNET
     settlement_asset: SettlementAsset
     symbol: str = Field(min_length=1)
