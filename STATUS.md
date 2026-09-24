@@ -55,8 +55,8 @@ Telethon image hydration and authentic serial RAG examples.
   The default `baseline_binance_value` is `0.125` and the strict maximum is
   `10` times that baseline, or `1.25` (125% annualized). Rates at the boundary
   pass; either sign above it rejects the entire new cycle. Existing-cycle
-  intents bypass this filter. Production MCP snapshots must still supply the
-  signed live rate.
+  intents bypass this filter. This policy and its integration are committed as
+  `3168989`. Production MCP snapshots must still supply the signed live rate.
 - Each owner QWEN run produces five strategy candidates. Confidence selects the
   lifecycle tier; continuations inherit it unless a reviewed update advances
   the revision. All five tiers remain available for performance evaluation,
@@ -71,8 +71,12 @@ Telethon image hydration and authentic serial RAG examples.
   observability, deployment, reliability, and acceptance-gate requirements;
   historical prompts and completed scaffold guidance were removed.
 - `AGENTS.md` now requires each commit to replace covered `pending` markers in
-  `HISTORY.md` with the last known commit ID; the latest deferred-labelling
-  record is finalized as `9f193149`.
+  `HISTORY.md` with the last known commit ID. The deferred-labelling record is
+  finalized as `9f193149`, and the funding-rate plus deferred-mainnet records
+  are finalized as `3168989`.
+- The empty untracked `draft_agentic_perp_trading_bot/tests/fixtures/`
+  directory was removed; replay fixture files remain a future action and no
+  fixture data was deleted.
 - Concrete implementations throughout `crewai_app` now explicitly inherit
   from their local `Protocol` contracts. Shared Flow interfaces live in
   `flows/interfaces.py`, and `TradeCursorResolver` is defined with the cursor
@@ -124,6 +128,12 @@ complete through `## Agentic Deduplication`; the next commit will resume at
 - Store each message ID and URL in JSON with its private S3 archive URI;
   preserve outcomes and redact unnecessary personal data.
 - Add replay fixtures and metrics for all five strategy tiers.
+
+### 3. Funding-Rate Threshold Backtesting
+
+- TODO: Use backtesting to compare the average ROI produced by different
+  `DEFAULT_MAXIMUM_BASELINE_MULTIPLIER` values at `draft_agentic_perp_trading_bot/src/crewai_app/domain/policies/funding_rate.py` and select the best-performing
+  default.
 
 ## Further Priorities
 

@@ -344,7 +344,7 @@ compatibility path. Updated canonical and test imports, including the retained
 `frameworkless_app` Telegram compatibility import. Ruff, compilation, runtime
 package-export, stale-reference, and whitespace checks pass.
 
-### 2026-09-24 — `pending`: added new-cycle funding-rate filtering
+### 2026-09-24 — `3168989`: added new-cycle funding-rate filtering
 
 Added a deterministic per-venue funding-rate decision and required signed
 `annualized_funding_rate_fraction` values in execution snapshots. New
@@ -357,7 +357,7 @@ reason together with the market observation timestamp. The full suite passes
 (`145 passed`), Ruff and compilation pass, and a duplicate `persist_decision`
 trace append exposed by the checks was removed.
 
-### 2026-09-24 — `pending`: documented deferred MCP mainnet switching
+### 2026-09-24 — `3168989`: documented deferred MCP mainnet switching
 
 Replaced the completed `CHANGELOG` instruction in the Aster MCP server with
 explicit `TODO` comments for the Aster and Hyperliquid `network` defaults and
@@ -366,7 +366,7 @@ switching from `ExchangeNetwork.TESTNET` to `ExchangeNetwork.MAINNET` until
 testing and deployment are complete. Both MCP servers pass Ruff and
 `py_compile` checks.
 
-### 2026-09-24 — `pending`: annotated all deferred-mainnet network defaults
+### 2026-09-24 — `3168989`: annotated all deferred-mainnet network defaults
 
 Extended the deferred-mainnet `TODO` annotations from the MCP server configs to
 all 34 defaulted `network` and `execution_network` declarations in canonical
