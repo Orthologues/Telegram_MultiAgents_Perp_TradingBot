@@ -83,7 +83,10 @@ with Flow-only wrappers under
 `draft_agentic_perp_trading_bot/src/crewai_app/tools/`. The later LangGraph
 implementation at `draft_agentic_perp_trading_bot/src/langgraph_app/` is a
 roadmap item, not a current runtime. Keep the architecture mapping as the
-source of truth when responsibilities move.
+source of truth when responsibilities move. When a refactor changes package,
+module, interface, or export-only naming, update
+`draft_agentic_perp_trading_bot/architecture_to_code_mapping.md` in the same
+documentation cycle and remove stale paths from the mapping.
 
 ## Agent Boundaries
 

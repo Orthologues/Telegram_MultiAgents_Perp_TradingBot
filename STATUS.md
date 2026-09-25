@@ -3,7 +3,7 @@
 Maintenance rule: **OVERWRITE** this file on every update. It is the current
 state, not a development log. The log is `HISTORY.md`.
 
-Last updated: 2026-09-24
+Last updated: 2026-09-25
 
 ## Phase
 
@@ -34,6 +34,10 @@ Telethon image hydration and authentic serial RAG examples.
   synonym, and position-reduction capabilities defined separately. Its pure
   protocol declarations follow the same `interfaces.py` and `__init__.py`
   package layout.
+- `architecture_to_code_mapping.md` now reflects the capability-specific
+  `interfaces.py` layout, shared `flows/interfaces.py`, split Telegram/AWS
+  persistence boundaries, and the implemented QWEN relation/deferred-labelling
+  Flow wiring.
 - Export-only canonical contract modules were consolidated into
   `domain/contracts/__init__.py`. Redundant `schemas.py`, `performance.py`,
   `telegram.py`, `trading.py`, and `skills_api/telegram_agent.py` modules were

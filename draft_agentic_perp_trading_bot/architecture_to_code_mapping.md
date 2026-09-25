@@ -11,17 +11,21 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 
 ## Canonical Runtime
 
-- CrewAI composition and Bedrock definitions:
+- CrewAI composition, Bedrock model settings, YAML configuration, and local
+  entrypoint:
   `src/crewai_app/{crew.py,main.py,config/}`
 - Signal evaluation Crew and application Flows:
   `src/crewai_app/crews/` and `src/crewai_app/flows/`
-- Canonical agent responsibility protocols:
-  `src/crewai_app/agent_interfaces/`
-- Legacy compatibility skill contracts only:
-  `src/crewai_app/skills_api/`
+- Canonical agent responsibility protocols, organized by capability:
+  `src/crewai_app/agent_interfaces/{qwen,ministral,telegram}/interfaces.py`
+- Shared Flow dependency protocols:
+  `src/crewai_app/flows/interfaces.py`
+- Legacy compatibility skill contracts and package re-exports:
+  `src/crewai_app/skills_api/{ministral_filter,omitted_stop_loss_inference,owner_qwen,qwen_agent_rag_loading}/`
 - CrewAI BaseTool wrappers for read-only context and Flow-only services:
   `src/crewai_app/tools/`
-- Stable Pydantic contracts: `src/crewai_app/domain/contracts/`
+- Stable Pydantic contracts and public package exports:
+  `src/crewai_app/domain/contracts/{definitions.py,execution.py,__init__.py}`
 - Confidence, funding-rate initiation filtering, omitted-stop-loss, execution
   gates, and position sizing:
   `src/crewai_app/domain/{policies,performance}/`
@@ -34,8 +38,10 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
   receipts: `src/crewai_app/adapters/telegram/`
 - Local deterministic loaders used by the scaffold:
   `src/crewai_app/adapters/local_harness.py`
-- S3, DynamoDB, ElastiCache, decision, and history boundaries:
-  `src/crewai_app/adapters/aws/persistence/`
+- AWS persistence, context-loader, decision, history, and deferred-labelling
+  boundaries: `src/crewai_app/adapters/aws/persistence/`
+- Telegram raw-media, metadata, receipt, and reply-tree persistence adapters:
+  `src/crewai_app/adapters/telegram/`
 - Deferred QWEN labelling queue and DynamoDB table adapter:
   `src/crewai_app/adapters/aws/persistence/message_labelling.py`
 - Aster and Hyperliquid MCP gateway contracts:
@@ -57,8 +63,9 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 - Input identity, delivered identity, and semantic trading-signal identity are
   separate. Failed publication must remain replayable.
 - QWEN message-relation reasoning is a separate typed capability for duplicate,
-  continuation, new-signal, or ambiguous outcomes; local Flow wiring is planned
-  and must not be confused with byte-level deduplication.
+  continuation, new-signal, or ambiguous outcomes. `TelegramSignalFlow` invokes
+  the evaluator and the deferred-labelling queue when configured; this must not
+  be confused with byte-level deduplication.
 - Relation outputs tagged `needs_human_labelling` are persisted asynchronously
   with their prompt context for offline labelling. They enter serial RAG only
   after label and provenance validation; ingestion never waits for a label.
@@ -78,9 +85,9 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 
 ## Compatibility and Planned Work
 
-- `src/frameworkless_app/` is retained as a legacy comparison path with only
-  the minimal compatibility boundary needed by the migration; it is not the
-  canonical runtime or a deletion target in this phase.
+- `src/frameworkless_app/` is retained as the legacy comparison implementation
+  and compatibility path; it is not the canonical runtime or a deletion target
+  in this phase.
 - `src/langgraph_app/` is reserved for the later LangGraph implementation.
 - SQS, Telethon image hydration, authenticated S3 serial-RAG retrieval,
   Phoenix/Grafana instrumentation, and Lambda order submission are planned or

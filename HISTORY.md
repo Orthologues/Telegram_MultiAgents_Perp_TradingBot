@@ -373,3 +373,12 @@ all 34 defaulted `network` and `execution_network` declarations in canonical
 and legacy contracts, exchange gateways, profile helpers, deterministic policy
 parameters, and the venue-comparison test helper. Each remains
 `ExchangeNetwork.TESTNET` until testing and deployment are complete.
+
+### 2026-09-25 — `pending`: refreshed the architecture-to-code mapping
+
+Updated `draft_agentic_perp_trading_bot/architecture_to_code_mapping.md` for the
+capability-specific `interfaces.py` layout, shared `flows/interfaces.py`,
+split Telegram/AWS persistence boundaries, and implemented QWEN relation and
+deferred-labelling Flow wiring. Clarified that `frameworkless_app` remains a
+legacy comparison implementation. Added an `AGENTS.md` rule requiring mapping
+updates whenever package, module, interface, or export-only naming changes.
