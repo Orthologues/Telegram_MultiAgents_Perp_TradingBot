@@ -2,26 +2,28 @@
 
 from pydantic import BaseModel, Field
 
-from crewai_app.domain.contracts import PerformanceMetricsSnapshot
+from crewai_app.domain.contracts import PerformanceMetricsSnapshot, StrategyTier
 from crewai_app.domain.policies.confidence import evaluate_confidence
 from crewai_app.tools._base import TradingBotTool
 
 
 class ConfidencePolicyInput(BaseModel):
     source_confidence: float = Field(ge=0.0, le=1.0)
+    selected_strategy_tier: StrategyTier
     quality_score: float | None = Field(default=None, ge=0.0, le=1.0)
     performance: PerformanceMetricsSnapshot | None = None
 
 
 class ConfidencePolicyTool(TradingBotTool):
     name: str = "apply_confidence_policy"
-    description: str = "Apply deterministic confidence selection outside agent reasoning."
+    description: str = "Score a Ministral-selected tier outside agent reasoning."
     args_schema: type[BaseModel] = ConfidencePolicyInput
     agent_accessible: bool = False
 
     def _run(
         self,
         source_confidence: float,
+        selected_strategy_tier: StrategyTier,
         quality_score: float | None = None,
         performance: PerformanceMetricsSnapshot | dict | None = None,
     ) -> dict:
@@ -32,6 +34,7 @@ class ConfidencePolicyTool(TradingBotTool):
         )
         return evaluate_confidence(
             source_confidence,
+            selected_strategy_tier=selected_strategy_tier,
             quality_score=quality_score,
             performance=snapshot,
         ).model_dump(mode="json")

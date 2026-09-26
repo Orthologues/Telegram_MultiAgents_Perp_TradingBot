@@ -49,7 +49,13 @@ def _limits(
 
 
 def test_confidence_exposes_all_five_strategy_tiers() -> None:
-    decisions = [evaluate_confidence(score) for score in (0.1, 0.3, 0.5, 0.7, 0.9)]
+    decisions = [
+        evaluate_confidence(
+            0.5,
+            selected_strategy_tier=tier,
+        )
+        for tier in StrategyTier
+    ]
 
     assert [decision.strategy_tier for decision in decisions] == list(StrategyTier)
 
@@ -71,13 +77,14 @@ def test_confidence_combines_ministral_quality_and_execution_metrics() -> None:
 
     decision = evaluate_confidence(
         0.7,
+        selected_strategy_tier=StrategyTier.INTERMEDIATE,
         quality_score=0.8,
         performance=performance,
     )
 
     assert decision.quality_score == 0.8
     assert decision.performance_score is not None
-    assert decision.reasons == []
+    assert decision.reasons == ["strategy_tier_selected_by_ministral"]
 
 
 def test_blacklist_is_a_deterministic_risk_rejection() -> None:

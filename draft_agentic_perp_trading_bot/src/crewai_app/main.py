@@ -3,7 +3,8 @@
 File mappings:
 ``main.py`` <- ``frameworkless_app/orchestrator.py``;
 ``flows/telegram_signal_flow.py`` <- ``frameworkless_app/orchestrator.py``;
-``domain/contracts/{definitions.py,schemas.py}`` <- ``frameworkless_app/schemas.py``;
+``domain/contracts/{schemas.py,execution.py,__init__.py}`` <-
+``frameworkless_app/schemas.py``;
 ``domain/policies/execution_gate.py`` <- ``frameworkless_app/risk_engine/policy.py``;
 ``adapters/telegram/{agent_worker,deduplication,normalizer,pipeline,reply_tree,storage}.py``
 <- ``frameworkless_app/telegram_ingestion/{agent_worker,deduplication,normalizer,pipeline,reply_tree,storage}.py``;
@@ -107,14 +108,17 @@ def run() -> None:
     # {
     #   "selected_owner_id": "owner_a_shu_qin",
     #   "candidate_set": {"candidates": "one entry for each of five tiers"},
-    #   "ministral_review_set": {"reviews": "one entry for each of five tiers"},
+    #   "ministral_review_set": {
+    #     "reviews": "one entry for each of five tiers",
+    #     "selected_strategy_tier": "the approved tier selected by Ministral"
+    #   },
     #   "decision_persisted": true,
     #   "execution_intent_emitted": false,
     #   "trace_steps": [
     #     "load_parent_messages", "load_active_trade_cursors",
     #     "retrieve_owner_rag_examples", "owner_qwen_inference",
     #     "validate_structured_output", "ministral_review",
-    #     "load_market_snapshot", "confidence_selection",
+    #     "load_market_snapshot", "ministral_selection", "confidence_scoring",
     #     "apply_deterministic_policies", "persist_decision"
     #   ]
     # }

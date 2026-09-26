@@ -24,8 +24,8 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
   `src/crewai_app/skills_api/{ministral_filter,omitted_stop_loss_inference,owner_qwen,qwen_agent_rag_loading}/`
 - CrewAI BaseTool wrappers for read-only context and Flow-only services:
   `src/crewai_app/tools/`
-- Stable Pydantic contracts and public package exports:
-  `src/crewai_app/domain/contracts/{definitions.py,execution.py,__init__.py}`
+- Stable Pydantic schemas and public package exports:
+  `src/crewai_app/domain/contracts/{schemas.py,execution.py,__init__.py}`
 - Confidence, funding-rate initiation filtering, omitted-stop-loss, execution
   gates, and position sizing:
   `src/crewai_app/domain/{policies,performance}/`
@@ -69,9 +69,10 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
 - Relation outputs tagged `needs_human_labelling` are persisted asynchronously
   with their prompt context for offline labelling. They enter serial RAG only
   after label and provenance validation; ingestion never waits for a label.
-- Each QWEN run returns all five strategy tiers. Confidence selects the
-  lifecycle policy; continuations inherit it unless an explicit reviewed update
-  advances the revision.
+- Each QWEN run returns all five strategy tiers. Shared Ministral review selects
+  one approved lifecycle policy; confidence scores that selection, and
+  continuations inherit it unless an explicit reviewed update advances the
+  revision.
 - Deterministic funding-rate, price, depth, slippage, blacklist, and lifecycle
   checks run outside agents and before cursor mutation or execution intent
   persistence. The funding-rate check applies only to new-cycle initiation and

@@ -1,4 +1,4 @@
-"""Replayable confidence scoring and five-tier strategy selection.
+"""Replayable confidence scoring for a Ministral-selected strategy tier.
 
 File mappings:
 ``domain/policies/confidence.py`` <- ``frameworkless_app/confidence_engine/policy.py``;
@@ -20,10 +20,11 @@ CONFIDENCE_FORMULA_VERSION = "synthetic-v2"
 def evaluate_confidence(
     source_confidence: float,
     *,
+    selected_strategy_tier: StrategyTier,
     quality_score: float | None = None,
     performance: PerformanceMetricsSnapshot | None = None,
 ) -> ConfidenceDecision:
-    """Combine source, Ministral quality, and replay metrics without hard gating."""
+    """Score the tier selected by Ministral without changing that selection."""
     source_score = _unit_interval(source_confidence)
     quality = _unit_interval(quality_score) if quality_score is not None else None
     performance_score = _performance_score(performance) if performance is not None else None
@@ -41,10 +42,11 @@ def evaluate_confidence(
         reasons.append("ministral_quality_score_unavailable")
     if performance_score is None:
         reasons.append("execution_performance_history_unavailable")
+    reasons.append("strategy_tier_selected_by_ministral")
 
     return ConfidenceDecision(
         confidence=confidence,
-        strategy_tier=_strategy_tier_for(confidence),
+        strategy_tier=selected_strategy_tier,
         source_confidence=source_score,
         quality_score=quality,
         performance_score=performance_score,
@@ -68,18 +70,6 @@ def _performance_score(snapshot: PerformanceMetricsSnapshot) -> float:
 
 def _unit_interval(value: float) -> float:
     return min(max(float(value), 0.0), 1.0)
-
-
-def _strategy_tier_for(confidence: float) -> StrategyTier:
-    if confidence < 0.2:
-        return StrategyTier.ULTRA_CONSERVATIVE
-    if confidence < 0.4:
-        return StrategyTier.CONSERVATIVE
-    if confidence < 0.6:
-        return StrategyTier.INTERMEDIATE
-    if confidence < 0.8:
-        return StrategyTier.RADICAL
-    return StrategyTier.ULTRA_RADICAL
 
 
 __all__ = ["CONFIDENCE_FORMULA_VERSION", "evaluate_confidence"]

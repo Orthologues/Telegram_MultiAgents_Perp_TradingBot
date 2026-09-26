@@ -2,12 +2,12 @@
 
 File mappings:
 ``domain/contracts/execution.py`` <- ``frameworkless_app/schemas.py``;
-``domain/contracts/definitions.py`` <- ``frameworkless_app/schemas.py``.
+``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``.
 """
 
 from enum import StrEnum
 
-from crewai_app.domain.contracts.definitions import (
+from crewai_app.domain.contracts.schemas import (
     ApprovedExecutionRequest,
     DeterministicRiskDecision,
     DecisionRecord,

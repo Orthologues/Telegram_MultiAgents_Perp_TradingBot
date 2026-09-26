@@ -20,8 +20,8 @@ TelegramAgent retrieval
   -> normalize, hydrate media, deduplicate, and build reply-tree context
   -> ElastiCache reply trees + private S3 media + DynamoDB metadata
   -> one owner-specific QWEN agent per owner, producing five strategy tiers
-  -> Ministral validation and signal deduplication
-  -> confidence/strategy and deterministic risk policies
+  -> Ministral validation, signal deduplication, and tier selection
+  -> confidence scoring and deterministic risk policies
   -> Aster/Hyperliquid MCP gateway and Lambda execution boundary
 ```
 
@@ -70,6 +70,12 @@ application. Retain
 implementation during the migration; it is not a second production runtime.
 Pure interface-only modules that define parent `Protocol` classes with method
 declarations and no implementation must be named `interfaces.py`.
+Modules whose primary purpose is defining shared Pydantic or dataclass schemas
+and data contracts must be named `schemas.py`, analogous to `interfaces.py` for
+pure protocols and `__init__.py` for export-only modules. Preserve a
+capability-specific filename when a module contains boundary behavior rather
+than a standalone schema collection, such as `execution.py`, `states.py`,
+`upstream_contracts.py`, or `venue_contracts.py`.
 Modules that only re-export classes, methods, interfaces, or modules and have
 no implementation must be merged into the owning package's `__init__.py`; do
 not retain a standalone export-only module.
@@ -99,16 +105,18 @@ documentation cycle and remove stale paths from the mapping.
   include every Telegram message ID and URL in order, plus the private S3 URI
   containing the archived example.
 - Ministral validates schema/evidence, deduplicates equivalent hypotheses,
-  handles authenticated MCP take-profit fill protection, and deterministically
-  derives omitted stop-losses from pair type, volume, and `5m`/`15m`/`1h`/`4h`
-  EMA, MACD, KDJ, RSI, Bollinger, ATR, and volatility inputs within one second.
-- Confidence selects one of the five initial lifecycle strategies, including
-  its recommended size and leverage. Parent-linked updates inherit that policy;
-  only an explicit `strategy_tier_hint` whose target candidate passes Ministral
-  review may increment its revision. Deterministic risk separately enforces
-  pair blacklisting, new-cycle annualized-funding limits, instant-order price
-  deviation, leverage, and cumulative owner/pair position-value limits. QWEN
-  must leave an omitted stop-loss unset.
+  selects exactly one approved tier, and handles authenticated MCP take-profit
+  fill protection. The deterministic Flow policy derives an omitted stop-loss
+  for that selected tier from pair type, volume, and `5m`/`15m`/`1h`/`4h` EMA,
+  MACD, KDJ, RSI, Bollinger, ATR, and volatility inputs within one second.
+- Ministral reviews all five candidates and selects exactly one approved initial
+  lifecycle strategy. Confidence scores that selected tier; deterministic sizing
+  then computes its recommended size and leverage. Parent-linked updates inherit
+  that policy; only an explicit `strategy_tier_hint` whose target candidate
+  passes Ministral review may increment its revision. Deterministic risk
+  gatekeeping includes pair blacklisting, new-cycle annualized-funding limits,
+  instant-order price deviation, leverage, and cumulative owner/pair
+  position-value limits. QWEN must leave an omitted stop-loss unset.
 
 ## Agent API Interfaces
 
@@ -242,8 +250,8 @@ telegram_signal_flow: owner_1:1037
 ├── owner_qwen_inference
 │   └── five strategy candidates
 ├── validate_structured_output
-├── ministral_review
-├── confidence_selection
+├── ministral_selection
+├── confidence_scoring
 ├── load_market_snapshot
 ├── apply_deterministic_policies
 ├── persist_decision

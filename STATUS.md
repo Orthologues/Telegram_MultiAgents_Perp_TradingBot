@@ -39,10 +39,12 @@ Telethon image hydration and authentic serial RAG examples.
   persistence boundaries, and the implemented QWEN relation/deferred-labelling
   Flow wiring.
 - Export-only canonical contract modules were consolidated into
-  `domain/contracts/__init__.py`. Redundant `schemas.py`, `performance.py`,
+  `domain/contracts/__init__.py`. Earlier redundant `performance.py`,
   `telegram.py`, `trading.py`, and `skills_api/telegram_agent.py` modules were
   removed while the package-level exports and the retained
-  `frameworkless_app` compatibility import were preserved.
+  `frameworkless_app` compatibility import were preserved. The aggregate
+  canonical schema module is now `domain/contracts/schemas.py`, matching the
+  retained `frameworkless_app/schemas.py` name.
 - A-zhu's active source is a conventional private Telegram channel. The former
   direct-chat acknowledgment workflow has been retired; neither `SKILLS.md`
   nor `skills_api/` defines a reply skill, and Telegram ingestion remains
@@ -61,10 +63,15 @@ Telethon image hydration and authentic serial RAG examples.
   pass; either sign above it rejects the entire new cycle. Existing-cycle
   intents bypass this filter. This policy and its integration are committed as
   `3168989`. Production MCP snapshots must still supply the signed live rate.
-- Each owner QWEN run produces five strategy candidates. Confidence selects the
-  lifecycle tier; continuations inherit it unless a reviewed update advances
-  the revision. All five tiers remain available for performance evaluation,
-  grouped by owner, channel, asset group, and lifecycle stage.
+- Each owner QWEN run produces five strategy candidates. Ministral reviews all
+  five and selects one approved lifecycle tier; confidence scores that selected
+  tier, and continuations inherit it unless a reviewed update advances the
+  revision. All five tiers remain available for performance evaluation, grouped
+  by owner, channel, asset group, and lifecycle stage.
+- The `ministral_review_task` contract now persists `selected_strategy_tier`.
+  Canonical orchestration uses it directly, then applies confidence scoring,
+  selected-tier sizing, omitted-stop-loss derivation, and deterministic safety
+  gates.
 - The local harness is non-live. SQS delivery, Telethon image hydration,
   production S3/DynamoDB/ElastiCache adapters, Phoenix/Grafana instrumentation,
   and Lambda order submission remain planned or only partially wired.

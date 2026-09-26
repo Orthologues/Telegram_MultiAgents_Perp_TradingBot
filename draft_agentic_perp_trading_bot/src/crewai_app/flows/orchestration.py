@@ -30,6 +30,7 @@ from crewai_app.domain.policies.execution_gate import (
 from crewai_app.domain.policies.funding_rate import (
     evaluate_funding_rate_cycle_filter,
 )
+from crewai_app.domain.policies.stop_loss import MinistralStopLossPolicy
 from crewai_app.domain.contracts import (
     ApprovedExecutionRequest,
     CanonicalTradeIntent,
@@ -76,8 +77,9 @@ async def process_message(
     risk_limits: Mapping[ExchangeId, PairRiskLimit] | None = None,
     existing_position_notional_by_exchange: Mapping[ExchangeId, Decimal] | None = None,
     market_snapshots: Mapping[ExchangeId, MarketExecutionSnapshot] | None = None,
+    selected_strategy_tier: StrategyTier | None = None,
 ) -> ApprovedExecutionRequest | None:
-    """Run one normalized message through five-tier review and deterministic policy."""
+    """Run one normalized message through review, selection, and deterministic policy."""
     if telegram_deduplicator is not None:
         input_deduplication = telegram_deduplicator.inspect(message)
         if input_deduplication.is_duplicate:
@@ -118,19 +120,27 @@ async def process_message(
         and message.strategy_tier_hint != inherited_strategy.strategy_tier
     )
 
-    confidence = _select_confidence(
+    selected_tier = _resolve_strategy_tier(
+        message,
+        selected_strategy_tier,
+        filter_decisions,
+        lifecycle_cursors,
+    )
+    if selected_tier is None:
+        if complete_candidate_set or transition_requested:
+            return None
+        selected_tier, selected = next(iter(filter_decisions.items()))
+    else:
+        selected = filter_decisions[selected_tier]
+
+    confidence = _score_confidence(
         message,
         source_confidence,
+        selected_tier,
         filter_decisions,
         lifecycle_cursors,
         performance_snapshot,
     )
-
-    selected = filter_decisions.get(confidence.strategy_tier)
-    if selected is None:
-        if complete_candidate_set or transition_requested:
-            return None
-        selected = next(iter(filter_decisions.values()))
 
     hypothesis, filter_decision = selected
     canonical_intent = filter_decision.canonical_intent
@@ -140,13 +150,23 @@ async def process_message(
         for cursor in lifecycle_cursors
     ):
         return None
-    if (
-        canonical_intent.stop_loss is None
-        and filter_decision.omitted_stop_loss is not None
-    ):
-        canonical_intent = canonical_intent.model_copy(
-            update={"stop_loss": filter_decision.omitted_stop_loss.stop_loss}
-        )
+    if canonical_intent.stop_loss is None:
+        omitted_stop_loss = filter_decision.omitted_stop_loss
+        if omitted_stop_loss is None:
+            policy_market_snapshot = _market_snapshot_for_stop_loss(
+                hypothesis,
+                market_snapshot,
+                market_snapshots,
+            )
+            if policy_market_snapshot is not None:
+                omitted_stop_loss = MinistralStopLossPolicy().derive(
+                    hypothesis,
+                    policy_market_snapshot,
+                )
+        if omitted_stop_loss is not None:
+            canonical_intent = canonical_intent.model_copy(
+                update={"stop_loss": omitted_stop_loss.stop_loss}
+            )
 
     effective_current_price = current_price
     if effective_current_price is None and market_snapshot is not None:
@@ -275,9 +295,9 @@ def select_strategy_tier_for_market(
     reviews: Mapping[StrategyTier, FilterDecision],
     active_trade_cursors: list[TradeThreadCursor],
     *,
-    performance_snapshot: PerformanceMetricsSnapshot | None = None,
+    selected_strategy_tier: StrategyTier | None = None,
 ) -> StrategyTier | None:
-    """Select the one tier whose market snapshot the Flow must load."""
+    """Return Ministral's approved tier whose market snapshot the Flow must load."""
     filter_decisions = {
         tier: (candidates.candidates[tier], decision)
         for tier, decision in reviews.items()
@@ -289,19 +309,44 @@ def select_strategy_tier_for_market(
         filter_decisions,
         active_trade_cursors,
     )
-    source_confidence = candidates.interpretation_confidence
-    return _select_confidence(
+    return _resolve_strategy_tier(
         message,
-        source_confidence,
+        selected_strategy_tier,
         filter_decisions,
         lifecycle_cursors,
-        performance_snapshot,
-    ).strategy_tier
+    )
 
 
-def _select_confidence(
+def _resolve_strategy_tier(
+    message: TelegramMessageEnvelope,
+    selected_strategy_tier: StrategyTier | None,
+    filter_decisions: Mapping[
+        StrategyTier,
+        tuple[QwenSignalHypothesis, FilterDecision],
+    ],
+    lifecycle_cursors: list[TradeThreadCursor],
+) -> StrategyTier | None:
+    inherited_strategy = _shared_lifecycle_strategy(lifecycle_cursors)
+    transition_requested = (
+        inherited_strategy is not None
+        and message.strategy_tier_hint is not None
+        and message.strategy_tier_hint != inherited_strategy.strategy_tier
+    )
+    if inherited_strategy is not None and not transition_requested:
+        if inherited_strategy.strategy_tier in filter_decisions:
+            return inherited_strategy.strategy_tier
+        return None
+    if transition_requested:
+        selected_strategy_tier = message.strategy_tier_hint
+    if selected_strategy_tier in filter_decisions:
+        return selected_strategy_tier
+    return None
+
+
+def _score_confidence(
     message: TelegramMessageEnvelope,
     source_confidence: float,
+    selected_strategy_tier: StrategyTier,
     filter_decisions: Mapping[
         StrategyTier,
         tuple[QwenSignalHypothesis, FilterDecision],
@@ -318,12 +363,11 @@ def _select_confidence(
     if inherited_strategy is not None and not transition_requested:
         return _confidence_from_lifecycle(inherited_strategy)
 
-    mean_quality = sum(
-        decision.quality_score for _, decision in filter_decisions.values()
-    ) / len(filter_decisions)
+    _, selected_review = filter_decisions[selected_strategy_tier]
     confidence = evaluate_confidence(
         source_confidence,
-        quality_score=mean_quality,
+        selected_strategy_tier=selected_strategy_tier,
+        quality_score=selected_review.quality_score,
         performance=performance_snapshot,
     )
     if transition_requested:
@@ -337,6 +381,18 @@ def _select_confidence(
             }
         )
     return confidence
+
+
+def _market_snapshot_for_stop_loss(
+    hypothesis: QwenSignalHypothesis,
+    market_snapshot: MarketAnalysisSnapshot | None,
+    market_snapshots: Mapping[ExchangeId, MarketExecutionSnapshot] | None,
+) -> MarketAnalysisSnapshot | None:
+    if market_snapshots is not None and hypothesis.symbol is not None:
+        for snapshot in market_snapshots.values():
+            if snapshot.market.symbol.upper() == hypothesis.symbol.upper():
+                return snapshot.market
+    return market_snapshot
 
 
 def _snapshot_rejection_reasons(

@@ -23,7 +23,7 @@ from crewai_app.domain.contracts.execution import (
     TradingPairType,
     settlement_asset_for_exchange,
 )
-from crewai_app.domain.contracts.definitions import (
+from crewai_app.domain.contracts.schemas import (
     AssetGroup,
     CanonicalTradeIntent,
     ClosedTradeOutcome,

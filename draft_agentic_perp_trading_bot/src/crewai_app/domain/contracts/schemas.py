@@ -1,7 +1,7 @@
-"""Canonical contract definitions for the CrewAI application.
+"""Canonical schemas for the CrewAI application.
 
 File mappings:
-``domain/contracts/definitions.py`` <- ``frameworkless_app/schemas.py``;
+``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``;
 ``domain/contracts/{execution,performance,telegram,trading}.py`` <-
 ``frameworkless_app/schemas.py``.
 """
@@ -994,12 +994,13 @@ class FilterDecision(BaseModel):
 
 
 class MinistralStrategyReviewSet(BaseModel):
-    """One shared Ministral review for every QWEN strategy tier."""
+    """One shared Ministral review and tier selection for every QWEN candidate."""
 
     owner_id: OwnerId
     channel_id: str
     reviewer_model: str = Field(min_length=1)
     reviews: dict[StrategyTier, FilterDecision]
+    selected_strategy_tier: StrategyTier
 
     @field_validator("reviews")
     @classmethod
@@ -1010,6 +1011,22 @@ class MinistralStrategyReviewSet(BaseModel):
         if set(reviews) != set(StrategyTier):
             raise ValueError("Ministral reviews must contain exactly all five strategy tiers")
         return reviews
+
+    @model_validator(mode="after")
+    def validate_selected_strategy_tier(self) -> Self:
+        selected_review = self.reviews[self.selected_strategy_tier]
+        if (
+            selected_review.status != "approved"
+            or selected_review.canonical_intent is None
+        ):
+            raise ValueError(
+                "selected_strategy_tier must reference an approved review with a canonical intent"
+            )
+        if selected_review.canonical_intent.strategy_tier != self.selected_strategy_tier:
+            raise ValueError(
+                "selected_strategy_tier must reference a matching canonical intent"
+            )
+        return self
 
 
 class SignalEvaluationResult(BaseModel):

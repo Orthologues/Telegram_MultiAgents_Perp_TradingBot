@@ -205,6 +205,7 @@ def _evaluation(message: TelegramMessageEnvelope) -> SignalEvaluationResult:
             channel_id=message.channel_id,
             reviewer_model="ministral-test",
             reviews=reviews,
+            selected_strategy_tier=StrategyTier.CONSERVATIVE,
         ),
     )
 
@@ -454,7 +455,7 @@ def test_telegram_signal_flow_routes_persists_and_emits_guarded_testnet_intent()
     assert set(flow.state.candidate_set.candidates) == set(StrategyTier)
     assert flow.state.approved_execution_request is not None
     assert flow.state.approved_execution_request.intent.strategy_tier == (
-        StrategyTier.ULTRA_RADICAL
+        StrategyTier.CONSERVATIVE
     )
     assert flow.state.approved_execution_request.intent.stop_loss is not None
     assert flow.state.decision_persisted is True
@@ -469,7 +470,8 @@ def test_telegram_signal_flow_routes_persists_and_emits_guarded_testnet_intent()
         "validate_structured_output",
         "ministral_review",
         "load_market_snapshot",
-        "confidence_selection",
+        "ministral_selection",
+        "confidence_scoring",
         "apply_deterministic_policies",
         "persist_decision",
         "execution_intent",

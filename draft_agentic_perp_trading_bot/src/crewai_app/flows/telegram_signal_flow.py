@@ -50,7 +50,6 @@ from crewai_app.domain.contracts import (
     TradingMessageRelationDecision,
 )
 from crewai_app.domain.lifecycle.cursor import ConcurrentTradeCursorManager
-from crewai_app.domain.policies.stop_loss import MinistralStopLossPolicy
 from crewai_app.domain.policies.funding_rate import (
     evaluate_funding_rate_cycle_filter,
 )
@@ -117,7 +116,7 @@ class CompatibilityDeterministicDecisionService(DeterministicDecisionService):
             )
 
         qwen_agent = _PrecomputedQwenAgent(candidates)
-        filter_agent = _PrecomputedMinistralAgent(reviews, market_snapshots)
+        filter_agent = _PrecomputedMinistralAgent(reviews)
         request = await process_message(
             message,
             qwen_agent,
@@ -132,6 +131,7 @@ class CompatibilityDeterministicDecisionService(DeterministicDecisionService):
                 self.existing_position_notional_by_exchange
             ),
             market_snapshots=market_snapshots,
+            selected_strategy_tier=reviews.selected_strategy_tier,
         )
         if request is None:
             return DeterministicDecisionOutcome(
@@ -263,6 +263,7 @@ class TelegramSignalFlow(Flow[TelegramSignalState]):
             candidates,
             reviews.reviews,
             self.state.active_trade_cursors,
+            selected_strategy_tier=reviews.selected_strategy_tier,
         )
         requested: dict[ExchangeId, tuple[str, Decimal]] = {}
         selected_intent_type: IntentType | None = None
@@ -333,7 +334,11 @@ class TelegramSignalFlow(Flow[TelegramSignalState]):
         self.state.approved_execution_request = outcome.approved_execution_request
         self.state.rejection_reasons.extend(outcome.rejection_reasons)
         self.state.trace_steps.extend(
-            ["confidence_selection", "apply_deterministic_policies"]
+            [
+                "ministral_selection",
+                "confidence_scoring",
+                "apply_deterministic_policies",
+            ]
         )
         return self.state.approved_execution_request
 
@@ -430,39 +435,14 @@ class _PrecomputedMinistralAgent(MinistralReviewAPI):
     def __init__(
         self,
         reviews: MinistralStrategyReviewSet,
-        market_snapshots: Mapping[ExchangeId, ExecutionLiquiditySnapshot],
     ) -> None:
         self.reviews = reviews
-        self.market_snapshots = market_snapshots
-        self.stop_loss_policy = MinistralStopLossPolicy()
 
     async def review(
         self,
         hypothesis: QwenSignalHypothesis,
         prompt_context: TelegramPromptContext,
-        market_snapshot: MarketAnalysisSnapshot | None = None,
+        _market_snapshot: MarketAnalysisSnapshot | None = None,
     ) -> FilterDecision:
         review = self.reviews.reviews[hypothesis.strategy_tier]
-        policy_market_snapshot = next(
-            (
-                snapshot.market
-                for snapshot in self.market_snapshots.values()
-                if hypothesis.symbol is not None
-                and snapshot.market.symbol.upper() == hypothesis.symbol.upper()
-            ),
-            market_snapshot,
-        )
-        if (
-            review.status == "approved"
-            and review.canonical_intent is not None
-            and review.canonical_intent.stop_loss is None
-            and policy_market_snapshot is not None
-        ):
-            omitted_stop_loss = self.stop_loss_policy.derive(
-                hypothesis,
-                policy_market_snapshot,
-            )
-            return review.model_copy(
-                update={"omitted_stop_loss": omitted_stop_loss}
-            )
         return review

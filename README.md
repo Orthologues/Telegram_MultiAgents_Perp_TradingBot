@@ -32,8 +32,9 @@ workflow and exposes no Telegram send capability.
 Each owner QWEN agent emits five reviewable strategy-tier candidates for every
 incoming trading signal, primarily for continuations of an existing perpetual
 position lifecycle.
-Ministral validates them; confidence selects and persists one position-lifecycle
-strategy, including recommended size and leverage, while deterministic risk
+Ministral reviews all five candidates and selects one approved
+position-lifecycle strategy. Confidence scores that selection, deterministic
+sizing computes its recommended size and leverage, and deterministic risk
 enforces pair, new-cycle annualized-funding, price, leverage, and cumulative
 position-value limits.
 Paired testnet P/L summaries compare only identical, fully closed signal-tier
@@ -47,10 +48,11 @@ not yet populated. QWEN relation outputs tagged `needs_human_labelling` are
 queued with their message context for later human labelling in a dedicated
 DynamoDB table; they do not wait for immediate review or enter RAG automatically.
 
-Omitted stop-losses are derived at the Ministral boundary from typed MCP
-pair type, volume, EMA, MACD, KDJ, RSI, Bollinger, ATR, and volatility inputs
-at `5m`, `15m`, `1h`, and `4h`, constrained to `1.2%`-`8%` from entry 1 or the
-average of entry 1 and entry 2. QWEN does not infer them.
+Omitted stop-losses are derived by the deterministic Flow boundary after
+Ministral selects a candidate, using typed MCP pair type, volume, EMA, MACD,
+KDJ, RSI, Bollinger, ATR, and volatility inputs at `5m`, `15m`, `1h`, and `4h`,
+constrained to `1.2%`-`8%` from entry 1 or the average of entry 1 and entry 2.
+QWEN does not infer them.
 
 ## Fastest Test
 

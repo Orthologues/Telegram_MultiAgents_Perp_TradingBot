@@ -18,8 +18,8 @@ TelegramAgent/Telethon retrieval
   -> adapters/telegram/normalize, hydrate, archive, and deduplicate
   -> publish normalized context to the downstream boundary
   -> `flows/telegram_signal_flow.py`
-  -> one owner QWEN definition + shared Ministral review
-  -> deterministic domain policies and Flow-only persistence
+  -> one owner QWEN definition + shared Ministral review and tier selection
+  -> deterministic confidence scoring, domain policies, and Flow-only persistence
   -> guarded Aster/Hyperliquid execution boundary
 ~~~
 
@@ -171,8 +171,9 @@ must return all five strategy tiers. Every hypothesis is an order proposal, neve
 The output boundary requires `owner_id`, `channel_id`, `asset_group`,
 `strategy_tier`, `intent_type`, `symbol`/`direction` when known, `entries`,
 `confidence`, `evidence`, and `source_dedup_key`. If the source message omits a
-stop-loss, leave `stop_loss` unset so the deterministic policy at the Ministral
-boundary can derive it later.
+stop-loss, leave `stop_loss` unset. After Ministral selects one approved
+candidate, the deterministic policy at the Flow boundary is assigned to derive
+the selected candidate's stop-loss before deterministic execution.
 
 Keep serial-RAG curation separate from stop-loss handling. Each curated object
 must preserve chronological message references, `s3_archive_uri`,
@@ -186,17 +187,25 @@ labelling table only after validating their labels and provenance.
 Owner: `domain/policies/confidence.py`. Status: local synthetic-v2 baseline;
 learned features are research.
 
-Confidence ranks hypotheses and selects one of five strategy tiers. It is not a
-hard rejection rule. The current synthetic baseline combines source confidence
-(0.45), Ministral quality when available (0.25), and replay performance when
-available (0.30), renormalizing available weights. Persist the selected tier,
-confidence, size, leverage, formula version, and provenance on the lifecycle
-cursor.
+Ministral selects one approved strategy tier after reviewing all five QWEN
+candidates. Confidence scores that selected tier; it is not a hard rejection
+rule or a second tier selector. The current synthetic baseline combines source
+confidence (0.45), selected-review quality when available (0.25), and replay
+performance when available (0.30), renormalizing available weights. Persist the
+selected tier, confidence, size, leverage, formula version, and provenance on
+the lifecycle cursor.
 
-At lifecycle commencement, confidence selects the initial policy. A
-parent-linked continuation inherits it unless an explicit `strategy_tier_hint` is
-reviewed and accepted as a policy revision. This selection is independent of
-deterministic execution permission.
+Here, `selected-review quality` means Ministral's structured
+`FilterDecision.quality_score` for source, evidence, ambiguity, and
+candidate/review binding. It is not currently calculated from `MACD`, `KDJ`,
+`Bollinger`, or other `5m`/`15m`/`1h`/`4h` technical indicators. Those indicators
+belong to the deterministic omitted-stop-loss policy described below and are
+not inputs to `evaluate_confidence`.
+
+At lifecycle commencement, the Ministral review selects the initial policy. A
+parent-linked continuation inherits it unless an explicit `strategy_tier_hint`
+is reviewed and accepted as a policy revision. Confidence scoring is
+independent of deterministic execution permission.
 
 The proposed technical/EMA/volatility features and RNN/LSTM experiments are
 research. They must use chronological train/validation/forward-test windows,
@@ -209,7 +218,9 @@ Owner: deterministic `domain/policies/stop_loss.py`, invoked by a Flow through
 `tools/stop_loss_policy_tool.py`. Status: local pure policy; complete MCP supplier
 and measured deadline are planned.
 
-QWEN leaves an omitted stop-loss unset. The Aster/Hyperliquid market boundary
+QWEN leaves an omitted stop-loss unset. After the selected tier is known, the
+Flow invokes the deterministic policy for the applicable selected candidate.
+The Aster/Hyperliquid market boundary
 must provide price, market capitalization, quote volume, pair type, and EMA,
 MACD, KDJ, RSI, Bollinger width, ATR, and realized volatility for 5m, 15m, 1h,
 and 4h. The deterministic policy uses:
@@ -252,14 +263,15 @@ evidence/injection checks are planned.
 
 Review all five QWEN candidates against the same immutable source context.
 Validate source identity, evidence, ambiguity, candidate/review binding, and
-semantic signal duplication. Emit one typed review per tier. Only an approved
-reviewed proposal can reach deterministic canonicalization:
+semantic signal duplication. Emit one typed review per tier and select exactly
+one approved candidate. Only that selected approved proposal can reach
+deterministic canonicalization:
 
 ~~~text
 QWEN five-tier candidates
-  -> shared Ministral review
+  -> shared Ministral review and tier selection
   -> source and structure validation
-  -> deterministic confidence, sizing, and execution gates
+  -> deterministic confidence scoring, sizing, and execution gates
   -> Flow-only persistence or execution intent
 ~~~
 
@@ -298,8 +310,9 @@ Owner: deterministic sizing and confidence policies. Status: fixed scaffold
 weights are local; learned updates are research.
 
 Use replayable TP1/TP2, stop-loss, P/L, and reversal metrics to evaluate future
-owner/channel/strategy-tier weighting. Confidence selects the tier before
-sizing; sizing then applies fixed owner/asset weights, quality scaling, tier
+owner/channel/strategy-tier weighting. Ministral selects the tier before
+confidence scoring and sizing; confidence records the selected tier's score,
+then sizing applies fixed owner/asset weights, quality scaling, tier
 multipliers, and leverage bounds. Do not place blacklist or execution
 permission in this skill.
 
