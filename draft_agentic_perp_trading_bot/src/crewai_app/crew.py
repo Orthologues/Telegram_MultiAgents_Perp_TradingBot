@@ -18,6 +18,14 @@ from crewai_app.domain.contracts import (
     QwenStrategyCandidateSet,
     TradingMessageRelationDecision,
 )
+
+from crewai_app.tools.agent_tool_policy import (
+    MINISTRAL_AGENT_ALLOWED_TOOL_TYPES,
+    QWEN_AGENT_ALLOWED_TOOL_TYPES,
+)
+
+DEFAULT_AWS_REGION = "eu-central-1"
+
 _OWNER_AGENT_CONFIG = {
     OwnerId.OWNER_A_SHU_QIN: "owner_a_qwen",
     OwnerId.OWNER_B_LAO_TU: "owner_b_qwen",
@@ -35,8 +43,7 @@ _OWNER_MODEL_ENV = {
 
 class CrewModelSettings(BaseModel):
     """IAM-authenticated Bedrock configuration without static credentials."""
-
-    aws_region_name: str = Field(min_length=1)
+    aws_region_name: str = Field(default=DEFAULT_AWS_REGION, min_length=1)
     owner_qwen_model_ids: dict[OwnerId, str] = Field(
         default_factory=lambda: {
             owner_id: BedrockModelId.QWEN3_VL_235B_A22B for owner_id in OwnerId
@@ -46,7 +53,7 @@ class CrewModelSettings(BaseModel):
         default=BedrockModelId.MINISTRAL_3_8B_INSTRUCT,
         min_length=1,
     )
-    timeout_seconds: int = Field(default=60, ge=1, le=300)
+    timeout_seconds: int = Field(default=15, ge=1, le=300)
     structured_output_retries: int = Field(default=1, ge=0, le=3)
 
     @field_validator("owner_qwen_model_ids")
@@ -73,18 +80,18 @@ class CrewModelSettings(BaseModel):
         return model_ids
 
     @classmethod
-    def from_environment(cls) -> CrewModelSettings:
+    def load_env_vars(cls) -> CrewModelSettings:
         if os.getenv("CREWAI_BEDROCK_ENABLED", "false").lower() != "true":
             raise RuntimeError("CrewAI Bedrock execution is disabled")
         return cls(
-            aws_region_name=_required_environment("AWS_REGION_NAME"),
+            aws_region_name=os.getenv("AWS_REGION_NAME", DEFAULT_AWS_REGION),
             owner_qwen_model_ids={
                 owner_id: _required_environment(environment_name)
                 for owner_id, environment_name in _OWNER_MODEL_ENV.items()
             },
             ministral_model_id=_required_environment("CREWAI_MINISTRAL_MODEL_ID"),
             timeout_seconds=int(
-                os.getenv("CREWAI_MODEL_TIMEOUT_SECONDS", "60")
+                os.getenv("CREWAI_MODEL_TIMEOUT_SECONDS", "15")
             ),
             structured_output_retries=int(
                 os.getenv("CREWAI_STRUCTURED_OUTPUT_RETRIES", "1")
@@ -98,9 +105,14 @@ def build_bedrock_llm(model_id: str, settings: CrewModelSettings) -> LLM:
         model_id if model_id.startswith("bedrock/") else f"bedrock/{model_id}"
     )
     return LLM(
+        # `model` identifies the normalized Bedrock model used by CrewAI.
         model=normalized_model_id,
+        # `temperature` controls sampling randomness; negative values are normally invalid.
+        # `0.0` minimizes variation, while positive values increase variation.
         temperature=0.0,
+        # `timeout` bounds each model request before retry handling.
         timeout=settings.timeout_seconds,
+        # `region_name` selects the AWS Bedrock region for the request.
         region_name=settings.aws_region_name,
     )
 
@@ -124,86 +136,148 @@ class TradingSignalCrew:
     ) -> None:
         self.owner_id = owner_id
         self.settings = settings
-        self.qwen_tools = _validate_agent_tools(qwen_tools or [])
-        self.ministral_tools = _validate_agent_tools(ministral_tools or [])
+        self.qwen_tools = _validate_agent_tools(
+            qwen_tools or [],
+            allowed_tool_types=QWEN_AGENT_ALLOWED_TOOL_TYPES,
+            agent_label="QWEN",
+        )
+        self.ministral_tools = _validate_agent_tools(
+            ministral_tools or [],
+            allowed_tool_types=MINISTRAL_AGENT_ALLOWED_TOOL_TYPES,
+            agent_label="Ministral",
+        )
 
     @agent
     def owner_qwen(self) -> Agent:
         return Agent(
+            # `config` selects the owner-specific YAML role and goal.
             config=self.agents_config[_OWNER_AGENT_CONFIG[self.owner_id]],
+            # `llm` supplies the IAM-authenticated Bedrock model.
             llm=build_bedrock_llm(
                 self.settings.owner_qwen_model_ids[self.owner_id],
                 self.settings,
             ),
+            # `tools` are the explicitly permitted owner-agent tools.
             tools=self.qwen_tools,
+            # `allow_delegation` prevents the owner analyst from delegating.
+            # `allow_delegation` is a boolean parameter in the Agent class that determines
+            # whether an agent can assign work or ask questions to other agents in the crew
             allow_delegation=False,
+            # `max_retry_limit` applies CrewAI's configured agent retry budget.
             max_retry_limit=self.settings.structured_output_retries,
         )
 
     @agent
     def shared_ministral(self) -> Agent:
         return Agent(
+            # `config` selects the shared Ministral reviewer role and goal.
             config=self.agents_config["shared_ministral"],
+            # `llm` supplies the IAM-authenticated Ministral model.
             llm=build_bedrock_llm(self.settings.ministral_model_id, self.settings),
+            # `tools` are the explicitly permitted reviewer tools.
             tools=self.ministral_tools,
+            # `allow_delegation` keeps review within the defined Crew.
             allow_delegation=False,
+            # `max_retry_limit` applies CrewAI's configured agent retry budget.
             max_retry_limit=self.settings.structured_output_retries,
         )
 
     @task
     def qwen_strategy_task(self) -> Task:
         return Task(
+            # `config` selects the QWEN strategy-generation task instructions.
             config=self.tasks_config["qwen_strategy_task"],
+            # `agent` assigns the owner-specific QWEN analyst.
             agent=self.owner_qwen(),
+            # `output_pydantic` validates the five strategy candidates.
             output_pydantic=QwenStrategyCandidateSet,
         )
 
     @task
     def qwen_relation_task(self) -> Task:
         return Task(
+            # `config` selects the QWEN message-relation task instructions.
             config=self.tasks_config["qwen_relation_task"],
+            # `agent` assigns the owner-specific QWEN analyst.
             agent=self.owner_qwen(),
+            # `output_pydantic` validates the relation decision.
             output_pydantic=TradingMessageRelationDecision,
         )
 
     @task
     def ministral_review_task(self) -> Task:
         return Task(
+            # `config` selects the Ministral review task instructions.
             config=self.tasks_config["ministral_review_task"],
+            # `agent` assigns the shared Ministral reviewer.
             agent=self.shared_ministral(),
+            # `context` supplies the preceding QWEN candidate output.
             context=[self.qwen_strategy_task()],
+            # `output_pydantic` validates the selected-tier review.
             output_pydantic=MinistralStrategyReviewSet,
         )
 
     @crew
     def crew(self) -> Crew:
         return Crew(
+            # `agents` define the owner analyst and shared reviewer.
             agents=[self.owner_qwen(), self.shared_ministral()],
+            # `tasks` run strategy generation before Ministral review.
             tasks=[self.qwen_strategy_task(), self.ministral_review_task()],
+            # `process` enforces the declared sequential task order.
             process=Process.sequential,
+            # `memory` disables cross-run CrewAI memory for this flow.
             memory=False,
+            # `cache` disables reuse of prior task outputs.
             cache=False,
+            # `verbose` suppresses CrewAI execution logs by default.
             verbose=False,
+            # `tracing` enables telemetry only when explicitly configured.
             tracing=os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true",
         )
 
     def relation_crew(self) -> Crew:
         return Crew(
+            # `agents` define the owner analyst for relation classification.
             agents=[self.owner_qwen()],
+            # `tasks` contains the single relation-classification task.
             tasks=[self.qwen_relation_task()],
+            # `process` keeps the relation task sequential.
             process=Process.sequential,
+            # `memory` disables cross-run CrewAI memory for this flow.
             memory=False,
+            # `cache` disables reuse of prior task outputs.
             cache=False,
+            # `verbose` suppresses CrewAI execution logs by default.
             verbose=False,
+            # `tracing` enables telemetry only when explicitly configured.
             tracing=os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true",
         )
 
 
-def _validate_agent_tools(tools: list[BaseTool]) -> list[BaseTool]:
-    forbidden = [tool.name for tool in tools if not getattr(tool, "agent_accessible", False)]
+def _validate_agent_tools(
+    tools: list[BaseTool],
+    *,
+    allowed_tool_types: frozenset[type[BaseTool]],
+    agent_label: str,
+) -> list[BaseTool]:
+    """Return a copy of tools that pass access and role allowlists."""
+    forbidden = [
+        tool.name for tool in tools if not getattr(tool, "agent_accessible", False)
+    ]
     if forbidden:
         raise ValueError(
             "Flow-only tools cannot be attached to agents: " + ", ".join(forbidden)
+        )
+    disallowed = [
+        tool.name
+        for tool in tools
+        if not any(isinstance(tool, allowed_type) for allowed_type in allowed_tool_types)
+    ]
+    if disallowed:
+        raise ValueError(
+            f"{agent_label} agent tool policy forbids: " + ", ".join(disallowed)
+
         )
     return list(tools)
 

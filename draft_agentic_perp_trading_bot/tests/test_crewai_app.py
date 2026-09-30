@@ -75,12 +75,37 @@ def _model_settings() -> CrewModelSettings:
 
 
 def test_model_settings_default_to_selected_bedrock_ids() -> None:
-    settings = CrewModelSettings(aws_region_name="us-east-1")
+    settings = CrewModelSettings()
 
     assert settings.owner_qwen_model_ids == {
         owner_id: BedrockModelId.QWEN3_VL_235B_A22B for owner_id in OwnerId
     }
     assert settings.ministral_model_id == BedrockModelId.MINISTRAL_3_8B_INSTRUCT
+    assert settings.timeout_seconds == 15
+    assert settings.aws_region_name == "eu-central-1"
+
+
+def test_model_settings_load_env_vars_defaults_to_eu_central_1(monkeypatch) -> None:
+    monkeypatch.setenv("CREWAI_BEDROCK_ENABLED", "true")
+    monkeypatch.delenv("AWS_REGION_NAME", raising=False)
+    for environment_name in (
+        "CREWAI_QWEN_OWNER_A_MODEL_ID",
+        "CREWAI_QWEN_OWNER_B_MODEL_ID",
+        "CREWAI_QWEN_OWNER_C_MODEL_ID",
+        "CREWAI_QWEN_OWNER_D_MODEL_ID",
+    ):
+        monkeypatch.setenv(
+            environment_name,
+            BedrockModelId.QWEN3_VL_235B_A22B.value,
+        )
+    monkeypatch.setenv(
+        "CREWAI_MINISTRAL_MODEL_ID",
+        BedrockModelId.MINISTRAL_3_8B_INSTRUCT.value,
+    )
+
+    settings = CrewModelSettings.load_env_vars()
+
+    assert settings.aws_region_name == "eu-central-1"
 
 
 def test_model_settings_allow_alternate_bedrock_ids() -> None:

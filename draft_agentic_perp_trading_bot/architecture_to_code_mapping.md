@@ -24,6 +24,8 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
   `src/crewai_app/skills_api/{ministral_filter,omitted_stop_loss_inference,owner_qwen,qwen_agent_rag_loading}/`
 - CrewAI BaseTool wrappers for read-only context and Flow-only services:
   `src/crewai_app/tools/`
+- Explicit per-agent CrewAI tool-type allowlists:
+  `src/crewai_app/tools/agent_tool_policy.py`
 - Stable Pydantic schemas and public package exports:
   `src/crewai_app/domain/contracts/{schemas.py,execution.py,__init__.py}`
 - Confidence, funding-rate initiation filtering, omitted-stop-loss, execution

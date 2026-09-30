@@ -3,7 +3,7 @@
 Maintenance rule: **OVERWRITE** this file on every update. It is the current
 state, not a development log. The log is `HISTORY.md`.
 
-Last updated: 2026-09-25
+Last updated: 2026-09-30
 
 ## Phase
 
@@ -72,6 +72,21 @@ Telethon image hydration and authentic serial RAG examples.
   Canonical orchestration uses it directly, then applies confidence scoring,
   selected-tier sizing, omitted-stop-loss derivation, and deterministic safety
   gates.
+- `CrewModelSettings.timeout_seconds` defaults to `15` seconds, and the
+  `CREWAI_MODEL_TIMEOUT_SECONDS` environment fallback is also `15`, matching
+  `.env.example`; structured-output retries remain separately configurable.
+- `CrewModelSettings` now defaults `aws_region_name` and its
+  `AWS_REGION_NAME` environment fallback to `eu-central-1`, the Frankfurt AWS
+  region; `.env.example` uses the same default.
+- The environment-backed CrewAI settings factory is named
+  `CrewModelSettings.load_env_vars()` to make its configuration source explicit.
+- CrewAI constructor inputs in `crewai_app/crew.py` now document the
+  purpose of `LLM`, `Agent`, `Task`, and `Crew` parameters, including the
+  sampling, retry, output-validation, ordering, memory, cache, verbosity, and
+  tracing controls.
+- `tools/agent_tool_policy.py` now defines separate explicit typed allowlists
+  for QWEN and Ministral; `_validate_agent_tools()` enforces the relevant list
+  in addition to the `agent_accessible` Flow-only safety marker.
 - The local harness is non-live. SQS delivery, Telethon image hydration,
   production S3/DynamoDB/ElastiCache adapters, Phoenix/Grafana instrumentation,
   and Lambda order submission remain planned or only partially wired.

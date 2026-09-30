@@ -83,7 +83,7 @@ def run() -> None:
     payload = PreliminaryRunInput.model_validate(
         json.loads(Path(input_path).read_text(encoding="utf-8"))
     )
-    settings = CrewModelSettings.from_environment()
+    settings = CrewModelSettings.load_env_vars()
     flow = TelegramSignalFlow(
         parent_context_loader=_StaticParentContextLoader(payload.prompt_context),
         cursor_context_loader=_StaticCursorContextLoader(

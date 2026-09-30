@@ -374,30 +374,29 @@ and legacy contracts, exchange gateways, profile helpers, deterministic policy
 parameters, and the venue-comparison test helper. Each remains
 `ExchangeNetwork.TESTNET` until testing and deployment are complete.
 
-### 2026-09-25 — `pending`: refreshed the architecture-to-code mapping
+### 2026-09-30 — `pending`: completed manual review of the canonical CrewAI composition
 
-Updated `draft_agentic_perp_trading_bot/architecture_to_code_mapping.md` for the
-capability-specific `interfaces.py` layout, shared `flows/interfaces.py`,
-split Telegram/AWS persistence boundaries, and implemented QWEN relation and
-deferred-labelling Flow wiring. Clarified that `frameworkless_app` remains a
-legacy comparison implementation. Added an `AGENTS.md` rule requiring mapping
-updates whenever package, module, interface, or export-only naming changes.
+Completed the human manual review of
+`draft_agentic_perp_trading_bot/src/crewai_app/crew.py`, including owner-specific
+QWEN routing, shared Ministral review and `selected_strategy_tier` handling,
+CrewAI model settings, constructor parameters, memory/cache behavior, and agent
+tool boundaries.
 
-### 2026-09-25 — `pending`: moved initial tier selection to Ministral
+Refreshed `architecture_to_code_mapping.md` for the capability-specific
+`interfaces.py` layout, shared Flow interfaces, persistence boundaries, and
+QWEN relation/deferred-labelling wiring. Renamed the canonical aggregate schema
+module to `domain/contracts/schemas.py`, and updated the related imports and
+architecture references.
 
-Changed the canonical `ministral_review_task` and `MinistralStrategyReviewSet`
-to return and validate `selected_strategy_tier` after reviewing all five QWEN
-candidates. Canonical orchestration now scores the selected tier instead of
-using confidence to select it, and derives an omitted stop-loss only after
-selection. Updated the CrewAI tests, task trace, README, `AGENTS.md`,
-`SKILLS.md`, `STATUS.md`, and architecture mapping accordingly.
+Aligned `CrewModelSettings` with the reviewed defaults: `timeout_seconds` and
+`CREWAI_MODEL_TIMEOUT_SECONDS` use `15`, `aws_region_name` and the
+`AWS_REGION_NAME` fallback use Frankfurt `eu-central-1`, and the environment
+factory is named `load_env_vars()`. Added regression coverage and synchronized
+`.env.example`.
 
-### 2026-09-26 — `pending`: standardized canonical schema naming
-
-Renamed `crewai_app/domain/contracts/definitions.py` to
-`crewai_app/domain/contracts/schemas.py` to align the canonical Pydantic schema
-module with `frameworkless_app/schemas.py`. Audited similarly named modules and
-retained capability-specific files such as `execution.py`, `states.py`,
-`upstream_contracts.py`, and `venue_contracts.py` because they contain boundary
-behavior rather than standalone schema collections. Added the corresponding
-`AGENTS.md` naming rule and updated imports and architecture mapping.
+Documented the `LLM`, `Agent`, `Task`, and `Crew` constructor inputs, including
+`temperature`, memory, cache, retry, output-validation, ordering, verbosity,
+and tracing semantics. Added explicit typed QWEN and Ministral tool allowlists
+in `crewai_app/tools/agent_tool_policy.py`; `_validate_agent_tools()` now
+enforces the relevant allowlist in addition to the `agent_accessible` safety
+marker. The full suite passes (`146 passed`) and Ruff checks pass.
