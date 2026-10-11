@@ -28,6 +28,10 @@ Source board: `AgenticPerpTradingBotArch Flowchart`
   `src/crewai_app/tools/agent_tool_policy.py`
 - Stable Pydantic schemas and public package exports:
   `src/crewai_app/domain/contracts/{schemas.py,execution.py,__init__.py}`
+- Modules without individual migration mappings, including the Crew runners,
+  Flow states/interfaces, persistence adapters, funding/RAG policies, and
+  CrewAI tool wrappers, are canonical boundaries without one-to-one
+  `frameworkless_app` predecessors; do not invent legacy provenance for them.
 - Confidence, funding-rate initiation filtering, omitted-stop-loss, execution
   gates, and position sizing:
   `src/crewai_app/domain/{policies,performance}/`

@@ -2,8 +2,9 @@
 
 File mappings:
 ``domain/contracts/schemas.py`` <- ``frameworkless_app/schemas.py``;
-``domain/contracts/{execution,performance,telegram,trading}.py`` <-
-``frameworkless_app/schemas.py``.
+``domain/contracts/execution.py`` extracts execution/model contracts from
+``frameworkless_app/schemas.py``; ``domain/contracts/__init__.py`` is the
+canonical public re-export surface.
 """
 
 from __future__ import annotations

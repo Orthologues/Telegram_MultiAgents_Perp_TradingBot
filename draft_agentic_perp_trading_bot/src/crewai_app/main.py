@@ -1,10 +1,11 @@
 """CrewAI application entrypoint with explicit migration provenance.
 
-File mappings:
-``main.py`` <- ``frameworkless_app/orchestrator.py``;
-``flows/telegram_signal_flow.py`` <- ``frameworkless_app/orchestrator.py``;
-``domain/contracts/{schemas.py,execution.py,__init__.py}`` <-
-``frameworkless_app/schemas.py``;
+Migration bases (these are evolved or split mappings, not identical copies):
+``main.py`` and ``flows/telegram_signal_flow.py`` <-
+``frameworkless_app/orchestrator.py``;
+``domain/contracts/schemas.py`` and ``domain/contracts/execution.py`` <-
+``frameworkless_app/schemas.py``; ``domain/contracts/__init__.py`` is the
+canonical public re-export surface;
 ``domain/policies/execution_gate.py`` <- ``frameworkless_app/risk_engine/policy.py``;
 ``adapters/telegram/{agent_worker,deduplication,normalizer,pipeline,reply_tree,storage}.py``
 <- ``frameworkless_app/telegram_ingestion/{agent_worker,deduplication,normalizer,pipeline,reply_tree,storage}.py``;

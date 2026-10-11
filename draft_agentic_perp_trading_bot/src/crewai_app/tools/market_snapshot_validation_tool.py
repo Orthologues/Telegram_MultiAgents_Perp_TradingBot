@@ -1,8 +1,9 @@
 """Flow-only CrewAI wrapper for deterministic market-snapshot validation.
 
-File mappings:
-``tools/market_snapshot_validation_tool.py`` <- ``crewai_app/main.py``;
-``domain/policies/execution_gate.py`` <- ``frameworkless_app/risk_engine/policy.py``.
+This is a canonical CrewAI Flow-only wrapper; it has no one-to-one
+``frameworkless_app`` predecessor. The deterministic validation policy is
+implemented by ``domain/policies/execution_gate.py``, migrated from
+``frameworkless_app/risk_engine/policy.py``.
 """
 
 from decimal import Decimal

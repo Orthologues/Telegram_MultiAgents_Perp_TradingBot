@@ -1,8 +1,9 @@
 """Typed CrewAI tools with explicit agent-access boundaries.
 
-File mappings:
-``tools/market_snapshot_validation_tool.py`` <- ``crewai_app/main.py``;
-``domain/policies/execution_gate.py`` <- ``frameworkless_app/risk_engine/policy.py``.
+The tool wrappers in this package are canonical CrewAI boundaries and have no
+one-to-one ``frameworkless_app`` predecessor. Deterministic validation remains
+implemented by ``domain/policies/execution_gate.py``, migrated from
+``frameworkless_app/risk_engine/policy.py``.
 """
 
 from crewai_app.tools.confidence_policy_tool import ConfidencePolicyTool
